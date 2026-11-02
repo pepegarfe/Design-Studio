@@ -80,6 +80,37 @@ en `web/`). Si "Pausas del plotter" = 0, subir movimientos; el XOFF real nunca s
 - Si algún día se pierde un corte largo a medias: la sospecha es el desborde → probar
   `flowControl:'hardware'` (Web Serial) / `rtscts=True` (pyserial).
 
+## PLAN aprobado (2-nov-2026) — "primero solo yo, luego clientes"
+Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA separados por usuario**
+(fresas, tarifas, autoguardado, prefs) para no rehacerlo al abrir a clientes. Escritorio sigue vivo.
+1. **Auditoría en local**: `studio_server.py` vs el puente de `design_studio.py`, función por función.
+2. **Plotter → navegador** (Web Serial, reusando `web/prueba_webserial.html`).
+3. **Seguridad**: hoy escucha en `0.0.0.0` SIN contraseña y expone `update_apply` (reemplaza el
+   programa) y el puerto serie → quitar en modo web + acceso con contraseña.
+4. **Datos por usuario** + catálogo de fuentes propio (el servidor no tiene las 981 de la Mac).
+5. **Publicar** con HTTPS (Web Serial lo EXIGE), probablemente Railway. ~US$5–20/mes.
+
+## Fase 1 HECHA (2-nov-2026): auditoría servidor vs escritorio
+- **En código**: las 39 llamadas de la UI tienen camino web (`api() ? puente : fetch`); 26/29 rutas
+  llaman a la MISMA función del motor que el escritorio; el resto son copias idénticas.
+- **En marcha**: `web/auditar_servidor.py` → **20/20 OK** (abrir SVG/DXF/AI idéntico al escritorio,
+  HPGL idéntico, CNC, fuentes, texto, booleana, exportar 4 formatos, calco, autoguardado). Corre
+  sobre una COPIA temporal: escribe config. NO probado en marcha: trayectorias CNC/.tap, nesting,
+  offset/expand/round/divide/fit (misma función que el escritorio, solo verificado en código).
+- **Lo que hay que arreglar para ONLINE** (no para la Mac):
+  1. **Todo es UNO para todos**: calco (`img_trace._STATE`), plotter (`SERVICE`), config/fresas/
+     autoguardado (un archivo) → dos usuarios se pisan. Fase 4.
+  2. **bottle con `wsgiref` = atiende de a UNO**: un nesting largo congela a todos. Necesita
+     servidor con hilos (waitress/gunicorn) antes de publicar.
+  3. **El calco deja la imagen subida en el disco para siempre** (`trace_upload`, `delete=False` sin
+     `unlink`; `/api/parse` sí borra). En un servidor se acumula.
+  4. Fuentes = las del equipo donde corre (981 en la Mac; un servidor Linux tendría casi ninguna).
+  5. Seguridad y plotter: fases 2 y 3.
+  6. **Código triplicado**: HPGL (`build_hpgl`, `Api._hpgl`, `_build_hpgl`), lectura de vectores
+     (`_load_vector` + copia en `/api/parse`) y área de trabajo ×2. Hoy idénticos; unificar.
+- Trampa de la prueba: `python -I` NO sirve para correr el servidor (le quita su propia carpeta y
+  no encuentra `plotter_control`), y pywebview revienta al importarse si `sys.argv[0]` es relativo.
+
 ## Estado
 Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso
 multi-dispositivo. Relacionado: [[estado]].
