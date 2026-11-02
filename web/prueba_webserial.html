@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba Web Serial</title>
+<!--
+  Prueba mínima de la idea "Design Studio online": ¿puede una página web, sin instalar nada,
+  hablar con el plotter y respetar su control de flujo?
+
+  Mismos parámetros que la app de escritorio (PlotterController.connect en plotter_control.py):
+  8N1, una línea por envío y 10 ms entre líneas. La diferencia está en XON/XOFF: pyserial lo
+  hace solo (xonxoff=True) y Web Serial NO lo ofrece (flowControl solo 'none'/'hardware'),
+  así que aquí se hace a mano: el plotter manda 0x13 ("espera, voy lleno") y 0x11 ("sigue").
+  Sin esto, un diseño largo desborda la memoria del plotter y se corta mal SIN ningún error.
+
+  Web Serial solo existe en Chrome/Edge de escritorio y solo en contexto seguro: abrir con
+  `python3 -m http.server` (localhost cuenta como seguro), no con doble clic.
+-->
+<style>
+  :root {
+    --bg:#F4F5F7; --panel:#FFFFFF; --ink:#1C1F24; --muted:#5E6673; --line:#DDE1E6;
+    --accent:#C81C68; --good:#1E9E6A; --bad:#D23B40; --warn:#B7791F;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14161A; --panel:#1D2026; --ink:#EDEFF2; --muted:#9AA2AE; --line:#2C3038;
+            --accent:#EC4A86; --good:#38C990; --bad:#E5484D; --warn:#E0A84B; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.45 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:24px 16px 48px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+            padding:16px; margin-bottom:14px; }
+  h2 { font-size:15px; margin:0 0 6px; }
+  p.help { color:var(--muted); margin:0 0 12px; font-size:14px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  label { font-size:14px; color:var(--muted); }
+  input, select { font:inherit; padding:6px 8px; border:1px solid var(--line); border-radius:6px;
+                  background:var(--bg); color:var(--ink); width:90px; }
+  select { width:auto; }
+  button { font:inherit; padding:8px 14px; border-radius:7px; border:1px solid var(--line);
+           background:var(--bg); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.stop { background:var(--bad); border-color:var(--bad); color:#fff; }
+  button:disabled { opacity:.45; cursor:default; }
+  .status { font-weight:600; }
+  .ok { color:var(--good); } .err { color:var(--bad); } .warn { color:var(--warn); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)); gap:8px;
+           margin-top:10px; }
+  .stat { background:var(--bg); border-radius:7px; padding:8px 10px; }
+  .stat b { display:block; font-size:20px; }
+  .stat span { font-size:12px; color:var(--muted); }
+  progress { width:100%; height:10px; margin-top:10px; accent-color:var(--accent); }
+  pre { background:var(--bg); border-radius:7px; padding:10px; max-height:220px; overflow:auto;
+        font:12px/1.4 ui-monospace, Menlo, monospace; white-space:pre-wrap; margin:10px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Prueba Web Serial</h1>
+  <p class="sub">¿Puede el navegador manejar el plotter sin instalar nada? Tres pasos, en orden.</p>
+
+  <section id="nosoporte" hidden>
+    <p class="status err">Este navegador no tiene Web Serial.</p>
+    <p class="help">Ábrela en <b>Chrome o Edge en computadora</b>, desde
+      <code>http://localhost:…</code> (no con doble clic sobre el archivo).</p>
+  </section>
+
+  <section>
+    <h2>1 · Conectar</h2>
+    <p class="help">El navegador mostrará una lista de puertos: elige el del plotter
+      (suele decir <i>FT232R</i> o <i>usbserial</i>).</p>
+    <div class="row">
+      <label>Velocidad <select id="baud">
+        <option>9600</option><option>19200</option><option>38400</option>
+      </select></label>
+      <button id="btnConectar" class="primary">Conectar</button>
+      <button id="btnDesconectar" disabled>Desconectar</button>
+      <span id="conn" class="status">Sin conectar</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · Cuadrado de prueba</h2>
+    <p class="help">Los mismos comandos exactos que "Corte de prueba" en Design Studio. Comprueba
+      que el plotter entiende lo que le manda el navegador. Es muy corto: <b>no</b> prueba el
+      control de flujo.</p>
+    <div class="row">
+      <label>Lado (mm) <input id="lado" type="number" value="10" min="1" max="200"></label>
+      <label>Velocidad <input id="vel" type="number" value="200" min="1"></label>
+      <label>Presión <input id="pres" type="number" value="140" min="1"></label>
+      <button id="btnCuadrado" disabled>Cortar cuadrado</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 · Flujo en el aire (la prueba que decide)</h2>
+    <p class="help">Miles de movimientos con la <b>cuchilla levantada</b> dentro de un recuadro de
+      2 cm: no corta nada, pero llena la memoria del plotter para que tenga que pedir
+      "espera". Si al final <b>"Pausas del plotter"</b> es mayor que 0 y no hubo errores, el
+      control de flujo funciona. Si se queda en 0, hay que subir los movimientos.</p>
+    <div class="row">
+      <label>Movimientos <input id="movs" type="number" value="2000" min="100" step="500"></label>
+      <button id="btnFlujo" disabled>Iniciar prueba de flujo</button>
+      <button id="btnParar" class="stop" disabled>Detener</button>
+    </div>
+    <progress id="prog" value="0" max="1"></progress>
+    <div class="stats">
+      <div class="stat"><b id="sLineas">0 / 0</b><span>Líneas enviadas</span></div>
+      <div class="stat"><b id="sBytes">0</b><span>Bytes enviados</span></div>
+      <div class="stat"><b id="sXoff">0</b><span>Pausas del plotter (XOFF)</span></div>
+      <div class="stat"><b id="sEspera">0 s</b><span>Tiempo esperando</span></div>
+    </div>
+    <p id="veredicto" class="status" style="margin-top:12px"></p>
+  </section>
+
+  <section>
+    <h2>Registro</h2>
+    <pre id="log"></pre>
+  </section>
+</main>
+
+<!-- Motor: sin pantalla, para poder probarlo fuera del navegador con un plotter simulado. -->
+<script id="motor">
+const XOFF = 0x13, XON = 0x11, ESC = 0x1b;
+const UNITS_PER_MM = 40;
+
+// Igual que HPGLConverter.test_square() del motor Python, byte a byte.
+function hpglCuadrado(ladoMm, vel, pres) {
+  const u = Math.round(ladoMm * UNITS_PER_MM);
+  return ['IN;', 'PA;', 'SP1;', `VS${vel};`, `FS${pres};`, 'PU0,0;',
+          `PD${u},0,${u},${u},0,${u},0,0;`, 'PU;', 'PU0,0;', 'SP0;'];
+}
+
+// Zigzag con la cuchilla ARRIBA dentro de un recuadro de 20 mm: solo carga la memoria.
+function hpglFlujo(n) {
+  const L = ['IN;', 'PA;', 'PU;'];
+  const lado = 20 * UNITS_PER_MM;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 37) % lado, y = (i % 2) ? lado : 0;
+    L.push(`PU${x},${y};`);
+  }
+  L.push('PU0,0;', 'SP0;');
+  return L;
+}
+
+// Estado del control de flujo. lectura() lo alimenta con cada byte que llega del plotter.
+function nuevoFlujo() {
+  return { pausado: false, xoffs: 0, xons: 0, esperaMs: 0, detener: false, recibido: [] };
+}
+
+function alRecibir(st, bytes) {
+  for (const b of bytes) {
+    if (b === XOFF) { if (!st.pausado) st.xoffs++; st.pausado = true; }
+    else if (b === XON) { st.pausado = false; st.xons++; }
+    else st.recibido.push(b);
+  }
+}
+
+const dormir = ms => new Promise(r => setTimeout(r, ms));
+
+// Envía línea a línea como send_hpgl() del escritorio. Antes de CADA línea mira si el plotter
+// pidió esperar. Si se queda pausado más de `maxEsperaMs`, es un error: el plotter dijo
+// "espera" y nunca dijo "sigue" (cable, plotter apagado...), y no hay que colgarse callado.
+async function enviar(escribir, lineas, st, op = {}) {
+  const pausaMs = op.pausaMs ?? 10, maxEsperaMs = op.maxEsperaMs ?? 60000;
+  const progreso = op.progreso || (() => {});
+  const cod = new TextEncoder();
+  let bytes = 0;
+  for (let i = 0; i < lineas.length; i++) {
+    let t0 = null;
+    while (st.pausado && !st.detener) {
+      t0 ??= Date.now();
+      if (Date.now() - t0 > maxEsperaMs)
+        throw new Error(`El plotter pidió esperar y no reanudó en ${maxEsperaMs / 1000} s`);
+      await dormir(5);
+    }
+    if (t0 !== null) st.esperaMs += Date.now() - t0;
+    if (st.detener) return { completo: false, enviadas: i, bytes };
+    const datos = cod.encode(lineas[i] + '\n');
+    await escribir(datos);
+    bytes += datos.length;
+    progreso(i + 1, lineas.length, bytes);
+    if (pausaMs) await dormir(pausaMs);
+  }
+  return { completo: true, enviadas: lineas.length, bytes };
+}
+
+// Lo mismo que PlotterController.abort(): ESC y reiniciar.
+function bytesAbortar() {
+  return new Uint8Array([ESC, ...new TextEncoder().encode('IN;\n')]);
+}
+</script>
+
+<!-- Pantalla y Web Serial. -->
+<script>
+const $ = id => document.getElementById(id);
+let puerto = null, escritor = null, lector = null, flujo = nuevoFlujo(), ocupado = false;
+
+function log(msg) {
+  const t = new Date().toLocaleTimeString();
+  $('log').textContent += `[${t}] ${msg}\n`;
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+function refrescarBotones() {
+  const c = !!puerto;
+  $('btnConectar').disabled = c;
+  $('btnDesconectar').disabled = !c || ocupado;
+  $('btnCuadrado').disabled = !c || ocupado;
+  $('btnFlujo').disabled = !c || ocupado;
+  $('btnParar').disabled = !ocupado;
+}
+
+async function escribir(datos) { await escritor.write(datos); }
+
+async function bucleLectura() {
+  try {
+    while (puerto && puerto.readable) {
+      lector = puerto.readable.getReader();
+      try {
+        for (;;) {
+          const { value, done } = await lector.read();
+          if (done) break;
+          const antes = flujo.pausado;
+          alRecibir(flujo, value);
+          if (flujo.pausado !== antes) log(flujo.pausado ? 'Plotter: ESPERA (XOFF)' : 'Plotter: SIGUE (XON)');
+        }
+      } finally { lector.releaseLock(); lector = null; }
+    }
+  } catch (e) { if (puerto) log('Error leyendo: ' + e.message); }
+}
+
+async function conectar() {
+  try {
+    puerto = await navigator.serial.requestPort();
+    await puerto.open({ baudRate: +$('baud').value, dataBits: 8, parity: 'none',
+                        stopBits: 1, flowControl: 'none' });
+    escritor = puerto.writable.getWriter();
+    flujo = nuevoFlujo();
+    bucleLectura();
+    const info = puerto.getInfo();
+    const id = info.usbVendorId ? ` (USB ${info.usbVendorId.toString(16)}:${info.usbProductId.toString(16)})` : '';
+    $('conn').textContent = 'Conectado' + id; $('conn').className = 'status ok';
+    log('Conectado a ' + $('baud').value + ' baudios' + id);
+    await escribir(new TextEncoder().encode('IN;\n'));   // como connect() del escritorio
+  } catch (e) {
+    puerto = null;
+    if (e.name !== 'NotFoundError') { $('conn').textContent = 'Error: ' + e.message; $('conn').className = 'status err'; }
+    log('No se conectó: ' + e.message);
+  }
+  refrescarBotones();
+}
+
+async function desconectar() {
+  const p = puerto; puerto = null;
+  try { if (lector) await lector.cancel(); } catch {}
+  try { if (escritor) { escritor.releaseLock(); escritor = null; } } catch {}
+  try { await p.close(); } catch {}
+  $('conn').textContent = 'Sin conectar'; $('conn').className = 'status';
+  log('Desconectado');
+  refrescarBotones();
+}
+
+async function correr(nombre, lineas) {
+  ocupado = true; refrescarBotones();
+  flujo.detener = false; flujo.xoffs = 0; flujo.esperaMs = 0;
+  $('veredicto').textContent = '';
+  $('prog').max = lineas.length; $('prog').value = 0;
+  log(`${nombre}: ${lineas.length} líneas`);
+  const t0 = Date.now();
+  try {
+    const r = await enviar(escribir, lineas, flujo, { progreso: (i, n, b) => {
+      $('prog').value = i; $('sLineas').textContent = `${i} / ${n}`;
+      $('sBytes').textContent = b.toLocaleString();
+      $('sXoff').textContent = flujo.xoffs;
+      $('sEspera').textContent = (flujo.esperaMs / 1000).toFixed(1) + ' s';
+    }});
+    const seg = ((Date.now() - t0) / 1000).toFixed(1);
+    if (!r.completo) {
+      await escribir(bytesAbortar());
+      log(`${nombre}: DETENIDO en la línea ${r.enviadas}`);
+    } else {
+      log(`${nombre}: completo en ${seg} s · ${r.bytes} bytes · ${flujo.xoffs} pausas del plotter`);
+    }
+    return r;
+  } catch (e) {
+    log(`${nombre}: ERROR — ${e.message}`);
+    $('veredicto').textContent = '✗ ' + e.message; $('veredicto').className = 'status err';
+    return null;
+  } finally { ocupado = false; refrescarBotones(); }
+}
+
+$('btnConectar').onclick = conectar;
+$('btnDesconectar').onclick = desconectar;
+$('btnParar').onclick = () => { flujo.detener = true; };
+$('btnCuadrado').onclick = () =>
+  correr('Cuadrado', hpglCuadrado(+$('lado').value, +$('vel').value, +$('pres').value));
+$('btnFlujo').onclick = async () => {
+  const r = await correr('Flujo en el aire', hpglFlujo(+$('movs').value));
+  if (!r || !r.completo) return;
+  const v = $('veredicto');
+  if (flujo.xoffs > 0) {
+    v.textContent = `✓ El plotter pidió esperar ${flujo.xoffs} veces y la página obedeció. ` +
+                    'Revisa que el cabezal terminara en el origen sin saltos raros.';
+    v.className = 'status ok';
+  } else {
+    v.textContent = '⚠ El plotter nunca pidió esperar: la prueba no llenó su memoria. ' +
+                    'Sube "Movimientos" (p. ej. 8000) y repite.';
+    v.className = 'status warn';
+  }
+};
+navigator.serial?.addEventListener('disconnect', e => {
+  if (puerto && e.target === puerto) { log('El plotter se desconectó del cable'); desconectar(); }
+});
+
+if (!('serial' in navigator)) {
+  $('nosoporte').hidden = false;
+  $('btnConectar').disabled = true;
+}
+</script>
+</body>
+</html>

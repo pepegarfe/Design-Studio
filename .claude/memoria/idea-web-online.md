@@ -25,13 +25,31 @@ La cara (HTML/CSS/JS) es la misma que la de escritorio; solo cambia el transport
   ⚠️ Ojo: `studio_ui.html` quedó adaptado a **fetch/HTTP** (modo servidor). Para volver a pywebview
   hay que regresar la parte de "Abrir" al puente `window.pywebview.api` (o hacerlo dual).
 
-## El candado honesto (por qué NO es "puro online")
-Cortar necesita el **USB del plotter**, y un navegador **no puede** tocar el puerto serie de la
-máquina. Por eso:
-- La Mac conectada al plotter es la que **sirve** la app y hace los cortes; los demás dispositivos
-  son "estaciones de diseño" remotas.
-- Entrar **desde fuera de la red local** (internet abierto) necesita un paso extra (túnel/exponer el
-  puerto, con cuidado de seguridad). En pausa.
+## El candado (CORREGIDO 2-nov-2026)
+⚠️ Esta nota decía que "un navegador **no puede** tocar el puerto serie". **Era falso**: la API
+**Web Serial** (Chrome/Edge de escritorio, desde 2021) habla con dispositivos USB-serial con
+permiso del usuario, y el plotter es un FTDI FT232R (ver [[plotter-puerto-usb]]). Límites reales:
+- **Solo Chrome/Edge en computadora**: ni Safari, ni Firefox, ni iPad/teléfono.
+- ⚠️ **XON/XOFF no existe en Web Serial** (`flowControl` solo `none`/`hardware`): habría que
+  escuchar a mano 0x13/0x11 y pausar el envío. Sin eso, un diseño largo se corta mal SIN error.
+  Es lo PRIMERO que hay que probar con el plotter real.
+- Fuentes: la web no puede listar las del sistema → catálogo propio (Google Fonts).
+- CNC no tiene candado: el `.tap` se descarga y va a la USB como hoy.
+
+Dos caminos evaluados: (1) motor Python en servidor + UI en navegador (rápido, mensualidad);
+(2) todo en el navegador con Pyodide (shapely/ezdxf/fontTools sí; pymupdf dudoso; mucho más
+trabajo). Paso propuesto antes de decidir: prueba mínima Web Serial + XON/XOFF que corte un cuadrado.
+
+## Paso 1 construido (2-nov-2026): `web/prueba_webserial.html`
+Jose dijo "vamos adelante". Página mínima: conectar por Web Serial (8N1, 9600, `flowControl:'none'`),
+cuadrado de prueba **byte a byte igual** a `HPGLConverter.test_square()`, y **"flujo en el aire"**
+(miles de `PU` en 20 mm con la cuchilla arriba) que cuenta las pausas XOFF: el cuadrado (~100 bytes)
+NUNCA llena la memoria del plotter, así que no prueba el control de flujo — la de flujo sí.
+`node web/test_webserial.mjs web/prueba_webserial.html` → 11 OK contra un plotter simulado, con caso
+de CONTROL (ignorando XOFF sí desborda). ⚠️ Trampa del simulador: si el envío falso es instantáneo,
+los avisos XOFF nunca llegan a tiempo y todo "falla" — el cable real tarda ~1 ms/byte.
+⏳ **Falta lo único que decide: correrla con el plotter real** (Chrome, `python3 -m http.server`
+en `web/`). Si "Pausas del plotter" = 0, subir movimientos; el XOFF real nunca se ha visto.
 
 ## Estado
 Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso
