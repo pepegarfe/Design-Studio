@@ -67,6 +67,19 @@ en `web/`). Si "Pausas del plotter" = 0, subir movimientos; el XOFF real nunca s
   el plotter ya guardó (minutos) sigue. `abort()` manda ESC + `IN;`, y ese `IN;` se forma DETRÁS
   de lo guardado. Si `ESC.K` funciona aquí, es el paro real que también le falta al escritorio.
 
+## El plotter NO habla, y no hace falta (2-nov-2026)
+- Plotter = **SMT Robotics Cutting Plotter 721**, clon de la familia "721" (Jinka JK-721 y otros).
+- **Nunca manda un solo byte**: `OI;`, `OS;`, `ESC.B`, `ESC.L` → 0 bytes, en la página Y con
+  pyserial (script crudo, sin xonxoff). ⇒ **el `xonxoff=True` del ESCRITORIO jamás ha hecho nada**,
+  y no hay `ESC.K`: el único paro real es el **botón Reset del plotter**.
+- CTS sale ENCENDIDA (en FT232R suelta se lee apagada) → quizá control por HARDWARE. No confirmado.
+- Manual del Jinka JK-721: **memoria 1–4 MB**, HPGL/DMPL, serie + USB, sin dato de handshake.
+  A 9600 baudios 1 MB tarda ≥18 min en llegar y el plotter corta mientras tanto: un diseño
+  normal no la llena. Encaja con lo medido (≥74 KB sin pausa). ⇒ El control de flujo es
+  **irrelevante en la práctica**; NO se gastó la prueba larga de CTS (20+ min) para confirmarlo.
+- Si algún día se pierde un corte largo a medias: la sospecha es el desborde → probar
+  `flowControl:'hardware'` (Web Serial) / `rtscts=True` (pyserial).
+
 ## Estado
 Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso
 multi-dispositivo. Relacionado: [[estado]].

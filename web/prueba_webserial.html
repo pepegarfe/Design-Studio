@@ -104,6 +104,7 @@
       <b>Vaciar memoria</b> es el paro de emergencia: le pide tirar lo que tiene guardado. Pruébalo
       con el cabezal moviéndose en el aire y fíjate si se detiene.</p>
     <div class="row">
+      <button id="btnIdent" disabled>¿Quién eres? (OI)</button>
       <button id="btnMemoria" disabled>Preguntar memoria</button>
       <button id="btnVaciar" class="stop" disabled>Vaciar memoria (paro)</button>
     </div>
@@ -258,6 +259,7 @@ function refrescarBotones() {
   $('btnFlujo').disabled = !c || ocupado;
   $('btnParar').disabled = !ocupado;
   $('btnMemoria').disabled = !c || ocupado;
+  $('btnIdent').disabled = !c || ocupado;
   $('btnVaciar').disabled = !c;   // el paro tiene que servir SIEMPRE, también a media prueba
 }
 
@@ -279,6 +281,21 @@ $('btnMemoria') && ($('btnMemoria').onclick = async () => {
   } catch (e) { log('Error preguntando: ' + e.message); }
   refrescarBotones();
 });
+
+// OI = "¿quién eres?": instrucción HPGL normal (se forma en la fila, por eso con el plotter
+// quieto). Si contesta, el plotter SÍ habla y su silencio a ESC.L/ESC.B es que no los entiende;
+// si tampoco contesta, quizá nunca habla, y entonces tampoco mandaría XOFF.
+$('btnIdent').onclick = async () => {
+  $('btnIdent').disabled = true;
+  try {
+    flujo.recibido.length = 0;
+    await escribir(new TextEncoder().encode('OI;\n'));
+    const r = await leerRespuesta(flujo, 3000);
+    log(`¿Quién eres? (OI): ${r === null ? 'no respondió' : r}` +
+        (flujo.recibido.length ? ` · además llegaron ${flujo.recibido.length} bytes sueltos` : ''));
+  } catch (e) { log('Error preguntando: ' + e.message); }
+  refrescarBotones();
+};
 
 $('btnVaciar') && ($('btnVaciar').onclick = async () => {
   flujo.detener = true;                      // si la página aún envía, que pare también
