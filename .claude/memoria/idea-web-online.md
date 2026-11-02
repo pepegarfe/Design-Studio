@@ -51,6 +51,22 @@ los avisos XOFF nunca llegan a tiempo y todo "falla" — el cable real tarda ~1 
 ⏳ **Falta lo único que decide: correrla con el plotter real** (Chrome, `python3 -m http.server`
 en `web/`). Si "Pausas del plotter" = 0, subir movimientos; el XOFF real nunca se ha visto.
 
+## Prueba con el plotter REAL (2-nov-2026)
+- ✅ **Conectó y cortó el cuadrado desde Chrome** (77 bytes, 0.1 s). El navegador SÍ maneja el plotter.
+- **Flujo, 8000 movimientos (79 KB): la página terminó en 91.6 s (~860 B/s = el tope del cable a
+  9600) con 0 XOFF, y el cabezal SIGUIÓ moviéndose** → el plotter guardó ≥ ~74 KB sin pedir pausa.
+  Su memoria es grande; un diseño de vinil normal no la llena. Falta ver si terminó en el origen.
+- ⚠️ **Error de diseño mío**: dije que con movimientos cortos la prueba sería breve. FALSO: la memoria
+  solo se llena si el plotter consume MÁS LENTO que el cable (≤960 B/s), así que movimientos cortos
+  NUNCA la llenan, y con memoria de ~1 MB llenarla tarda ≥18 min con cualquier diseño.
+  Lo que se arrastra es el VACIADO: lo guardado se ejecuta después (8000 movs ≈ 25 min).
+- Por eso se agregó **"Memoria del plotter"**: `ESC.L` (tamaño), `ESC.B` (libre) — HPGL los
+  atiende al instante aunque esté ocupado — y **`ESC.K` = paro** (tirar lo guardado). ⏳ No
+  probados en este plotter. 15 OK en simulador.
+- ⚠️ **Hallazgo para la app de ESCRITORIO**: "Detener" solo frena lo que falta por ENVIAR; lo que
+  el plotter ya guardó (minutos) sigue. `abort()` manda ESC + `IN;`, y ese `IN;` se forma DETRÁS
+  de lo guardado. Si `ESC.K` funciona aquí, es el paro real que también le falta al escritorio.
+
 ## Estado
 Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso
 multi-dispositivo. Relacionado: [[estado]].

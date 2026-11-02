@@ -97,11 +97,31 @@
   </section>
 
   <section>
+    <h2>Memoria del plotter</h2>
+    <p class="help">Le pregunta al plotter de qué tamaño es su memoria y cuánto le queda libre.
+      Responde al instante aunque esté ocupado. Si dice "no respondió", tu plotter no entiende
+      estas preguntas (no es grave).<br>
+      <b>Vaciar memoria</b> es el paro de emergencia: le pide tirar lo que tiene guardado. Pruébalo
+      con el cabezal moviéndose en el aire y fíjate si se detiene.</p>
+    <div class="row">
+      <button id="btnMemoria" disabled>Preguntar memoria</button>
+      <button id="btnVaciar" class="stop" disabled>Vaciar memoria (paro)</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="sTam">—</b><span>Tamaño de la memoria</span></div>
+      <div class="stat"><b id="sLibre">—</b><span>Libre ahora</span></div>
+    </div>
+  </section>
+
+  <section>
     <h2>3 · Flujo en el aire (la prueba que decide)</h2>
     <p class="help">Miles de movimientos con la <b>cuchilla levantada</b> dentro de un recuadro de
       2 cm: no corta nada, pero llena la memoria del plotter para que tenga que pedir
       "espera". Si al final <b>"Pausas del plotter"</b> es mayor que 0 y no hubo errores, el
-      control de flujo funciona. Si se queda en 0, hay que subir los movimientos.</p>
+      control de flujo funciona.<br>
+      ⚠️ <b>Es larga:</b> la página termina de enviar en minutos, pero el plotter sigue
+      trabajando lo que guardó (2000 movimientos ≈ 7 min; 8000 ≈ 25 min). Para cortarla,
+      "Vaciar memoria" arriba o el botón del propio plotter.</p>
     <div class="row">
       <label>Movimientos <input id="movs" type="number" value="2000" min="100" step="500"></label>
       <button id="btnFlujo" disabled>Iniciar prueba de flujo</button>
@@ -193,6 +213,30 @@ async function enviar(escribir, lineas, st, op = {}) {
 function bytesAbortar() {
   return new Uint8Array([ESC, ...new TextEncoder().encode('IN;\n')]);
 }
+
+// Comandos de control de HPGL (ESC . letra): el plotter los atiende AL INSTANTE, sin
+// formarlos detrás de lo que ya tiene en la memoria. L = tamaño de la memoria,
+// B = espacio libre ahora, K = tirar lo guardado (paro). No todos los plotters los entienden.
+function bytesControl(letra) {
+  return new Uint8Array([ESC, 0x2e, letra.charCodeAt(0)]);
+}
+
+// Espera una respuesta terminada en CR (o LF) entre los bytes que no son XON/XOFF.
+// null si no llega nada en `maxMs`: el plotter no entiende la pregunta.
+async function leerRespuesta(st, maxMs = 2000) {
+  const t0 = Date.now();
+  for (;;) {
+    const fin = st.recibido.findIndex(b => b === 13 || b === 10);
+    if (fin >= 0) {
+      const txt = String.fromCharCode(...st.recibido.slice(0, fin)).trim();
+      st.recibido.splice(0, fin + 1);
+      if (txt) return txt;
+      continue;   // un LF suelto tras el CR
+    }
+    if (Date.now() - t0 > maxMs) return null;
+    await dormir(20);
+  }
+}
 </script>
 
 <!-- Pantalla y Web Serial. -->
@@ -213,7 +257,36 @@ function refrescarBotones() {
   $('btnCuadrado').disabled = !c || ocupado;
   $('btnFlujo').disabled = !c || ocupado;
   $('btnParar').disabled = !ocupado;
+  $('btnMemoria').disabled = !c || ocupado;
+  $('btnVaciar').disabled = !c;   // el paro tiene que servir SIEMPRE, también a media prueba
 }
+
+const fmtBytes = t => /^\d+$/.test(t) ? (+t).toLocaleString() + ' bytes' : t;
+
+async function preguntar(letra, nombre) {
+  flujo.recibido.length = 0;
+  await escribir(bytesControl(letra));
+  const r = await leerRespuesta(flujo);
+  log(`${nombre} (ESC.${letra}): ${r === null ? 'no respondió' : r}`);
+  return r === null ? 'no respondió' : fmtBytes(r);
+}
+
+$('btnMemoria') && ($('btnMemoria').onclick = async () => {
+  $('btnMemoria').disabled = true;
+  try {
+    $('sTam').textContent = await preguntar('L', 'Tamaño de la memoria');
+    $('sLibre').textContent = await preguntar('B', 'Libre ahora');
+  } catch (e) { log('Error preguntando: ' + e.message); }
+  refrescarBotones();
+});
+
+$('btnVaciar') && ($('btnVaciar').onclick = async () => {
+  flujo.detener = true;                      // si la página aún envía, que pare también
+  try {
+    await escribir(bytesControl('K'));
+    log('Paro: enviado ESC.K (vaciar memoria). ¿Se detuvo el cabezal?');
+  } catch (e) { log('Error en el paro: ' + e.message); }
+});
 
 async function escribir(datos) { await escritor.write(datos); }
 

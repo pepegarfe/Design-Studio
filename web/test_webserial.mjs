@@ -6,7 +6,7 @@ const html = fs.readFileSync(process.argv[2], 'utf8');
 const src = html.match(/<script id="motor">([\s\S]*?)<\/script>/)[1];
 const ctx = { TextEncoder, setTimeout, Date, Promise, Uint8Array, Error };
 vm.createContext(ctx);
-vm.runInContext(src + '\n;globalThis.M={hpglCuadrado,hpglFlujo,nuevoFlujo,alRecibir,enviar,bytesAbortar,XOFF,XON};', ctx);
+vm.runInContext(src + '\n;globalThis.M={hpglCuadrado,hpglFlujo,nuevoFlujo,alRecibir,enviar,bytesAbortar,bytesControl,leerRespuesta,XOFF,XON};', ctx);
 const M = ctx.M;
 
 let fallos = 0;
@@ -95,6 +95,23 @@ ok(Buffer.from(M.bytesAbortar()).equals(Buffer.from('\x1bIN;\n')), 'abortar mand
   const sinPD = !L.some(l => l.startsWith('PD') || l.startsWith('SP1'));
   const dentro = L.filter(l => /^PU\d/.test(l)).every(l => l.slice(2, -1).split(',').every(v => +v >= 0 && +v <= 800));
   ok(sinPD && dentro, 'prueba de flujo: cuchilla siempre ARRIBA y dentro del recuadro de 20 mm');
+}
+
+// 8. Preguntas de memoria (ESC.L / ESC.B) y paro (ESC.K).
+ok(Buffer.from(M.bytesControl('L')).equals(Buffer.from('\x1b.L')) &&
+   Buffer.from(M.bytesControl('K')).equals(Buffer.from('\x1b.K')), 'ESC.L / ESC.K son los bytes correctos');
+{
+  const st = M.nuevoFlujo();
+  // respuesta troceada, con un XOFF metido en medio y CR+LF al final: como la mandaría un cable real
+  setTimeout(() => M.alRecibir(st, [...Buffer.from('102')]), 30);
+  setTimeout(() => M.alRecibir(st, [M.XOFF, ...Buffer.from('4\r\n')]), 60);
+  const r = await M.leerRespuesta(st, 1000);
+  ok(r === '1024' && st.pausado, `respuesta troceada con XOFF en medio → "${r}" (y el XOFF sí se registró)`);
+  setTimeout(() => M.alRecibir(st, [...Buffer.from('512\r')]), 30);
+  const r2 = await M.leerRespuesta(st, 1000);
+  ok(r2 === '512', `el LF sobrante no se come la siguiente respuesta → "${r2}"`);
+  const t0 = Date.now(), r3 = await M.leerRespuesta(M.nuevoFlujo(), 200);
+  ok(r3 === null && Date.now() - t0 < 500, 'plotter que no entiende la pregunta → "no respondió" en vez de colgarse');
 }
 
 console.log(fallos ? `\n${fallos} FALLA(S)` : '\nTodo OK');
