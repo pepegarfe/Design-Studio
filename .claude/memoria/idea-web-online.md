@@ -138,7 +138,7 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   conectó y CORTÓ un diseño de Jose por Web Serial (tras arreglar el 413).
   Sin Web Serial (Safari/Firefox) cae al plotter del servidor y el aviso dice "pyserial…": fase 3.
 
-## Fase 3 HECHA en código (2-nov-2026): seguridad
+## Fase 3 HECHA (2-nov-2026): seguridad — ✅ Jose creó su cuenta, entró y cortó con la sesión puesta
 - **Entrar con contraseña** (`web_auth.py`): cuentas en `datos_web/usuarios.json` (gitignored; `DS_DATOS`
   la mueve), solo la huella PBKDF2 (600k vueltas); cookie `ds_sesion` firmada HMAC (llave en
   `datos_web/secreto.key` o `DS_SECRETO`), HttpOnly + SameSite=Lax (+ Secure en https), 30 días.
