@@ -79,7 +79,11 @@ ip.draw_circle((100, 100), 60, color=(0, 0, 0), fill=(0, 0, 0))
 PNG = ip.get_pixmap(dpi=72).tobytes('png')
 
 # ── arrancar el servidor sobre la copia ───────────────────────────────────────
+# Sus temporales van a una carpeta propia: así se puede contar si deja basura en el disco.
+TEMPS = os.path.join(COPIA, '_temporales')
+os.makedirs(TEMPS)
 srv = subprocess.Popen([sys.executable, 'studio_server.py'], cwd=COPIA,
+                       env=dict(os.environ, TMPDIR=TEMPS),
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 for _ in range(60):
     try:
@@ -113,6 +117,8 @@ try:
     web = pedir('/api/hpgl', datos)
     import studio_backend as be
     ok(web.get('ok') and web['hpgl'] == be.build_hpgl(datos), 'HPGL idéntico al que corta el escritorio', f"{web.get('bytes')} bytes")
+    sq = pedir('/api/test_square')
+    ok(sq.get('ok') and sq['hpgl'] == be.test_square_hpgl(10), 'cuadrado del test de corte idéntico al del escritorio', f"{sq.get('bytes')} bytes")
 
     # 4. área de trabajo y CNC (escriben config: por eso va sobre la copia)
     wa = pedir('/api/workarea')
@@ -147,6 +153,15 @@ try:
     if up.get('ok'):
         tr = pedir('/api/trace', {'mode': 'bw', 'threshold': 128, 'smooth': 1, 'invert': False, 'colors': 2, 'speckle': 2})
         ok(tr.get('ok') and tr.get('paths'), 'calcar (potrace)', tr.get('error') or f"{len(tr.get('paths'))} trazados")
+        tc = pedir('/api/trace', {'mode': 'color', 'colors': 4, 'speckle': 2})
+        ok(tc.get('ok'), 'calcar a color (vtracer)', tc.get('error') or f"{len(tc.get('paths'))} trazados")
+        for _ in range(3):
+            pedir('/api/trace_upload', archivo=('c.png', PNG))
+        pedir('/api/trace_upload', archivo=('rota.png', b'esto no es una imagen'))
+        quedan = os.listdir(TEMPS)
+        ok(len(quedan) == 1, '5 imágenes subidas (una rota) y 2 calcos → solo queda en disco la imagen que se está calcando', f'{len(quedan)} archivo(s): {sorted(quedan)}')
+        tr = pedir('/api/trace', {'mode': 'bw', 'threshold': 128, 'smooth': 1, 'invert': False, 'colors': 2, 'speckle': 2})
+        ok(tr.get('ok'), 'y el calco sigue funcionando con la última buena', tr.get('error'))
 
     # 9. autoguardado
     marca = {'prueba': uuid.uuid4().hex, 'objects': [{'pts': [[0, 0], [1, 1]]}]}

@@ -14,6 +14,7 @@ import webview
 import plotter_control as core   # el motor existente (parsers, HPGL, controlador)
 from studio_backend import (SERVICE, set_workarea as _set_workarea,
                             cnc_get as _cnc_get, cnc_set as _cnc_set, flip_paths_y,
+                            load_workarea, load_vector, build_hpgl,
                             cnc_toolpaths_preview as _cnc_preview, cnc_build_tap as _cnc_tap)
 import img_trace as tracer
 import text_vector as texter
@@ -79,49 +80,9 @@ def _desarmar_vigilante():
         pass
 
 
-def _load_workarea():
-    """Área de trabajo guardada (misma config que la app vieja), o el default del plotter."""
-    try:
-        p = core._config_path()
-        if p.exists():
-            d = json.loads(p.read_text(encoding='utf-8'))   # ⚠️ ver la regla del encoding abajo
-            return float(d.get('work_w', 3000.0)), float(d.get('work_h', 600.0))
-    except Exception:
-        pass
-    return 3000.0, 600.0
-
-
-def _load_vector(path):
-    """Lee un vector (SVG/DXF/AI) y lo entrega como lo espera la UI: trazados en mm
-    con Y hacia ARRIBA (el volteo del SVG va aquí, POR FORMATO — ver flip_paths_y)."""
-    ext = os.path.splitext(path)[1].lower()
-    try:
-        if ext == '.svg':
-            styled = core.SVGParser().parse(path)
-        elif ext == '.dxf':
-            styled = core.DXFParser().parse(path)
-        elif ext == '.ai':
-            styled = core.AIParser().parse(path)
-        else:
-            return {'ok': False, 'error': 'Formato no soportado (usa SVG, DXF, AI o .dstudio).'}
-    except Exception as e:
-        return {'ok': False, 'error': f'No se pudo leer el archivo: {e}'}
-    paths = []
-    xs, ys = [], []
-    for d in styled:
-        pts = d.get('pts') or []
-        if len(pts) < 2:
-            continue
-        rp = [[round(float(x), 3), round(float(y), 3)] for (x, y) in pts]
-        paths.append({'pts': rp})
-        for x, y in rp:
-            xs.append(x); ys.append(y)
-    bbox = [min(xs), min(ys), max(xs), max(ys)] if xs else [0, 0, 0, 0]
-    if ext == '.svg':
-        flip_paths_y(paths)   # solo SVG viene Y-abajo; AI/DXF ya llegan Y-arriba
-    ww, wh = _load_workarea()
-    return {'ok': True, 'name': os.path.basename(path),
-            'paths': paths, 'bbox': bbox, 'work': [ww, wh]}
+# Las dos viven en studio_backend: el servidor web usa EXACTAMENTE las mismas.
+_load_workarea = load_workarea
+_load_vector = load_vector
 
 
 class Api:
@@ -413,16 +374,7 @@ class Api:
         return _load_vector(path)
 
     def _hpgl(self, data):
-        conv = core.HPGLConverter(
-            speed=int(float(data.get('speed', 320))),
-            pressure=int(float(data.get('pressure', 140))),
-            overcut_mm=float(data.get('overcut', 0.0)),
-            corner_angle_deg=float(data.get('corner', 0.0)))
-        conv.initialize()
-        for p in data.get('paths', []):
-            conv.add_path([(float(pt[0]), float(pt[1])) for pt in p])
-        conv.finalize()
-        return conv.get_hpgl()
+        return build_hpgl(data)   # el MISMO que usan el envío al plotter y el servidor web
 
     def gen_hpgl(self, data):
         try:

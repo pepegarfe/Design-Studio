@@ -9,6 +9,7 @@ pero la comunicación real con el plotter aún NO se ha probado en esta app nuev
 Maneja con gracia la ausencia de plotter: cada método devuelve {'ok':False,'error':...}
 en vez de tronar.
 """
+import os
 import time
 import json
 import re
@@ -519,6 +520,51 @@ def cnc_build_tap(data):
         return {'ok': False, 'error': f'G-code: {e}'}
 
 
+def load_workarea():
+    """Área de trabajo guardada (misma config que la app vieja), o el default del plotter."""
+    try:
+        p = core._config_path()
+        if p.exists():
+            d = json.loads(p.read_text(encoding='utf-8'))   # ⚠️ ver la regla del encoding abajo
+            return float(d.get('work_w', 3000.0)), float(d.get('work_h', 600.0))
+    except Exception:
+        pass
+    return 3000.0, 600.0
+
+
+def load_vector(path):
+    """Lee un vector (SVG/DXF/AI) y lo entrega como lo espera la UI: trazados en mm
+    con Y hacia ARRIBA (el volteo del SVG va aquí, POR FORMATO — ver flip_paths_y)."""
+    ext = os.path.splitext(path)[1].lower()
+    try:
+        if ext == '.svg':
+            styled = core.SVGParser().parse(path)
+        elif ext == '.dxf':
+            styled = core.DXFParser().parse(path)
+        elif ext == '.ai':
+            styled = core.AIParser().parse(path)
+        else:
+            return {'ok': False, 'error': 'Formato no soportado (usa SVG, DXF, AI o .dstudio).'}
+    except Exception as e:
+        return {'ok': False, 'error': f'No se pudo leer el archivo: {e}'}
+    paths = []
+    xs, ys = [], []
+    for d in styled:
+        pts = d.get('pts') or []
+        if len(pts) < 2:
+            continue
+        rp = [[round(float(x), 3), round(float(y), 3)] for (x, y) in pts]
+        paths.append({'pts': rp})
+        for x, y in rp:
+            xs.append(x); ys.append(y)
+    bbox = [min(xs), min(ys), max(xs), max(ys)] if xs else [0, 0, 0, 0]
+    if ext == '.svg':
+        flip_paths_y(paths)   # solo SVG viene Y-abajo; AI/DXF ya llegan Y-arriba
+    ww, wh = load_workarea()
+    return {'ok': True, 'name': os.path.basename(path),
+            'paths': paths, 'bbox': bbox, 'work': [ww, wh]}
+
+
 def build_hpgl(data):
     """Genera HPGL desde trazados efectivos (mm) + parámetros de corte."""
     conv = core.HPGLConverter(
@@ -531,6 +577,11 @@ def build_hpgl(data):
         conv.add_path([(float(pt[0]), float(pt[1])) for pt in p])
     conv.finalize()
     return conv.get_hpgl()
+
+
+def test_square_hpgl(size_mm=10):
+    """El cuadrado del test de corte. Lo usan el escritorio y el navegador (Web Serial)."""
+    return core.HPGLConverter(speed=200, pressure=140).test_square(size_mm)
 
 
 def _port_items():
@@ -714,10 +765,7 @@ class PlotterService:
         if g:
             return g
         try:
-            conv = core.HPGLConverter(speed=200, pressure=140)
-            hpgl = conv.test_square(size_mm)
-            return self.send_design({'paths': [], 'speed': 200, 'pressure': 140,
-                                     '_raw_hpgl': hpgl}) if False else self._send_raw(hpgl)
+            return self._send_raw(test_square_hpgl(size_mm))
         except Exception as e:
             return {'ok': False, 'error': str(e)}
 

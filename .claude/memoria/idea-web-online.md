@@ -102,14 +102,29 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
      autoguardado (un archivo) → dos usuarios se pisan. Fase 4.
   2. **bottle con `wsgiref` = atiende de a UNO**: un nesting largo congela a todos. Necesita
      servidor con hilos (waitress/gunicorn) antes de publicar.
-  3. **El calco deja la imagen subida en el disco para siempre** (`trace_upload`, `delete=False` sin
-     `unlink`; `/api/parse` sí borra). En un servidor se acumula.
+  3. ~~El calco deja la imagen subida en el disco~~ → ARREGLADO en fase 2 (ver abajo).
   4. Fuentes = las del equipo donde corre (981 en la Mac; un servidor Linux tendría casi ninguna).
   5. Seguridad y plotter: fases 2 y 3.
-  6. **Código triplicado**: HPGL (`build_hpgl`, `Api._hpgl`, `_build_hpgl`), lectura de vectores
-     (`_load_vector` + copia en `/api/parse`) y área de trabajo ×2. Hoy idénticos; unificar.
+  6. ~~Código triplicado~~ → ARREGLADO en fase 2: todo vive en `studio_backend`.
 - Trampa de la prueba: `python -I` NO sirve para correr el servidor (le quita su propia carpeta y
   no encuentra `plotter_control`), y pywebview revienta al importarse si `sys.argv[0]` es relativo.
+
+## Fase 2 HECHA en código (2-nov-2026): el plotter desde el navegador
+- `studio_ui.html`: `<script id="motor-plotter">` (`PlotterMotor`) + conector `WSP` dentro del
+  script principal. `P.*` decide **en cada llamada**: `api()` (escritorio) → `ws()` (Web Serial,
+  si el navegador lo tiene) → `fetch('/api/...')` (plotter junto al servidor, p. ej. iPad en LAN).
+  ⚠️ No decidir al cargar: `window.pywebview` aparece DESPUÉS de cargar la página.
+- El servidor solo arma el HPGL (`/api/hpgl`, `/api/test_square`); el navegador lo manda.
+- Unificado en `studio_backend`: `load_workarea`, `load_vector`, `build_hpgl`, `test_square_hpgl`
+  (escritorio y servidor llaman a las MISMAS). Escritorio comparado antes/después: idéntico.
+- Calco: la imagen anterior se borra al subir otra, y `img_trace.trace()` ya borra sus `.pbm/.svg/
+  .png` de trabajo (fuga que también tenía el ESCRITORIO: 2 archivos por cada ajuste del calco).
+- Pruebas: `node web/test_plotter_web.mjs` → navegador manda **byte a byte lo mismo** que el
+  `PlotterService` del escritorio (`web/bytes_escritorio.py`, cable de mentira) en conectar, mover,
+  pluma, origen, casa, enviar, test de corte y cancelar; más permisos, otra pestaña, desenchufar,
+  doble envío, XON/XOFF. `web/auditar_servidor.py` → 24/24 (cuenta temporales con `TMPDIR` propio).
+- ❌ FALTA: probarlo con la interfaz real en Chrome + el plotter (solo probado con cable simulado).
+  Sin Web Serial (Safari/Firefox) cae al plotter del servidor y el aviso dice "pyserial…": fase 3.
 
 ## Estado
 Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso

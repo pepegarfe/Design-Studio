@@ -95,6 +95,7 @@ def trace(options):
     path = _STATE['path']
     mode = options.get('mode', 'bw')
     svg = tempfile.mktemp(suffix='.svg')
+    sobras = [svg]   # archivos de trabajo: se borran al terminar, salga bien o mal
     try:
         if mode == 'color':
             import vtracer
@@ -111,12 +112,14 @@ def trace(options):
             if 2 <= colors < 256:
                 im = im.quantize(colors=colors, dither=Image.NONE).convert('RGB')
             src_png = tempfile.mktemp(suffix='.png')
+            sobras.append(src_png)
             im.save(src_png)
             vtracer.convert_image_to_svg_py(src_png, svg)
         else:
             bw = _prep_bw(path, int(options.get('threshold', 128)),
                           bool(options.get('invert', False)))
             pbm = tempfile.mktemp(suffix='.pbm')
+            sobras.append(pbm)
             bw.save(pbm)
             subprocess.run(
                 [_potrace_bin(), '-s', '-o', svg,
@@ -127,6 +130,13 @@ def trace(options):
         paths, bbox = _svg_to_paths(svg)
     except Exception as e:
         return {'ok': False, 'error': f'No se pudo calcar: {e}'}
+    finally:
+        # Sin esto, CADA ajuste del calco dejaba 2 archivos en la carpeta temporal.
+        for f in sobras:
+            try:
+                os.unlink(f)
+            except OSError:
+                pass
     if not paths:
         return {'ok': False, 'error': 'El calco no encontró trazos (prueba otro umbral o invertir).'}
     return {'ok': True, 'name': _STATE['name'], 'paths': paths, 'bbox': bbox}

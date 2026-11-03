@@ -15,10 +15,9 @@ import socket
 
 from bottle import Bottle, static_file, request, response, HTTPResponse
 
-import plotter_control as core
 from studio_backend import (SERVICE, set_workarea as _set_workarea,
                             cnc_get as _cnc_get, cnc_set as _cnc_set,
-                            flip_paths_y as _flip_paths_y,
+                            load_workarea, load_vector, build_hpgl, test_square_hpgl,
                             cnc_toolpaths_preview as _cnc_preview, cnc_build_tap as _cnc_tap)
 import img_trace as tracer
 import text_vector as texter
@@ -34,14 +33,7 @@ app = Bottle()
 
 
 def _workarea():
-    try:
-        p = core._config_path()
-        if p.exists():
-            d = json.loads(p.read_text(encoding='utf-8'))   # ⚠️ ver la regla del encoding
-            return [float(d.get('work_w', 3000.0)), float(d.get('work_h', 600.0))]
-    except Exception:
-        pass
-    return [3000.0, 600.0]
+    return list(load_workarea())   # la MISMA función que el escritorio
 
 
 def _json(obj, status=200):
@@ -105,6 +97,9 @@ def api_tap():
     return _json(_cnc_tap(request.json or {}))
 
 
+_TRACE_TMP = [None]   # la imagen que el calco está usando ahora
+
+
 @app.post('/api/trace_upload')
 def api_trace_upload():
     up = request.files.get('file')
@@ -114,7 +109,19 @@ def api_trace_upload():
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
     tmp.close()
     up.save(tmp.name, overwrite=True)
-    return _json(tracer.set_source(tmp.name))
+    r = tracer.set_source(tmp.name)
+    # El calco relee la imagen en cada ajuste, así que esta se queda; la ANTERIOR ya no
+    # la usa nadie. Sin esto cada imagen subida se quedaba en el disco para siempre.
+    if r.get('ok'):
+        sobra, _TRACE_TMP[0] = _TRACE_TMP[0], tmp.name
+    else:
+        sobra = tmp.name   # no se pudo abrir: no sirve para nada
+    if sobra:
+        try:
+            os.unlink(sobra)
+        except OSError:
+            pass
+    return _json(r)
 
 
 @app.post('/api/trace')
@@ -244,63 +251,38 @@ def api_parse():
         return _json({'ok': False, 'error': 'No llegó ningún archivo.'}, 400)
     name = up.filename or 'archivo'
     ext = os.path.splitext(name)[1].lower()
+    if ext not in ('.svg', '.dxf', '.ai'):
+        return _json({'ok': False, 'error': 'Formato no soportado (usa SVG, DXF o AI).'})
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
     tmp.close()
     try:
         up.save(tmp.name, overwrite=True)
-        if ext == '.svg':
-            styled = core.SVGParser().parse(tmp.name)
-        elif ext == '.dxf':
-            styled = core.DXFParser().parse(tmp.name)
-        elif ext == '.ai':
-            styled = core.AIParser().parse(tmp.name)
-        else:
-            return _json({'ok': False, 'error': 'Formato no soportado (usa SVG, DXF o AI).'})
-    except Exception as e:
-        return _json({'ok': False, 'error': f'No se pudo leer el archivo: {e}'})
+        r = load_vector(tmp.name)   # el MISMO lector que el escritorio
     finally:
         try:
             os.unlink(tmp.name)
         except OSError:
             pass
-
-    paths, xs, ys = [], [], []
-    for d in styled:
-        pts = d.get('pts') or []
-        if len(pts) < 2:
-            continue
-        rp = [[round(float(x), 3), round(float(y), 3)] for (x, y) in pts]
-        paths.append({'pts': rp})
-        for x, y in rp:
-            xs.append(x); ys.append(y)
-    bbox = [min(xs), min(ys), max(xs), max(ys)] if xs else [0, 0, 0, 0]
-    if ext == '.svg':
-        _flip_paths_y(paths)   # solo SVG viene Y-abajo; AI/DXF ya llegan Y-arriba
-    return _json({'ok': True, 'name': name, 'paths': paths, 'bbox': bbox, 'work': _workarea()})
-
-
-def _build_hpgl(data):
-    """Genera HPGL a partir de los trazados efectivos (en mm) usando el motor del original."""
-    paths = data.get('paths', [])
-    conv = core.HPGLConverter(
-        speed=int(float(data.get('speed', 320))),
-        pressure=int(float(data.get('pressure', 140))),
-        overcut_mm=float(data.get('overcut', 0.0)),
-        corner_angle_deg=float(data.get('corner', 0.0)))
-    conv.initialize()
-    for p in paths:
-        conv.add_path([(float(pt[0]), float(pt[1])) for pt in p])
-    conv.finalize()
-    return conv.get_hpgl()
+    if r.get('ok'):
+        r['name'] = name   # el nombre real, no el del temporal
+    return _json(r)
 
 
 @app.post('/api/hpgl')
 def api_hpgl():
     try:
         data = request.json or {}
-        hpgl = _build_hpgl(data)
+        hpgl = build_hpgl(data)   # el MISMO que corta el escritorio
     except Exception as e:
         return _json({'ok': False, 'error': f'No se pudo generar el HPGL: {e}'})
+    return _json({'ok': True, 'hpgl': hpgl, 'lines': hpgl.count('\n') + 1, 'bytes': len(hpgl)})
+
+
+
+@app.get('/api/test_square')
+def api_test_square():
+    # Para el navegador que maneja el plotter él mismo (Web Serial): solo pide el HPGL.
+    hpgl = test_square_hpgl(10)
     return _json({'ok': True, 'hpgl': hpgl, 'lines': hpgl.count('\n') + 1, 'bytes': len(hpgl)})
 
 

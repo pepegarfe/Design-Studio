@@ -894,6 +894,79 @@
 <div class="toast" id="toast"></div>
 
 <script src="three.bundle.js"></script>
+<script id="motor-plotter">
+// Motor del envío al plotter DESDE EL NAVEGADOR (Web Serial). Va aparte y sin tocar la página
+// para que web/test_plotter_web.mjs lo pruebe tal cual contra un plotter simulado.
+// Es el mismo que web/prueba_webserial.html, que cortó con el SMT 721 real (2-nov-2026).
+var PlotterMotor = (function(){
+  var XOFF = 0x13, XON = 0x11, ESC = 0x1b;
+
+  // Estado del control de flujo. La lectura del cable lo alimenta con cada byte que llega.
+  function nuevoFlujo() {
+    return { pausado: false, xoffs: 0, xons: 0, esperaMs: 0, detener: false };
+  }
+  // Si el plotter manda XOFF ("espera") se pausa hasta su XON ("sigue"). El 721 nunca
+  // manda nada (lo guarda todo en su memoria), pero otro plotter podría.
+  function alRecibir(st, bytes) {
+    for (var i = 0; i < bytes.length; i++) {
+      if (bytes[i] === XOFF) { if (!st.pausado) st.xoffs++; st.pausado = true; }
+      else if (bytes[i] === XON) { st.pausado = false; st.xons++; }
+    }
+  }
+  function dormir(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  // Línea a línea, con 10 ms entre líneas: igual que send_design() del escritorio.
+  // Pausado más de maxEsperaMs = error visible (el plotter dijo "espera" y nunca "sigue").
+  async function enviar(escribir, lineas, st, op) {
+    op = op || {};
+    var pausaMs = op.pausaMs == null ? 10 : op.pausaMs;
+    var maxEsperaMs = op.maxEsperaMs == null ? 60000 : op.maxEsperaMs;
+    var progreso = op.progreso || function(){};
+    var cod = new TextEncoder(), bytes = 0;
+    for (var i = 0; i < lineas.length; i++) {
+      var t0 = null;
+      while (st.pausado && !st.detener) {
+        if (t0 === null) t0 = Date.now();
+        if (Date.now() - t0 > maxEsperaMs)
+          throw new Error('El plotter pidió esperar y no reanudó en ' + (maxEsperaMs / 1000) + ' s');
+        await dormir(5);
+      }
+      if (t0 !== null) st.esperaMs += Date.now() - t0;
+      if (st.detener) return { completo: false, enviadas: i, bytes: bytes };
+      var datos = cod.encode(lineas[i] + '\n');
+      await escribir(datos);
+      bytes += datos.length;
+      progreso(i + 1, lineas.length, bytes);
+      if (pausaMs) await dormir(pausaMs);
+    }
+    return { completo: true, enviadas: lineas.length, bytes: bytes };
+  }
+
+  // Igual que PlotterController.abort(): ESC y reiniciar. ⚠️ El 721 lo forma DETRÁS de lo
+  // que ya tiene en su memoria: el paro de verdad es el botón Reset del plotter.
+  function bytesAbortar() {
+    return new Uint8Array([ESC].concat(Array.from(new TextEncoder().encode('IN;\n'))));
+  }
+
+  // Las mismas líneas que send_design(): se parte el HPGL por renglón y se tiran los vacíos.
+  function lineasHpgl(hpgl) {
+    return String(hpgl).split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  }
+
+  // Los mismos comandos que el control manual del escritorio (PlotterController.move_relative,
+  // pen, command). 40 unidades = 1 mm; int() de Python trunca, Math.trunc también.
+  function cmdJog(dir, mm) {
+    var u = Math.trunc(mm * 40);
+    return { up: 'PR0,' + u + ';', down: 'PR0,-' + u + ';', left: 'PR-' + u + ',0;', right: 'PR' + u + ',0;' }[dir] || null;
+  }
+  function cmdPen(down) { return down ? 'PD;' : 'PU;'; }
+  function cmdComando(w) { return { origin: 'PS;', home: 'PU0,0;' }[w] || null; }
+
+  return { XOFF: XOFF, XON: XON, nuevoFlujo: nuevoFlujo, alRecibir: alRecibir, enviar: enviar,
+           bytesAbortar: bytesAbortar, lineasHpgl: lineasHpgl, cmdJog: cmdJog, cmdPen: cmdPen,
+           cmdComando: cmdComando };
+})();
+</script>
 <script>
 (function(){
   var root=document.documentElement;
@@ -3306,18 +3379,112 @@
 
   // ===== Fase 3: Plotter (conexión · control manual · envío) — SIN verificar con hardware =====
   function postJSON(u,b){ return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})}).then(function(r){return r.json();}); }
+  // ===== Plotter desde el NAVEGADOR (Web Serial, Chrome/Edge de escritorio) =====
+  // En la versión web el plotter está en la mesa de quien corta, no junto al servidor: el
+  // navegador le habla directo por el cable USB. El servidor solo arma el HPGL, con el MISMO
+  // build_hpgl() del escritorio. Sin Web Serial (Safari, Firefox, iPad) se usa el camino
+  // viejo: el plotter conectado a la computadora que corre el servidor.
+  var WSP = (function(){
+    var M = PlotterMotor;
+    var puertos = [], port = null, connId = null, baud = 9600, writer = null, reader = null;
+    var st = M.nuevoFlujo();
+    var prog = {active:false, sent:0, total:0, done:false, error:null, cancelled:false};
+    function recordar(k, v){ try{ if(v === undefined) return localStorage.getItem('ds.plotter.'+k); localStorage.setItem('ds.plotter.'+k, String(v)); }catch(e){} return null; }
+    // El navegador no da /dev/cu.usbserial-…: da el fabricante del chip (0x0403 = FTDI, el del 721).
+    function etiqueta(p, i, n){ var f = (p.getInfo && p.getInfo()) || {};
+      return (f.usbVendorId === 0x0403 ? 'Cable USB — FTDI' : 'Cable USB') + (n > 1 ? ' #'+(i+1) : ''); }
+    function status(){ var b = parseInt(recordar('baud'), 10);
+      return {ok:true, connected:!!port, port:connId, baud:baud, has_serial:true,
+              last_port:null, last_baud: b || null}; }
+    function guard(){ return port && writer ? null : {ok:false, error:'Plotter no conectado'}; }
+    function escribir(datos){ return writer.write(typeof datos === 'string' ? new TextEncoder().encode(datos) : datos); }
+    function linea(cmd){ var g = guard(); if(g) return Promise.resolve(g);
+      return escribir(cmd + '\n').then(function(){ return {ok:true}; }, function(e){ return {ok:false, error:String(e && e.message || e)}; }); }
+    async function leer(p){
+      // Solo escucha XON/XOFF. Si el cable se desconecta, la lectura termina sola.
+      try { reader = p.readable.getReader();
+        for(;;){ var r = await reader.read(); if(r.done) break; M.alRecibir(st, r.value); }
+      } catch(e) {} finally { try{ reader && reader.releaseLock(); }catch(e){} reader = null; }
+    }
+    function ports(){ return navigator.serial.getPorts().then(function(ps){ puertos = ps;
+      var items = ps.map(function(p, i){ return {port:'ws:'+i, label:etiqueta(p, i, ps.length), kind:'usb'}; });
+      // Por seguridad el navegador solo deja ver cables a los que TÚ ya diste permiso; los
+      // demás se eligen en la ventanita de Chrome.
+      items.push({port:'ws:nuevo', kind:'nuevo',
+                  label: ps.length ? 'Otro cable… (Chrome te pregunta cuál)' : 'Buscar el plotter… (Chrome te pregunta cuál)'});
+      return {ok:true, items:items, has_serial:true}; }); }
+    function connect(id, b){
+      // requestPort() tiene que llamarse YA, dentro del clic: Chrome no abre la ventanita
+      // si antes se espera otra cosa.
+      var elegir = id === 'ws:nuevo' ? navigator.serial.requestPort()
+                                     : Promise.resolve(puertos[parseInt(String(id).slice(3), 10)]);
+      return elegir.then(function(p){
+        if(!p) throw new Error('Ese cable ya no está: actualiza la lista');
+        return p.open({baudRate:b || 9600, dataBits:8, parity:'none', stopBits:1, flowControl:'none'}).then(function(){ return p; });
+      }).then(function(p){
+        port = p; baud = b || 9600; recordar('baud', baud);
+        st = M.nuevoFlujo(); writer = p.writable.getWriter(); leer(p);
+        return navigator.serial.getPorts().then(function(ps){ puertos = ps;
+          var i = ps.indexOf(p); connId = 'ws:' + i; portLabels[connId] = etiqueta(p, i, ps.length);
+          return escribir('IN;\n'); });   // como el escritorio: reiniciar al conectar
+      }).then(status, function(e){
+        var n = e && e.name;
+        return {ok:false, error: n === 'NotFoundError' ? 'No elegiste ningún cable'
+              : n === 'InvalidStateError' ? 'Ese cable ya está abierto (¿otra pestaña o la app de escritorio?)'
+              : n === 'SecurityError' ? 'El navegador no deja usar el cable desde esta dirección (hace falta https o localhost)'
+              : 'No se pudo conectar: ' + (e && e.message || e)}; });
+    }
+    function disconnect(){ var p = port; port = null; connId = null; st.detener = true;
+      if(!p) return Promise.resolve(status());
+      return Promise.resolve(reader && reader.cancel()).catch(function(){})
+        .then(function(){ try{ writer && writer.releaseLock(); }catch(e){} writer = null; return p.close(); })
+        .catch(function(){}).then(status); }
+    function correr(hpgl){
+      if(prog.active) return {ok:false, error:'Ya hay un envío en curso'};
+      var lineas = M.lineasHpgl(hpgl);
+      st.detener = false; st.pausado = false;
+      prog = {active:true, sent:0, total:lineas.length, done:false, error:null, cancelled:false};
+      M.enviar(escribir, lineas, st, {progreso:function(n){ prog.sent = n; }})
+        .then(function(r){ if(!r.completo) prog.cancelled = true; },
+              function(e){ prog.error = String(e && e.message || e); })
+        .then(function(){ prog.active = false; prog.done = true; });
+      return {ok:true, total:lineas.length};
+    }
+    function hpglDe(promesa){ var g = guard(); if(g) return Promise.resolve(g);
+      if(prog.active) return Promise.resolve({ok:false, error:'Ya hay un envío en curso'});
+      return promesa.then(function(r){ return (r && r.ok) ? correr(r.hpgl) : {ok:false, error:(r && r.error) || 'No se pudo generar el HPGL'}; }); }
+    if(navigator.serial) navigator.serial.addEventListener('disconnect', function(e){
+      if(e.target !== port) return;
+      port = null; connId = null; writer = null; st.detener = true;
+      setConnUI(false); toast('Se desconectó el cable del plotter'); });
+    return {
+      ports: ports, status: function(){ return Promise.resolve(status()); },
+      connect: connect, disconnect: disconnect,
+      jog: function(d, dist){ var c = M.cmdJog(d, parseFloat(dist) || 1); return c ? linea(c) : Promise.resolve({ok:false, error:'Dirección inválida'}); },
+      pen: function(down){ return linea(M.cmdPen(!!down)); },
+      command: function(w){ var c = M.cmdComando(w); return c ? linea(c) : Promise.resolve({ok:false, error:'Comando desconocido'}); },
+      send: function(data){ return hpglDe(postJSON('/api/hpgl', data)); },
+      progress: function(){ var p = {}; for(var k in prog) p[k] = prog[k]; p.ok = true; return Promise.resolve(p); },
+      cancel: function(){ st.detener = true;
+        return (port && writer ? escribir(M.bytesAbortar()) : Promise.resolve()).catch(function(){}).then(function(){ return {ok:true}; }); },
+      testcut: function(){ return hpglDe(fetch('/api/test_square').then(function(r){ return r.json(); })); }
+    };
+  })();
+  // Quién maneja el plotter se decide EN CADA llamada, no al cargar: en la app de escritorio
+  // window.pywebview aparece un poco DESPUÉS de cargar la página.
+  function ws(){ return !api() && navigator.serial ? WSP : null; }
   var P = {
-    ports:      function(){ return api()? api().ports() : fetch('/api/ports').then(function(r){return r.json();}); },
-    status:     function(){ return api()? api().plotter_status() : fetch('/api/status').then(function(r){return r.json();}); },
-    connect:    function(port,baud){ return api()? api().connect(port,baud) : postJSON('/api/connect',{port:port,baud:baud}); },
-    disconnect: function(){ return api()? api().disconnect() : postJSON('/api/disconnect',{}); },
-    jog:        function(d,dist){ return api()? api().jog(d,dist) : postJSON('/api/jog',{direction:d,dist:dist}); },
-    pen:        function(down){ return api()? api().pen(down) : postJSON('/api/pen',{down:down}); },
-    command:    function(w){ return api()? api().command(w) : postJSON('/api/command',{which:w}); },
-    send:       function(data){ return api()? api().send_design(data) : postJSON('/api/send',data); },
-    progress:   function(){ return api()? api().send_progress() : fetch('/api/send_progress').then(function(r){return r.json();}); },
-    cancel:     function(){ return api()? api().cancel() : postJSON('/api/cancel',{}); },
-    testcut:    function(){ return api()? api().test_cut() : postJSON('/api/testcut',{}); }
+    ports:      function(){ return api()? api().ports() : ws()? ws().ports() : fetch('/api/ports').then(function(r){return r.json();}); },
+    status:     function(){ return api()? api().plotter_status() : ws()? ws().status() : fetch('/api/status').then(function(r){return r.json();}); },
+    connect:    function(port,baud){ return api()? api().connect(port,baud) : ws()? ws().connect(port,baud) : postJSON('/api/connect',{port:port,baud:baud}); },
+    disconnect: function(){ return api()? api().disconnect() : ws()? ws().disconnect() : postJSON('/api/disconnect',{}); },
+    jog:        function(d,dist){ return api()? api().jog(d,dist) : ws()? ws().jog(d,dist) : postJSON('/api/jog',{direction:d,dist:dist}); },
+    pen:        function(down){ return api()? api().pen(down) : ws()? ws().pen(down) : postJSON('/api/pen',{down:down}); },
+    command:    function(w){ return api()? api().command(w) : ws()? ws().command(w) : postJSON('/api/command',{which:w}); },
+    send:       function(data){ return api()? api().send_design(data) : ws()? ws().send(data) : postJSON('/api/send',data); },
+    progress:   function(){ return api()? api().send_progress() : ws()? ws().progress() : fetch('/api/send_progress').then(function(r){return r.json();}); },
+    cancel:     function(){ return api()? api().cancel() : ws()? ws().cancel() : postJSON('/api/cancel',{}); },
+    testcut:    function(){ return api()? api().test_cut() : ws()? ws().testcut() : postJSON('/api/testcut',{}); }
   };
   var connected=false, penDown=false, connPort=null;
   function setConnUI(c,port){ connected=c;
@@ -3344,7 +3511,7 @@
     var items=(r&&r.items)||((r&&r.ports)||[]).map(function(p){ return {port:p, label:p, kind:'otro'}; });
     sel.innerHTML='';
     if(!items.length){ sel.innerHTML='<option value="">— sin puertos —</option>'; return; }
-    [['usb','Cables USB'],['otro','Otros (no suelen ser el plotter)']].forEach(function(g){
+    [['usb','Cables USB'],['otro','Otros (no suelen ser el plotter)'],['nuevo','Otro cable']].forEach(function(g){
       var lote=items.filter(function(i){ return i.kind===g[0]; });
       if(!lote.length) return;
       var og=document.createElement('optgroup'); og.label=g[1];
