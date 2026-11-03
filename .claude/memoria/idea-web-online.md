@@ -134,7 +134,8 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   Se escondió porque las rutas atrapan el error y responden **200 con el error adentro**: una
   prueba que solo mira el código HTTP no lo ve — mirar `ok` del cuerpo. La auditoría ahora prueba
   un diseño de ~2 MB y usa un puerto PROPIO (`DS_PORT`): con el 8765 le pegaba al servidor de Jose.
-- ❌ FALTA: probarlo con la interfaz real en Chrome + el plotter (solo probado con cable simulado).
+- ✅ **PROBADO CON EL PLOTTER REAL (2-nov-2026)**: la interfaz completa en Chrome (servidor local)
+  conectó y CORTÓ un diseño de Jose por Web Serial (tras arreglar el 413).
   Sin Web Serial (Safari/Firefox) cae al plotter del servidor y el aviso dice "pyserial…": fase 3.
 
 ## Estado
