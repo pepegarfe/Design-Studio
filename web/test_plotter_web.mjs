@@ -41,10 +41,10 @@ function cableFalso({ vendor = 0x0403 } = {}) {
 }
 
 function montar({ permitidos = [], elegido = null } = {}) {
-  const avisos = [], escuchas = {}, llamadas = [];
+  const avisos = [], escuchas = {}, llamadas = [], pedidos = [];
   const serial = {
     getPorts: async () => permitidos.slice(),
-    requestPort: async () => { if (!elegido) { const e = new Error('nada'); e.name = 'NotFoundError'; throw e; } if (!permitidos.includes(elegido)) permitidos.push(elegido); return elegido; },
+    requestPort: async op => { pedidos.push(op); if (!elegido) { const e = new Error('nada'); e.name = 'NotFoundError'; throw e; } if (!permitidos.includes(elegido)) permitidos.push(elegido); return elegido; },
     addEventListener: (n, f) => { escuchas[n] = f; },
   };
   const respuesta = r => Promise.resolve(r);
@@ -53,6 +53,7 @@ function montar({ permitidos = [], elegido = null } = {}) {
     navigator: { serial },
     localStorage: (() => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = v; } }; })(),
     portLabels: {},
+    ws: () => ctx.WSP,
     setConnUI: c => avisos.push('conn:' + c),
     toast: m => avisos.push('toast:' + m),
     postJSON: (u, b) => { llamadas.push([u, b]); return respuesta(u === '/api/hpgl' ? { ok: true, hpgl: esc.hpgl } : { ok: false }); },
@@ -60,7 +61,7 @@ function montar({ permitidos = [], elegido = null } = {}) {
   };
   vm.createContext(ctx);
   vm.runInContext(motor + '\n' + conector + '\n;globalThis.WSP = WSP; globalThis.M = PlotterMotor;', ctx);
-  return { W: ctx.WSP, M: ctx.M, avisos, escuchas, llamadas, portLabels: ctx.portLabels };
+  return { W: ctx.WSP, M: ctx.M, avisos, escuchas, llamadas, pedidos, permitidos, portLabels: ctx.portLabels };
 }
 
 async function hastaTerminar(W) {
@@ -75,7 +76,7 @@ async function hastaTerminar(W) {
   ok(r.ok && r.items.length === 1 && r.items[0].port === 'ws:nuevo' && /Buscar el plotter/.test(r.items[0].label),
      'sin permisos: la lista solo ofrece "Buscar el plotter…"');
   const s = await W.connect('ws:nuevo', 9600);
-  ok(s.ok === false && s.error === 'No elegiste ningún cable', 'cerrar la ventanita de Chrome sin elegir → mensaje claro: ' + s.error);
+  ok(s.ok === false && /^No elegiste ningún cable\. Si no aparecía.*encendido/.test(s.error), 'cerrar la ventanita de Chrome sin elegir → mensaje claro: ' + s.error);
   const g = await W.jog('right', 1);
   ok(g.ok === false && g.error === 'Plotter no conectado', 'mover sin conectar → "Plotter no conectado", como el escritorio');
 }
@@ -185,6 +186,72 @@ async function hastaTerminar(W) {
   let err = null;
   try { await M.enviar(async () => {}, ['PU0,0;'], st, { maxEsperaMs: 100 }); } catch (e) { err = e; }
   ok(err && /no reanudó/.test(err.message), 'plotter que dice "espera" y nunca "sigue" → error visible, no cuelgue');
+}
+
+// ── 7. conexión de un clic (rápida) y automática ─────────────────────────────
+{
+  const FILTRO = '[{"usbVendorId":1027},{"usbVendorId":6790},{"usbVendorId":1659},{"usbVendorId":4292}]';
+  const cable = cableFalso();
+  const { W, pedidos } = montar({ elegido: cable });
+  const s = await W.rapido(false);
+  ok(s.ok && s.connected && pedidos.length === 1 && JSON.stringify(pedidos[0].filters) === FILTRO,
+     'primera vez: un clic abre la ventanita de Chrome FILTRADA a cables de plotter (FTDI, CH340, Prolific, Silicon Labs)');
+  await W.disconnect();
+  const s2 = await W.rapido(false);
+  ok(s2.ok && s2.connected && pedidos.length === 1, 'segunda vez: conecta directo, SIN ventanita');
+}
+{
+  const { W, pedidos } = montar({ elegido: cableFalso({ vendor: 0x1234 }) });
+  const s = await W.rapido(true);
+  ok(s.ok && pedidos.length === 1 && pedidos[0] === undefined, '"Mostrar todos los cables" abre la ventanita SIN filtro');
+}
+{
+  const ftdi = cableFalso(), otro = cableFalso({ vendor: 0x05ac });
+  const { W, pedidos } = montar({ permitidos: [otro, ftdi] });
+  const s = await W.rapido(false);
+  ok(s.ok && ftdi.abierto && !otro.abierto && pedidos.length === 0, 'con 2 cables permitidos elige solo el que tiene chip de plotter');
+}
+{
+  const a = cableFalso(), b = cableFalso();
+  const { W, pedidos } = montar({ permitidos: [a, b], elegido: b });
+  await W.rapido(false);
+  ok(pedidos.length === 1 && b.abierto && !a.abierto, 'con 2 cables de plotter no adivina: pregunta cuál');
+}
+{
+  const { W, avisos } = montar();
+  const s = await W.auto();
+  ok(s === null && avisos.length === 0, 'al abrir la página sin permisos: no hace nada ni molesta con avisos');
+}
+{
+  const cable = cableFalso();
+  const { W, avisos, pedidos } = montar({ permitidos: [cable] });
+  const s = await W.auto();
+  ok(s && s.ok && cable.abierto && pedidos.length === 0 && avisos.includes('conn:true') && avisos.some(x => /Plotter conectado/.test(x)),
+     'al abrir la página con el plotter ya permitido y enchufado: se conecta solo y avisa');
+  await dormir(5);
+  ok(txt(cable.llegado) === esc.conectar, 'y manda el mismo IN; de arranque que el escritorio');
+}
+{
+  const cable = cableFalso();
+  const { W, escuchas, avisos } = montar({ permitidos: [cable] });
+  escuchas.connect({ target: cable });
+  await dormir(10);
+  ok(cable.abierto && (await W.status()).connected && avisos.some(x => /Plotter conectado/.test(x)),
+     'enchufar el cable con la página abierta: se conecta solo');
+}
+{
+  const cable = cableFalso();
+  await montar({ permitidos: [cable] }).W.auto();
+  const { W, avisos } = montar({ permitidos: [cable] });
+  const s = await W.auto();
+  ok(s && !s.ok && avisos.some(x => /ya está abierto/.test(x)), 'si el cable lo tiene otra pestaña, avisa en vez de quedarse callado');
+}
+{
+  const cable = cableFalso();
+  const { W, pedidos } = montar({ elegido: cable });
+  await W.rapido(false);
+  const s = await W.rapido(false);
+  ok(s.connected && pedidos.length === 1, 'clic de conectar estando ya conectado: no vuelve a abrir nada');
 }
 
 console.log(fallos ? `\n${fallos} FALLA(S)` : '\nTodo OK');

@@ -123,6 +123,12 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   `PlotterService` del escritorio (`web/bytes_escritorio.py`, cable de mentira) en conectar, mover,
   pluma, origen, casa, enviar, test de corte y cancelar; más permisos, otra pestaña, desenchufar,
   doble envío, XON/XOFF. `web/auditar_servidor.py` → 24/24 (cuenta temporales con `TMPDIR` propio).
+- Conectar AMIGABLE (pedido de Jose, 2-nov: "no es nada amigable"): en el navegador la píldora dice
+  "Conectar plotter" y conecta de UN clic (`WSP.rapido`); ventanita de Chrome filtrada a chips de
+  plotter (FTDI 0x0403, CH340 0x1a86, Prolific 0x067b, Silicon Labs 0x10c4; "Mostrar todos los
+  cables" sin filtro); con permiso previo conecta solo al abrir la página o al enchufar (`WSP.auto`,
+  evento `connect`); puerto/baudios bajo "Opciones avanzadas"; "Enviar" sin conexión conecta y sigue.
+  La 1.ª ventanita de Chrome NO se puede quitar (seguridad del navegador). Escritorio sin cambios.
 - ❌ FALTA: probarlo con la interfaz real en Chrome + el plotter (solo probado con cable simulado).
   Sin Web Serial (Safari/Firefox) cae al plotter del servidor y el aviso dice "pyserial…": fase 3.
 
