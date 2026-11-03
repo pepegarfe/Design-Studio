@@ -26,7 +26,13 @@ for _n in os.listdir(_REPO):
     if _n.endswith(('.py', '.json', '.html', '.js')) or _n in ('version.txt',):
         shutil.copy2(os.path.join(_REPO, _n), COPIA)
 shutil.copytree(os.path.join(_REPO, 'vendor'), os.path.join(COPIA, 'vendor'))
-BASE = 'http://127.0.0.1:8765'
+# Puerto PROPIO y libre: si se usara el 8765 y Jose tiene su servidor abierto, las pruebas le
+# pegarían al SUYO (con su configuración real) sin darse cuenta. Pasó el 2-nov-2026.
+import socket
+with socket.socket() as _s:
+    _s.bind(('127.0.0.1', 0))
+    PUERTO = _s.getsockname()[1]
+BASE = f'http://127.0.0.1:{PUERTO}'
 sys.path.insert(0, COPIA)
 os.chdir(COPIA)
 
@@ -83,13 +89,19 @@ PNG = ip.get_pixmap(dpi=72).tobytes('png')
 TEMPS = os.path.join(COPIA, '_temporales')
 os.makedirs(TEMPS)
 srv = subprocess.Popen([sys.executable, 'studio_server.py'], cwd=COPIA,
-                       env=dict(os.environ, TMPDIR=TEMPS),
+                       env=dict(os.environ, TMPDIR=TEMPS, DS_PORT=str(PUERTO)),
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 for _ in range(60):
+    if srv.poll() is not None:
+        break   # el servidor de la prueba murió: no seguir contra quién sabe qué
     try:
         urllib.request.urlopen(BASE + '/api/workarea', timeout=1); break
     except Exception:
         time.sleep(0.25)
+if srv.poll() is not None:
+    print('FALLA el servidor de la prueba no arrancó:\n' + srv.stdout.read().decode(errors='replace')[-1500:])
+    shutil.rmtree(COPIA, ignore_errors=True)
+    sys.exit(1)
 
 try:
     import plotter_control as core
@@ -117,6 +129,17 @@ try:
     web = pedir('/api/hpgl', datos)
     import studio_backend as be
     ok(web.get('ok') and web['hpgl'] == be.build_hpgl(datos), 'HPGL idéntico al que corta el escritorio', f"{web.get('bytes')} bytes")
+    # Un diseño GRANDE (≈2 MB). Se revisa la RESPUESTA, no solo que conteste: el servidor
+    # atrapa sus errores y responde 200 con el error adentro (así se escondió el 413).
+    grande = {'paths': [[[i * 0.1, 0.0], [i * 0.1, 10.0], [i * 0.1 + 0.05, 10.0]] for i in range(35000)],
+              'speed': 300, 'pressure': 120}
+    tam = len(json.dumps(grande)) // 1024
+    web = pedir('/api/hpgl', grande)
+    ok(web.get('ok') and web['hpgl'] == be.build_hpgl(grande), f'HPGL de un diseño grande ({tam} KB) idéntico al escritorio', web.get('error') or f"{web.get('bytes')} bytes")
+    ct, cuerpo = pedir('/api/export', {'format': 'svg', 'paths': grande['paths'], 'name': 'grande'}, crudo=True)
+    ok(b'<svg' in cuerpo[:400], f'exportar un diseño grande ({tam} KB)', f'{len(cuerpo)} bytes' if b'<svg' in cuerpo[:400] else cuerpo[:150])
+    gs = pedir('/api/autosave_save', {'objects': [{'pts': p} for p in grande['paths']]})
+    ok(gs.get('ok') is not False, f'autoguardar un diseño grande ({tam} KB)', gs.get('error') or 'guardado')
     sq = pedir('/api/test_square')
     ok(sq.get('ok') and sq['hpgl'] == be.test_square_hpgl(10), 'cuadrado del test de corte idéntico al del escritorio', f"{sq.get('bytes')} bytes")
 

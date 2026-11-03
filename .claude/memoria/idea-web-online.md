@@ -129,6 +129,11 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   cables" sin filtro); con permiso previo conecta solo al abrir la página o al enchufar (`WSP.auto`,
   evento `connect`); puerto/baudios bajo "Opciones avanzadas"; "Enviar" sin conexión conecta y sigue.
   La 1.ª ventanita de Chrome NO se puede quitar (seguridad del navegador). Escritorio sin cambios.
+- **413 al Enviar** (2-nov, primera prueba real en Chrome): bottle rechaza pedidos >100 KB
+  (`MEMFILE_MAX`) y afectaba a TODA ruta con diseño grande. Subido a 200 MB en `studio_server.py`.
+  Se escondió porque las rutas atrapan el error y responden **200 con el error adentro**: una
+  prueba que solo mira el código HTTP no lo ve — mirar `ok` del cuerpo. La auditoría ahora prueba
+  un diseño de ~2 MB y usa un puerto PROPIO (`DS_PORT`): con el 8765 le pegaba al servidor de Jose.
 - ❌ FALTA: probarlo con la interfaz real en Chrome + el plotter (solo probado con cable simulado).
   Sin Web Serial (Safari/Firefox) cae al plotter del servidor y el aviso dice "pyserial…": fase 3.
 

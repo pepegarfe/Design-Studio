@@ -13,7 +13,7 @@ import json
 import tempfile
 import socket
 
-from bottle import Bottle, static_file, request, response, HTTPResponse
+from bottle import Bottle, BaseRequest, static_file, request, response, HTTPResponse
 
 from studio_backend import (SERVICE, set_workarea as _set_workarea,
                             cnc_get as _cnc_get, cnc_set as _cnc_set,
@@ -28,8 +28,13 @@ import updater
 import export_ops as exporter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PORT = 8765
+PORT = int(os.environ.get('DS_PORT', 8765))   # otro puerto: lo usa web/auditar_servidor.py
 app = Bottle()
+# ⚠️ bottle rechaza por defecto todo pedido de más de 100 KB (error 413), y un diseño real lo
+# pasa fácil: "Enviar al plotter" fallaba (caso real 2-nov-2026). Y como las rutas atrapan el
+# error, respondían 200 con el 413 escondido en el mensaje. En internet este tope protege al
+# servidor de pedidos gigantes: revisarlo en la fase de seguridad.
+BaseRequest.MEMFILE_MAX = 200 * 1024 * 1024
 
 
 def _workarea():
