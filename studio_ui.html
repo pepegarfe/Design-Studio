@@ -978,6 +978,12 @@ var PlotterMotor = (function(){
 </script>
 <script>
 (function(){
+  // Versión web: si la sesión venció, cualquier pedido al servidor responde 401 → a la
+  // pantalla de entrada, en vez de fallar callado en cada botón. El escritorio no usa fetch
+  // para hablar con Python (usa window.pywebview), así que no le afecta.
+  if(window.fetch && location.protocol.indexOf('http')===0){ var fetch0=window.fetch;
+    window.fetch=function(){ return fetch0.apply(this,arguments).then(function(r){
+      if(r.status===401) location.href='/entrar'; return r; }); }; }
   var root=document.documentElement;
   var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
   function cvar(n){return getComputedStyle(root).getPropertyValue(n).trim();}
@@ -3585,7 +3591,7 @@ var PlotterMotor = (function(){
     P.status().then(function(s){ if(s&&s.ok){ setConnUI(!!s.connected,s.port);
         lastPort=s.last_port||null;
         if(s.last_baud) el('baudSel').value=String(s.last_baud);
-        if(!s.has_serial) toast('pyserial no disponible en este Python'); }
+        if(!s.has_serial) toast(s.aviso||'pyserial no disponible en este Python'); }
       refreshPorts(s&&(s.port||s.last_port)); })
      .catch(function(){ refreshPorts(); }); }
   // ===== Conectar en el navegador: un clic, y solo de ahí en adelante =====
@@ -5133,6 +5139,7 @@ var PlotterMotor = (function(){
       el('upCur').textContent='v '+((r&&r.current)||'—');
       upChip(r);
       if(!r||!r.ok){ el('upMsg').textContent=(r&&r.error)||'No se pudo consultar GitHub.'; return; }
+      if(r.web){ el('upMsg').innerHTML='Estás usando la <b>versión web</b>: siempre es la más reciente, no hay nada que instalar.<br><br><a href="/salir">Cerrar sesión</a>'; return; }
       if(r.dev){ el('upMsg').innerHTML='Estás corriendo Design Studio <b>desde el código</b> (modo desarrollo): aquí se actualiza con <b>git pull</b>, no con el instalador.<br><br>Última publicada: <b>'+(r.latest||'—')+'</b>'; return; }
       if(!r.newer){ el('upMsg').innerHTML='Ya tienes la versión más reciente (<b>'+r.current+'</b>).'; return; }
       var mb = r.size? ' · '+Math.round(r.size/1048576)+' MB' : '';

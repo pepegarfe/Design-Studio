@@ -138,6 +138,25 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   conectó y CORTÓ un diseño de Jose por Web Serial (tras arreglar el 413).
   Sin Web Serial (Safari/Firefox) cae al plotter del servidor y el aviso dice "pyserial…": fase 3.
 
+## Fase 3 HECHA en código (2-nov-2026): seguridad
+- **Entrar con contraseña** (`web_auth.py`): cuentas en `datos_web/usuarios.json` (gitignored; `DS_DATOS`
+  la mueve), solo la huella PBKDF2 (600k vueltas); cookie `ds_sesion` firmada HMAC (llave en
+  `datos_web/secreto.key` o `DS_SECRETO`), HttpOnly + SameSite=Lax (+ Secure en https), 30 días.
+  La **1.ª cuenta solo desde localhost** y sin `X-Forwarded-For`; después `/crear` queda cerrado
+  (más cuentas = fase 4). 8 fallos → 15 min de bloqueo por dirección (`DS_PROXY=1` para creerle
+  a X-Forwarded-For detrás de Railway). Mismo mensaje si el usuario no existe.
+- La guardia va **por fuera de bottle** (`_guardia`, WSGI): ninguna ruta nueva queda abierta por
+  olvido. También corta pedidos >64 MB y agrega cabeceras (nosniff, X-Frame-Options DENY).
+  ⚠️ Solo la aplica `main()`: importar `app` en otro lado la salta.
+- Huecos cerrados: `/api/text` aceptaba CUALQUIER archivo como fuente (ahora solo los de la lista);
+  `update_start` descargaba CUALQUIER URL y `update_apply` (ahora la web no se actualiza:
+  "siempre la más reciente"); plotter en el servidor APAGADO (`DS_PLOTTER_SERVIDOR=1` lo prende),
+  con aviso "usa Chrome o Edge" en vez de "pyserial…"; nombre de exportación saneado.
+- UI: fetch con 401 → `/entrar`; "Cerrar sesión" en el diálogo de versión (web).
+- `web/auditar_servidor.py` → **59/59** (32 de seguridad nuevas). Sin salir: la cookie robada vale
+  hasta que vence (no hay lista de sesiones; cambiar `v` del usuario las mata todas).
+- Pendiente para publicar: HTTPS (fase 5), servidor de varios a la vez, datos por usuario (fase 4).
+
 ## Estado
 Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso
 multi-dispositivo. Relacionado: [[estado]].

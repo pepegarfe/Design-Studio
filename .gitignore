@@ -23,3 +23,6 @@ arranque.log
 studio.ico
 studio.icns
 vendor/
+
+# Cuentas y llave de sesión de la versión web (web_auth.py). NUNCA a git.
+datos_web/

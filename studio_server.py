@@ -12,8 +12,10 @@ import os
 import json
 import tempfile
 import socket
+import re
+import http.cookies
 
-from bottle import Bottle, BaseRequest, static_file, request, response, HTTPResponse
+from bottle import Bottle, BaseRequest, static_file, request, response, HTTPResponse, redirect
 
 from studio_backend import (SERVICE, set_workarea as _set_workarea,
                             cnc_get as _cnc_get, cnc_set as _cnc_set,
@@ -26,6 +28,7 @@ import curve_fit as fitter
 import nest_ops as nester
 import updater
 import export_ops as exporter
+import web_auth as auth
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get('DS_PORT', 8765))   # otro puerto: lo usa web/auditar_servidor.py
@@ -34,7 +37,15 @@ app = Bottle()
 # pasa fácil: "Enviar al plotter" fallaba (caso real 2-nov-2026). Y como las rutas atrapan el
 # error, respondían 200 con el 413 escondido en el mensaje. En internet este tope protege al
 # servidor de pedidos gigantes: revisarlo en la fase de seguridad.
-BaseRequest.MEMFILE_MAX = 200 * 1024 * 1024
+LIMITE = 64 * 1024 * 1024   # ningún pedido pasa de 64 MB (un diseño grande real pesa 1–5 MB)
+BaseRequest.MEMFILE_MAX = LIMITE
+
+# El control del plotter DESDE EL SERVIDOR (para un navegador sin Web Serial, p. ej. un iPad
+# en la red del taller) va APAGADO: en internet el plotter está en la mesa de quien corta, no
+# junto al servidor, y es una puerta de más. Se prende con DS_PLOTTER_SERVIDOR=1.
+PLOTTER_EN_SERVIDOR = os.environ.get('DS_PLOTTER_SERVIDOR') == '1'
+SIN_PLOTTER = ('Para conectar el plotter abre Design Studio en Chrome o Edge de computadora: '
+               'Safari, Firefox y el iPad no pueden usar el cable USB.')
 
 
 def _workarea():
@@ -44,6 +55,68 @@ def _workarea():
 def _json(obj, status=200):
     return HTTPResponse(body=json.dumps(obj), status=status,
                         headers={'Content-Type': 'application/json; charset=utf-8'})
+
+
+# ── Entrar / salir (web_auth.py) ──────────────────────────────────────────────
+def _es_https():
+    e = request.environ
+    return e.get('wsgi.url_scheme') == 'https' or (auth.DETRAS_DE_PROXY and e.get('HTTP_X_FORWARDED_PROTO') == 'https')
+
+
+def _abrir_sesion(usuario):
+    response.set_cookie(auth.COOKIE, auth.emitir_sesion(usuario), max_age=auth.DURACION, path='/',
+                        httponly=True, samesite='lax', secure=_es_https())
+    redirect('/')
+
+
+def _pantalla(modo, mensaje='', usuario='', status=200):
+    return HTTPResponse(body=auth.pagina(modo, mensaje, usuario), status=status,
+                        headers={'Content-Type': 'text/html; charset=utf-8'})
+
+
+def _modo_sin_sesion():
+    if auth.hay_cuentas():
+        return 'entrar'
+    return 'crear' if auth.es_esta_computadora(request.environ) else 'cerrado'
+
+
+@app.get('/entrar')
+def entrar_get():
+    if auth.usuario_de(request.get_cookie(auth.COOKIE)):
+        redirect('/')
+    return _pantalla(_modo_sin_sesion())
+
+
+@app.post('/entrar')
+def entrar_post():
+    if not auth.hay_cuentas():
+        return _pantalla(_modo_sin_sesion())
+    usuario = (request.forms.getunicode('usuario') or '').strip().lower()
+    err = auth.intentar_entrar(request.environ, usuario, request.forms.getunicode('clave') or '')
+    if err:
+        return _pantalla('entrar', err, usuario, 401)
+    _abrir_sesion(usuario)
+
+
+@app.post('/crear')
+def crear_post():
+    # Solo la PRIMERA cuenta, y solo desde esta computadora. Las demás se darán de alta en la fase 4.
+    if auth.hay_cuentas() or not auth.es_esta_computadora(request.environ):
+        return _pantalla(_modo_sin_sesion(), 'No se puede crear la cuenta desde aquí.', status=403)
+    usuario = (request.forms.getunicode('usuario') or '').strip().lower()
+    clave = request.forms.getunicode('clave') or ''
+    if clave != (request.forms.getunicode('clave2') or ''):
+        return _pantalla('crear', 'Las dos contraseñas no son iguales.', usuario, 400)
+    err = auth.crear_cuenta(usuario, clave)
+    if err:
+        return _pantalla('crear', err, usuario, 400)
+    _abrir_sesion(usuario)
+
+
+@app.get('/salir')
+def salir():
+    response.delete_cookie(auth.COOKIE, path='/')
+    redirect('/entrar')
 
 
 @app.get('/')
@@ -141,7 +214,13 @@ def api_fonts():
 
 @app.post('/api/text')
 def api_text():
-    return _json(texter.text_paths(request.json or {}))
+    d = request.json or {}
+    # Solo fuentes de la lista: si no, se le podía pasar CUALQUIER archivo del servidor como
+    # "fuente" y, por el mensaje de error, saber si existe.
+    lista = texter.list_fonts().get('fonts') or []
+    if d.get('path') not in {f.get('path') for f in lista}:
+        return _json({'ok': False, 'error': 'Esa fuente no está en la lista de fuentes.'})
+    return _json(texter.text_paths(d))
 
 
 @app.post('/api/boolean')
@@ -203,32 +282,37 @@ def api_export():
         return _json(r)
     tipos = {'png': 'image/png', 'jpg': 'image/jpeg', 'pdf': 'application/pdf',
              'svg': 'image/svg+xml', 'dxf': 'application/dxf'}
-    name = (d.get('name') or 'diseno').rsplit('.', 1)[0] + '.' + r['ext']
+    # Sin comillas ni saltos de línea: el nombre va dentro de una cabecera de la respuesta.
+    base = re.sub(r'[^\w .()-]', '_', str(d.get('name') or 'diseno').rsplit('.', 1)[0])[:80].strip() or 'diseno'
+    name = base + '.' + r['ext']
     return HTTPResponse(body=r['bytes'], status=200, headers={
         'Content-Type': tipos.get(r['ext'], 'application/octet-stream'),
         'Content-Disposition': f'attachment; filename="{name}"'})
 
 
+# La versión web no se instala ni se actualiza sola: siempre es la que corre el servidor.
+# Antes, update_start descargaba CUALQUIER dirección que se le pasara.
+_SIN_UPDATE = {'ok': False, 'error': 'La versión web no se instala: siempre es la más reciente.'}
+
+
 @app.get('/api/update_check')
 def api_update_check():
-    return _json(updater.check())
+    return _json({'ok': True, 'web': True, 'newer': False, 'current': updater.current_version()})
 
 
 @app.post('/api/update_start')
 def api_update_start():
-    return _json(updater.start((request.json or {}).get('url')))
+    return _json(_SIN_UPDATE)
 
 
 @app.post('/api/update_status')
 def api_update_status():
-    return _json(updater.status((request.json or {}).get('job')))
+    return _json(_SIN_UPDATE)
 
 
 @app.post('/api/update_apply')
 def api_update_apply():
-    # En modo web el servidor NO se auto-reemplaza (updater.apply se niega si no es
-    # la app compilada); la respuesta explica que se actualiza con git pull.
-    return _json(updater.apply((request.json or {}).get('job')))
+    return _json(_SIN_UPDATE)
 
 
 @app.post('/api/autosave_save')
@@ -291,54 +375,63 @@ def api_test_square():
     return _json({'ok': True, 'hpgl': hpgl, 'lines': hpgl.count('\n') + 1, 'bytes': len(hpgl)})
 
 
-# ── Plotter (Fase 3 — SIN verificar con hardware) ───────────────────────────────
+# ── Plotter conectado AL SERVIDOR (apagado por defecto: ver PLOTTER_EN_SERVIDOR) ──
+def _plotter(f, *a):
+    return _json(f(*a) if PLOTTER_EN_SERVIDOR else {'ok': False, 'error': SIN_PLOTTER})
+
+
 @app.get('/api/ports')
 def api_ports():
+    if not PLOTTER_EN_SERVIDOR:
+        return _json({'ok': True, 'ports': [], 'items': [], 'has_serial': False, 'aviso': SIN_PLOTTER})
     return _json(SERVICE.ports())
 
 @app.get('/api/status')
 def api_status():
+    if not PLOTTER_EN_SERVIDOR:
+        return _json({'ok': True, 'connected': False, 'port': None, 'has_serial': False,
+                      'last_port': None, 'last_baud': None, 'aviso': SIN_PLOTTER})
     return _json(SERVICE.status())
 
 @app.post('/api/connect')
 def api_connect():
     d = request.json or {}
-    return _json(SERVICE.connect(d.get('port'), d.get('baud', 9600)))
+    return _plotter(SERVICE.connect, d.get('port'), d.get('baud', 9600))
 
 @app.post('/api/disconnect')
 def api_disconnect():
-    return _json(SERVICE.disconnect())
+    return _plotter(SERVICE.disconnect)
 
 @app.post('/api/jog')
 def api_jog():
     d = request.json or {}
-    return _json(SERVICE.jog(d.get('direction'), d.get('dist', 1)))
+    return _plotter(SERVICE.jog, d.get('direction'), d.get('dist', 1))
 
 @app.post('/api/pen')
 def api_pen():
     d = request.json or {}
-    return _json(SERVICE.pen(bool(d.get('down'))))
+    return _plotter(SERVICE.pen, bool(d.get('down')))
 
 @app.post('/api/command')
 def api_command():
     d = request.json or {}
-    return _json(SERVICE.command(d.get('which')))
+    return _plotter(SERVICE.command, d.get('which'))
 
 @app.post('/api/send')
 def api_send():
-    return _json(SERVICE.send_design(request.json or {}))
+    return _plotter(SERVICE.send_design, request.json or {})
 
 @app.get('/api/send_progress')
 def api_send_progress():
-    return _json(SERVICE.progress())
+    return _plotter(SERVICE.progress)
 
 @app.post('/api/cancel')
 def api_cancel():
-    return _json(SERVICE.cancel())
+    return _plotter(SERVICE.cancel)
 
 @app.post('/api/testcut')
 def api_testcut():
-    return _json(SERVICE.test_cut())
+    return _plotter(SERVICE.test_cut)
 
 
 def _lan_ip():
@@ -352,6 +445,48 @@ def _lan_ip():
         return '127.0.0.1'
 
 
+PUBLICAS = ('/entrar', '/crear', '/salir')
+SEGURIDAD = [('X-Content-Type-Options', 'nosniff'),   # el navegador no "adivina" tipos de archivo
+             ('X-Frame-Options', 'DENY'),             # nadie puede meter la app dentro de otra página
+             ('Referrer-Policy', 'same-origin')]
+
+
+def _guardia(wsgi):
+    """Antes de bottle: sin sesión válida no se llega a NINGUNA ruta (salvo entrar/salir).
+    Va por fuera de bottle para que ninguna ruta nueva se quede sin protección por olvido."""
+    def con_guardia(environ, start_response):
+        def responder(status, headers, exc_info=None):
+            return start_response(status, list(headers) + SEGURIDAD, exc_info)
+
+        def corto(status, tipo, cuerpo, extra=()):
+            responder(status, [('Content-Type', tipo), ('Content-Length', str(len(cuerpo)))] + list(extra))
+            return [cuerpo]
+
+        ruta = environ.get('PATH_INFO') or '/'
+        if ruta not in PUBLICAS:
+            try:
+                c = http.cookies.SimpleCookie(environ.get('HTTP_COOKIE') or '')
+                token = c[auth.COOKIE].value if auth.COOKIE in c else None
+            except http.cookies.CookieError:
+                token = None
+            usuario = auth.usuario_de(token)
+            if not usuario:
+                if ruta.startswith('/api/'):
+                    return corto('401 Unauthorized', 'application/json; charset=utf-8', json.dumps(
+                        {'ok': False, 'login': True, 'error': 'Tu sesión terminó: vuelve a entrar.'}).encode('utf-8'))
+                return corto('302 Found', 'text/plain', b'', [('Location', '/entrar')])
+            environ['ds.usuario'] = usuario
+        try:
+            largo = int(environ.get('CONTENT_LENGTH') or 0)
+        except ValueError:
+            largo = 0
+        if largo > LIMITE:
+            return corto('413 Request Entity Too Large', 'application/json; charset=utf-8', json.dumps(
+                {'ok': False, 'error': f'Es demasiado grande (más de {LIMITE // 1048576} MB).'}).encode('utf-8'))
+        return wsgi(environ, responder)
+    return con_guardia
+
+
 def main():
     import threading
     threading.Thread(target=texter.list_fonts, daemon=True).start()   # calienta el caché de fuentes
@@ -360,7 +495,7 @@ def main():
     print(f"  · esta Mac:        http://localhost:{PORT}")
     print(f"  · otros dispositivos (misma red): http://{ip}:{PORT}")
     from bottle import run
-    run(app, host='0.0.0.0', port=PORT, quiet=True)
+    run(_guardia(app), host='0.0.0.0', port=PORT, quiet=True)
 
 
 if __name__ == '__main__':
