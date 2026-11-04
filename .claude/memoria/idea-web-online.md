@@ -1,14 +1,13 @@
 ---
 name: idea-web-online
-description: Idea guardada — Design Studio como app web local multi-dispositivo (prototipo funcional, en pausa)
+description: Design Studio en el navegador — plan de 5 fases EN MARCHA (fases 1-3 probadas por Jose; fase 4 en código, sin probar por él)
 metadata:
   type: project
 ---
 
-# Idea: Design Studio "online" (app web local) — EN PAUSA
+# Design Studio "online" — EN MARCHA desde el 2-nov-2026
 
-Explorada el 21-jul-2026 y **pausada por decisión de Jose** para seguir con la plataforma real.
-Se guarda porque el prototipo **funciona** y quizá se retome.
+Explorada el 21-jul-2026 y pausada; retomada el 2-nov-2026 con el plan de abajo. Estado actual: al final.
 
 ## Qué quería Jose
 Abrir Design Studio **desde varios dispositivos** (laptop, tablet, teléfono) y **sin instalar nada**.
@@ -157,6 +156,33 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   hasta que vence (no hay lista de sesiones; cambiar `v` del usuario las mata todas).
 - Pendiente para publicar: HTTPS (fase 5), servidor de varios a la vez, datos por usuario (fase 4).
 
+## Fase 4 EN CÓDIGO (4-nov-2026) — ⏳ falta que Jose la pruebe y la decisión de fuentes
+- **Datos por cuenta**: `datos_web/usuarios/<usuario>/` (fresas, tarifas, área, autoguardado). El calco
+  y los acomodos también son por cuenta. Reglas para tocar esto: `.claude/rules/servidor-web.md`.
+- **Herencia**: la cuenta del dueño nace con una COPIA de `plotter_config.json`, `cnc_config.json` y
+  `autosave.dstudio` de la carpeta del proyecto. ⇒ desde ahí, lo que Jose cambie en la web NO llega
+  al escritorio ni al revés. La copia buena era la del proyecto (fresa 2 filos MDF a 1270); la de la
+  app instalada (`~/Library/Application Support/Antike/PlotterController/`) sigue en 4000 de fábrica.
+- **Cuentas**: dueño = la primera del archivo. `/cuentas` (solo él): alta con contraseña temporal,
+  restablecer, desactivar (saca al instante, conserva los datos). `/clave`: cualquiera cambia la
+  suya; con temporal nada funciona hasta cambiarla. Enlaces en el diálogo de versión de la interfaz.
+  Las cuentas NO se borran desde la app.
+- **Varios a la vez**: waitress si está instalado, si no el servidor con hilos de Python. waitress
+  NO está en la Mac (Python de Homebrew protegido); se probó instalado aparte. Hay que meterlo en
+  las dependencias al publicar.
+- **Fuentes**: `DS_FUENTES=<carpeta>` hace que solo se ofrezca ese catálogo. Falta decidir cuál.
+- **Auditoría 116/116 con los dos servidores**. Se quitó cada protección en una copia (10 casos) y
+  la auditoría las detectó todas. Lo que delató el fallo de waitress fue correrla con los dos.
+- ⚠️ `node web/test_plotter_web.mjs`: 1 FALLA ("plotter que pide pausas: 0 pausas") que ya estaba
+  antes de la fase 4 (misma falla en el commit b0c3c8e). Sin investigar; el plotter real no pide pausas.
+
+## Pendiente para publicar (fase 5)
+- `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las
+  cuentas y el trabajo de los clientes. Fijar `DS_DATOS` y `DS_PROXY=1`.
+- ⚠️ Sin comprobar: `plotter_control.py` importa `tkinter` al inicio; un servidor Linux podría no
+  tenerlo y el programa no arrancaría.
+- Sin tope de acomodos simultáneos por cuenta: uno podría acaparar el procesador.
+- `/api/fonts` entrega rutas completas del servidor (con un catálogo propio ya no dicen nada de la Mac).
+
 ## Estado
-Prototipo web funcional en `studio_server.py` + `studio_ui.html`. Se retoma si Jose quiere el acceso
-multi-dispositivo. Relacionado: [[estado]].
+Fases 1, 2 y 3 probadas por Jose. Fase 4 en código y auditada. Relacionado: [[estado]].
