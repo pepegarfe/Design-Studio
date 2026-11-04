@@ -171,10 +171,22 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   NO está en la Mac (Python de Homebrew protegido); se probó instalado aparte. Hay que meterlo en
   las dependencias al publicar.
 - **Fuentes**: `DS_FUENTES=<carpeta>` hace que solo se ofrezca ese catálogo. Falta decidir cuál.
-- **Auditoría 116/116 con los dos servidores**. Se quitó cada protección en una copia (10 casos) y
+- **Auditoría con los dos servidores** (116/116 al cerrar esto; 143/143 con la prueba sin cuenta). Se quitó cada protección en una copia (10 casos) y
   la auditoría las detectó todas. Lo que delató el fallo de waitress fue correrla con los dos.
-- ⚠️ `node web/test_plotter_web.mjs`: 1 FALLA ("plotter que pide pausas: 0 pausas") que ya estaba
-  antes de la fase 4 (misma falla en el commit b0c3c8e). Sin investigar; el plotter real no pide pausas.
+- ⚠️ `node web/test_plotter_web.mjs`: falla intermitente "plotter que pide pausas: 0 pausas"; también
+  salió en el commit b0c3c8e, anterior a la fase 4. El plotter real no pide pausas.
+
+## Prueba sin cuenta (4-nov-2026, pedido de Jose: "ingreso fácil... donde no se guarden parámetros")
+- Botón "Probar sin cuenta" en `/entrar` (`POST /invitado`, sin contraseña). Cada visitante tiene su
+  carpeta en `datos_web/invitados/`: los ajustes valen mientras dura la prueba y se borran al salir,
+  a las 2 h o al reiniciar. Empieza siempre con valores de fábrica; autoguardado desactivado; el
+  navegador no recuerda los baudios. Interpretación mía: Jose no pidió una cuenta compartida.
+- Sin la carpeta la cookie deja de valer, así que salir la mata aunque alguien la haya copiado.
+- Topes por ser público: 20 pruebas a la vez, 10 nuevas por dirección cada 15 min, 1 acomodo a la vez
+  por visitante. `DS_INVITADOS=0` quita el botón.
+- ⚠️ DECIDIR ANTES DE PUBLICAR: cualquiera de internet podrá usar el procesador sin contraseña.
+- Falla "plotter que pide pausas" de `test_plotter_web.mjs`: INTERMITENTE. Salió 2 veces y luego
+  pasó limpio 9 seguidas sin que se tocara esa parte; causa sin investigar.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las
