@@ -633,6 +633,48 @@ print(json.dumps(r))
     ok(r.get('valida') and r.get('vencida_rechazada') and r.get('purgadas') == 20, 'a las 2 horas la cookie deja de valer y la carpeta se borra', sal.stderr[-200:])
     ok(r.get('todas') and r.get('cuentas') == ['dueno'], 'reiniciar borra todas las pruebas y ninguna cuenta real')
 
+    # Y. TÚNEL DE CLOUDFLARE — con las cabeceras MEDIDAS en un túnel real (5-nov-2026): todo
+    # llega desde 127.0.0.1, CF-Connecting-IP = el visitante (Cloudflare da 403 si alguien la
+    # inventa) y X-Forwarded-For = lo que el visitante quiera poner + su dirección real al final.
+    def tunel(real, inventada=None):
+        return {'CF-Connecting-IP': real, 'X-Forwarded-Proto': 'https',
+                'X-Forwarded-For': (inventada + ',' if inventada else '') + real}
+    for i in range(8):   # el atacante inventa una dirección distinta en CADA intento
+        formulario('/entrar', {'usuario': 'jose', 'clave': 'adivinando'}, tunel('198.51.100.7', f'1.1.1.{i}'))
+    st, h, cuerpo = formulario('/entrar', {'usuario': 'jose', 'clave': CLAVE}, tunel('198.51.100.7', '1.1.1.99'))
+    ok(st == 401 and 'Demasiados intentos'.encode() in cuerpo,
+       'por el túnel: inventar una dirección por intento NO esquiva el bloqueo de 8 fallos', str(st))
+    st, h, cuerpo = formulario('/entrar', {'usuario': 'jose', 'clave': CLAVE}, tunel('203.0.113.50'))
+    ok(st in (302, 303) and 'Secure' in (h.get('Set-Cookie') or ''),
+       'el atacante bloqueado NO deja fuera a otro visitante del túnel, y su cookie va marcada solo-https',
+       f'{st} · {h.get("Set-Cookie", "")[:80]}')
+    st, h, cuerpo = formulario('/entrar', {'usuario': 'jose', 'clave': CLAVE})
+    ok(st in (302, 303), 'ni al dueño en esta Mac (antes, todo el túnel era "127.0.0.1" y uno bloqueaba a todos)', str(st))
+    guion_ip = r'''
+import json, web_auth as a
+L = {"REMOTE_ADDR": "127.0.0.1"}
+casos = {
+  "tunel": a.direccion(dict(L, HTTP_CF_CONNECTING_IP="198.51.100.7", HTTP_X_FORWARDED_FOR="6.6.6.6, 198.51.100.7")),
+  "cf_desde_wifi": a.direccion({"REMOTE_ADDR": "192.168.1.5", "HTTP_CF_CONNECTING_IP": "6.6.6.6"}),
+  "proxy_inventada": a.direccion({"REMOTE_ADDR": "10.0.0.2", "HTTP_X_FORWARDED_FOR": "6.6.6.6, 198.51.100.8"}),
+  "local_tunel": a.es_esta_computadora(dict(L, HTTP_CF_CONNECTING_IP="198.51.100.7")),
+  "local_de_verdad": a.es_esta_computadora(dict(L)),
+}
+print(json.dumps(casos))
+'''
+    for proxy in ('0', '1'):
+        sal = subprocess.run([sys.executable, '-c', guion_ip], cwd=COPIA, env=dict(os.environ, DS_PROXY=proxy),
+                             capture_output=True, text=True, timeout=60)
+        try:
+            c = json.loads(sal.stdout.strip().splitlines()[-1])
+        except Exception:
+            c = {}
+        ok(c.get('tunel') == '198.51.100.7' and c.get('cf_desde_wifi') == '192.168.1.5'
+           and c.get('local_tunel') is False and c.get('local_de_verdad') is True
+           and c.get('proxy_inventada') == ('198.51.100.8' if proxy == '1' else '10.0.0.2'),
+           f'DS_PROXY={proxy}: dirección real por túnel/proxy, CF inventada desde el WiFi ignorada, '
+           'el túnel nunca es "esta computadora"', str(c) or sal.stderr[-200:])
+
     # Z. fuerza bruta (al final: deja bloqueada la dirección de la prueba)
     for _ in range(8):
         formulario('/entrar', {'usuario': 'jose', 'clave': 'adivinando'})

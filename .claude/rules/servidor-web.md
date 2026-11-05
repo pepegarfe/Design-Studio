@@ -26,6 +26,12 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   archivo a medio escribir cae a valores de fábrica, y el siguiente guardado BORRA las fresas.
 - ⚠️ **waitress va con `clear_untrusted_proxy_headers=False`.** Por defecto borra X-Forwarded-For y
   `es_esta_computadora()` tomaría a un visitante de fuera por local: podría crear la cuenta del dueño.
+- ⚠️ **Dirección del visitante (`direccion()`): MEDIDO con un túnel real de Cloudflare (5-nov-2026)**
+  todo llega desde `127.0.0.1`, `CF-Connecting-IP` = la real (Cloudflare da **403** si alguien la
+  inventa) y `X-Forwarded-For` = **lo que mande el visitante + la real al final**. ⇒ Nunca el PRIMER
+  valor de X-Forwarded-For (lo escribe el atacante: esquivaba el bloqueo de 8 fallos); por túnel,
+  `CF-Connecting-IP` solo si llega desde la propia Mac; detrás de otro proxy, el ÚLTIMO valor.
+  `es_esta_computadora()` exige que no venga NINGUNA de las dos. Auditoría, sección "Y".
 - **`NOMBRE_VALIDO` no admite punto inicial**: el nombre es una carpeta, y `..` caería sobre los datos de todos.
 - **Prueba sin cuenta**: el usuario `invitado:<vence>-<hex>` no está en `usuarios.json`, su carpeta la
   da `carpeta_de()` y lo que guarde en memoria se limpia en `_limpiar_invitado()`: ⚠️ una estructura

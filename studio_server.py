@@ -65,7 +65,11 @@ def _json(obj, status=200):
 # ── Entrar / salir (web_auth.py) ──────────────────────────────────────────────
 def _es_https():
     e = request.environ
-    return e.get('wsgi.url_scheme') == 'https' or (auth.DETRAS_DE_PROXY and e.get('HTTP_X_FORWARDED_PROTO') == 'https')
+    # Por el túnel de Cloudflare (llega desde esta Mac con CF-Connecting-IP) el https lo pone
+    # Cloudflare: aquí llega en http, y X-Forwarded-Proto dice cómo entró el visitante.
+    tunel = e.get('REMOTE_ADDR') in auth._LOCAL and e.get('HTTP_CF_CONNECTING_IP')
+    return e.get('wsgi.url_scheme') == 'https' or (
+        (auth.DETRAS_DE_PROXY or tunel) and e.get('HTTP_X_FORWARDED_PROTO') == 'https')
 
 
 def _abrir_sesion(usuario):

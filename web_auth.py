@@ -327,16 +327,32 @@ def purgar_invitados(todos=False):
 
 
 # ── dirección del visitante y bloqueo por fallos ──────────────────────────────
+_LOCAL = ('127.0.0.1', '::1')
+
+
 def direccion(environ):
-    if DETRAS_DE_PROXY and environ.get('HTTP_X_FORWARDED_FOR'):
-        return environ['HTTP_X_FORWARDED_FOR'].split(',')[0].strip()
-    return environ.get('REMOTE_ADDR', '')
+    """La dirección REAL del visitante, para el bloqueo por fallos. Medido con el túnel de
+    Cloudflare (5-nov-2026): todo llega desde 127.0.0.1 (cloudflared corre en esta Mac), con
+    `CF-Connecting-IP` = la real y `X-Forwarded-For` = LO QUE MANDÓ EL VISITANTE + la real.
+    ⚠️ El PRIMER valor de X-Forwarded-For lo escribe el visitante: tomarlo dejaba esquivar el
+    bloqueo inventando una dirección por intento. Y sin esto, todos los del túnel serían
+    '127.0.0.1': uno solo equivocándose 8 veces dejaba fuera a todos, también al dueño."""
+    remota = environ.get('REMOTE_ADDR', '')
+    cf = environ.get('HTTP_CF_CONNECTING_IP', '').strip()
+    if cf and remota in _LOCAL:
+        return cf        # túnel de Cloudflare: Cloudflare rechaza (403) a quien la inventa
+    xff = environ.get('HTTP_X_FORWARDED_FOR')
+    if DETRAS_DE_PROXY and xff:
+        return xff.split(',')[-1].strip()   # el ÚLTIMO lo agrega el proxy de enfrente
+    return remota
 
 
 def es_esta_computadora(environ):
-    # Si trae X-Forwarded-For pasó por un proxy: viene de fuera aunque REMOTE_ADDR diga 127.0.0.1.
-    return (environ.get('REMOTE_ADDR') in ('127.0.0.1', '::1')
-            and not environ.get('HTTP_X_FORWARDED_FOR'))
+    # Si trae X-Forwarded-For o CF-Connecting-IP pasó por un proxy o el túnel: viene de fuera
+    # aunque REMOTE_ADDR diga 127.0.0.1.
+    return (environ.get('REMOTE_ADDR') in _LOCAL
+            and not environ.get('HTTP_X_FORWARDED_FOR')
+            and not environ.get('HTTP_CF_CONNECTING_IP'))
 
 
 def _bloqueado(ip):
