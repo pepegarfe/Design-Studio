@@ -10,6 +10,7 @@ Uso (desde la carpeta del proyecto; la copia se hace sola en una carpeta tempora
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -632,6 +633,58 @@ print(json.dumps(r))
     ok(r.get('pasaron') == 20 and 'muchas pruebas' in r.get('tope', ''), 'máximo 20 pruebas a la vez en todo el servidor', str(r)[:150] or sal.stderr[-200:])
     ok(r.get('valida') and r.get('vencida_rechazada') and r.get('purgadas') == 20, 'a las 2 horas la cookie deja de valer y la carpeta se borra', sal.stderr[-200:])
     ok(r.get('todas') and r.get('cuentas') == ['dueno'], 'reiniciar borra todas las pruebas y ninguna cuenta real')
+
+    # K. ESTACIÓN DE CORTE: cada cuenta tiene SU fila; lo que se corta es el MISMO HPGL de "Enviar"
+    cuadro = {'paths': [[[0, 0], [50, 0], [50, 30], [0, 30], [0, 0]]], 'speed': 300, 'pressure': 120,
+              'overcut': 0.5, 'corner': 30}
+    st, r = api('/api/estacion/mandar', YO, {**cuadro, 'nombre': '  Letrero   de prueba  '})
+    ok(r.get('ok') and r.get('pendientes') == 1, 'mandar a la estación: queda 1 trabajo esperando', str(r))
+    JID = r.get('id')
+    fila_yo = api('/api/estacion/fila', YO)[1]
+    t0_ = (fila_yo.get('trabajos') or [{}])[0]
+    ok(t0_.get('estado') == 'pendiente' and t0_.get('nombre') == 'Letrero de prueba' and t0_.get('ancho_mm') == 50
+       and t0_.get('alto_mm') == 30 and 'hpgl' not in t0_,
+       'la fila dice nombre (limpio), medidas reales (50 × 30 mm) y NO arrastra el HPGL en cada consulta', str(t0_))
+    ok(api('/api/estacion/fila', ANA)[1].get('trabajos') == [], 'otra cuenta NO ve tu fila')
+    ok(api('/api/estacion/tomar', ANA, {'id': JID})[1].get('ok') is False, 'ni puede tomar tu trabajo sabiendo su número')
+    v = api('/api/estacion/vista', YO, {'id': JID})[1]
+    ok(v.get('ok') and v.get('ancho_mm') == 50 and v.get('d', '').startswith('M0.0 30.0'), 'vista previa del trabajo (Y hacia abajo, en mm)', str(v)[:120])
+    with ThreadPoolExecutor(4) as hilos:
+        tomas = list(hilos.map(lambda _: api('/api/estacion/tomar', YO, {'id': JID})[1], range(4)))
+    ganadoras = [x for x in tomas if x.get('ok')]
+    ok(len(ganadoras) == 1, 'cuatro "Cortar" a la vez sobre el mismo trabajo: solo UNO lo consigue', str([x.get('ok') for x in tomas]))
+    hpgl_envio = api('/api/hpgl', YO, cuadro)[1].get('hpgl')
+    ok(ganadoras and ganadoras[0].get('hpgl') == hpgl_envio, 'la estación corta EXACTAMENTE el HPGL de "Enviar al plotter"')
+    ok(api('/api/estacion/quitar', YO, {'id': JID})[1].get('ok') is False, 'no se puede descartar mientras se corta')
+    ok(api('/api/estacion/terminar', YO, {'id': JID, 'resultado': 'hecho'})[1].get('ok') and
+       api('/api/estacion/fila', YO)[1]['trabajos'][0]['estado'] == 'hecho', 'terminar: queda como "hecho"')
+    ok(api('/api/estacion/terminar', YO, {'id': JID, 'resultado': 'hecho'})[1].get('ok') is False, 'no se termina dos veces')
+    ok(api('/api/estacion/terminar', YO, {'id': JID, 'resultado': 'pendiente'})[1].get('ok') and
+       api('/api/estacion/tomar', YO, {'id': JID})[1].get('hpgl') == hpgl_envio, '"Cortar otra vez" lo devuelve a la fila con el mismo HPGL')
+    ok(api('/api/estacion/terminar', YO, {'id': JID, 'resultado': 'borrar-todo'})[1].get('ok') is False, 'un resultado inventado se rechaza')
+    api('/api/estacion/terminar', YO, {'id': JID, 'resultado': 'cancelado'})
+    malos_id = [api('/api/estacion/tomar', YO, {'id': m})[1].get('ok') for m in ('../../usuarios', '../ana/estacion', None, 7, 'A' * 12)]
+    ok(malos_id == [False] * 5 and os.path.exists(os.path.join(DATOS_WEB, 'usuarios.json')), 'números de trabajo inventados (con ../) → rechazados, sin tocar nada')
+    ok(api('/api/estacion/quitar', YO, {'id': JID})[1].get('ok') and api('/api/estacion/fila', YO)[1]['trabajos'] == [] and
+       not os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'estacion', JID + '.hpgl')), 'descartar lo borra de la fila y del disco')
+    ok(api('/api/estacion/mandar', YO, {'paths': [], 'nombre': 'vacío'})[1].get('ok') is False, 'un diseño sin trazos no entra a la fila')
+    llenos = [api('/api/estacion/mandar', YO, {**cuadro, 'nombre': f'n{i}'})[1].get('ok') for i in range(31)]
+    ok(llenos.count(True) == 30 and llenos[-1] is False, 'tope de 30 trabajos esperando por cuenta')
+    for t in api('/api/estacion/fila', YO)[1]['trabajos']:
+        api('/api/estacion/quitar', YO, {'id': t['id']})
+    ok(os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'estacion.json')) and
+       not os.path.exists(os.path.join(COPIA, 'estacion.json')), 'la fila vive en la carpeta de la cuenta, no en la común')
+    ok(api('/api/estacion/mandar', P3, cuadro)[1].get('ok') is False and api('/api/estacion/fila', P3)[1].get('ok') is False,
+       'la prueba sin cuenta no tiene estación')
+    st, h, _ = http_crudo('GET', '/estacion', cookie=P3)
+    ok(st in (302, 303), 'ni puede abrir la pantalla de la estación')
+    st, h, c = http_crudo('GET', '/estacion', cookie=YO)
+    with open(os.path.join(COPIA, 'studio_ui.html'), encoding='utf-8') as f:
+        motor_app = re.search(r'<script id="motor-plotter">[\s\S]*?</script>', f.read()).group(0)
+    ok(st == 200 and motor_app.encode() in c and b'<!--MOTOR-PLOTTER-->' not in c and b'Cuenta <b>jose</b>' in c
+       and 'no-store' in (h.get('Cache-Control') or ''),
+       'la pantalla de la estación lleva el MISMO motor del plotter que la app (con el driver de Android)')
+    ok(http_crudo('GET', '/estacion')[0] in (302, 303), 'sin sesión, la estación manda a entrar')
 
     # Y. TÚNEL DE CLOUDFLARE — con las cabeceras MEDIDAS en un túnel real (5-nov-2026): todo
     # llega desde 127.0.0.1, CF-Connecting-IP = el visitante (Cloudflare da 403 si alguien la

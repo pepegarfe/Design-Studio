@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#C81C68">
+<title>Estación de corte</title>
+<!--
+  ESTACIÓN DE CORTE: un teléfono Android viejo, fijo en el taller y enchufado al plotter, con
+  esta página abierta en Chrome. Pregunta al servidor cada pocos segundos si hay trabajos;
+  cuando llega uno AVISA (vibra, suena) y espera a que alguien toque "Cortar": el plotter
+  nunca arranca sin nadie mirando. Ver estacion.py.
+
+  El servidor mete aquí el bloque "motor-plotter" de studio_ui.html (en la marca MOTOR-PLOTTER
+  de abajo): el mismo motor y el mismo driver FTDI de Android que la app. No copiarlo a mano.
+-->
+<style>
+  :root {
+    --bg:#F4F5F7; --panel:#FFFFFF; --ink:#1C1F24; --muted:#5E6673; --line:#DDE1E6;
+    --accent:#C81C68; --good:#1E9E6A; --bad:#D23B40; --warn:#B7791F; --soft:#FBE7F0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14161A; --panel:#1D2026; --ink:#EDEFF2; --muted:#9AA2AE; --line:#2C3038;
+            --accent:#EC4A86; --good:#38C990; --bad:#E5484D; --warn:#E0A84B; --soft:#3A1D2A; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:17px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:14px 16px 40px; }
+  header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  header h1 { font-size:20px; margin:0; flex:1; }
+  .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px;
+          border:1px solid var(--line); background:var(--panel); font-size:15px; font-weight:600; }
+  .pill i { width:10px; height:10px; border-radius:50%; background:var(--bad); }
+  .pill.ok i { background:var(--good); }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+            padding:14px; margin-bottom:12px; }
+  h2 { font-size:15px; margin:0 0 10px; color:var(--muted); font-weight:600;
+       text-transform:uppercase; letter-spacing:.04em; }
+  .vacio { color:var(--muted); text-align:center; padding:18px 6px; }
+  .trabajo { display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .trabajo:first-of-type { border-top:0; }
+  .trabajo.nuevo { background:var(--soft); margin:0 -14px; padding:12px 14px; }
+  .vista { width:84px; height:84px; flex:none; border:1px solid var(--line); border-radius:8px;
+           background:var(--bg); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .vista svg { width:100%; height:100%; }
+  .vista path { fill:none; stroke:var(--accent); vector-effect:non-scaling-stroke; stroke-width:1.4; }
+  .info { flex:1; min-width:0; }
+  .nombre { font-weight:650; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .meta { color:var(--muted); font-size:14px; }
+  .acciones { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  button { font:inherit; font-weight:600; padding:12px 16px; min-height:48px; border-radius:10px;
+           border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.stop { background:var(--bad); border-color:var(--bad); color:#fff; }
+  button.chico { padding:8px 12px; min-height:40px; font-size:15px; }
+  button:disabled { opacity:.45; cursor:default; }
+  .grande { width:100%; font-size:19px; min-height:60px; }
+  progress { width:100%; height:14px; accent-color:var(--accent); }
+  .msg { padding:12px 14px; border-radius:10px; margin-bottom:12px; font-weight:600; }
+  .msg.err { background:color-mix(in srgb, var(--bad) 14%, transparent); color:var(--bad); }
+  .msg.ok { background:color-mix(in srgb, var(--good) 14%, transparent); color:var(--good); }
+  .msg.warn { background:color-mix(in srgb, var(--warn) 16%, transparent); color:var(--warn); }
+  .estado { font-size:13px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--bg); }
+  .estado.hecho { color:var(--good); } .estado.error { color:var(--bad); } .estado.cancelado { color:var(--warn); }
+  footer { color:var(--muted); font-size:13px; text-align:center; margin-top:16px; }
+  footer a { color:inherit; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Estación de corte</h1>
+    <button class="pill" id="pill"><i></i><span id="pillTxt">Conectar plotter</span></button>
+  </header>
+
+  <div id="msg" class="msg" hidden></div>
+
+  <section id="secCortando" hidden>
+    <h2>Cortando</h2>
+    <div class="nombre" id="cortNombre"></div>
+    <progress id="cortProg" value="0" max="1"></progress>
+    <div class="meta" id="cortMeta"></div>
+    <div class="acciones"><button class="stop grande" id="btnDetener">Detener</button></div>
+  </section>
+
+  <section>
+    <h2>Esperando para cortar</h2>
+    <div id="pendientes"></div>
+  </section>
+
+  <section id="secDudosos" hidden>
+    <h2>¿Se terminaron de cortar?</h2>
+    <p class="meta" style="margin:0 0 6px">La estación se cerró o perdió la conexión mientras
+      cortaba estos trabajos. Mira el plotter y dime qué pasó.</p>
+    <div id="dudosos"></div>
+  </section>
+
+  <section>
+    <h2>Últimos</h2>
+    <div id="historial"></div>
+  </section>
+
+  <footer>
+    Deja esta pantalla abierta y el teléfono cargando · Cuenta <b>{{USUARIO}}</b> ·
+    <a href="/">Ir a Design Studio</a>
+  </footer>
+</main>
+
+<!--MOTOR-PLOTTER-->
+
+<!-- La lógica, sin tocar la página: web/test_estacion.mjs la prueba con un plotter simulado. -->
+<script id="estacion-logica">
+function crearEstacion(dep) {
+  var M = dep.M, SER = M.serieDelNavegador(dep.nav);
+  var CHIPS = [0x0403, 0x1a86, 0x067b, 0x10c4];   // los mismos que la app (en Android solo llega FTDI)
+  var e = { soporte: !!SER, usb: !!(SER && SER.esUsb), conectado: false, trabajos: [],
+            cortando: null, progreso: { n: 0, total: 0 }, mensaje: null, servidor: true };
+  var puerto = null, writer = null, reader = null, st = M.nuevoFlujo(), vistos = {}, seCayo = false;
+  var cod = new TextEncoder();
+
+  function cambio() { dep.render(e); }
+  function aviso(tipo, texto) { e.mensaje = texto ? { tipo: tipo, texto: texto } : null; cambio(); }
+  function escribir(d) { return writer.write(d); }
+  function esDePlotter(p) { var f = (p.getInfo && p.getInfo()) || {}; return CHIPS.indexOf(f.usbVendorId) >= 0; }
+  function candidato(ps) {
+    if (ps.length === 1) return ps[0];
+    var dp = ps.filter(esDePlotter);
+    return dp.length === 1 ? dp[0] : null;
+  }
+  async function leer(p) {     // solo para XON/XOFF; por WebUSB no hay lectura (el 721 es mudo)
+    if (!p.readable) return;
+    try { reader = p.readable.getReader();
+      for (;;) { var r = await reader.read(); if (r.done) break; M.alRecibir(st, r.value); }
+    } catch (x) {} finally { try { reader && reader.releaseLock(); } catch (x) {} reader = null; }
+  }
+  function errorConexion(x) {
+    var n = x && x.name;
+    return n === 'NotFoundError' ? 'No elegiste ningún cable. Revisa que el plotter esté encendido y con el cable conectado.'
+         : n === 'InvalidStateError' ? 'Ese cable ya está abierto (¿otra pestaña u otro programa?)'
+         : n === 'SecurityError' ? 'El navegador no deja usar el cable desde esta dirección (hace falta https).'
+         : 'No se pudo conectar: ' + (x && x.message || x);
+  }
+  async function abrir(p) {
+    await p.open({ baudRate: dep.baud || 9600, dataBits: 8, parity: 'none', stopBits: 1, flowControl: 'none' });
+    writer = p.writable.getWriter(); puerto = p; st = M.nuevoFlujo(); leer(p);
+    await escribir(cod.encode('IN;\n'));   // como la app: reiniciar al conectar
+    e.conectado = true; aviso(null);
+  }
+  // Con un clic: si ya diste permiso al cable, directo; si no, la ventanita de Chrome.
+  async function conectar() {
+    if (puerto) return true;
+    if (!SER) { aviso('err', 'Este navegador no puede usar el cable USB: abre la estación en Google Chrome.'); return false; }
+    try {
+      var c = candidato(await SER.getPorts());
+      await abrir(c || await SER.requestPort({ filters: CHIPS.map(function(v){ return { usbVendorId: v }; }) }));
+      return true;
+    } catch (x) { puerto = null; writer = null; e.conectado = false; aviso('err', errorConexion(x)); return false; }
+  }
+  // Sin ventanita: al abrir la página o al enchufar el cable.
+  async function auto(p) {
+    if (puerto || !SER) return;
+    try { var c = p || candidato(await SER.getPorts()); if (c) await abrir(c); }
+    catch (x) { aviso('err', errorConexion(x)); }
+  }
+  function soltar() {
+    var habia = !!puerto; puerto = null; writer = null; e.conectado = false;
+    if (e.cortando) { seCayo = true; st.detener = true; }
+    if (habia) aviso('err', 'Se desconectó el cable del plotter.');
+  }
+  if (SER) {
+    SER.addEventListener('disconnect', function(ev){ if (ev.target === puerto) soltar(); });
+    SER.addEventListener('connect', function(ev){ auto(ev.target); });
+  }
+
+  async function revisar() {
+    var r;
+    try { r = await dep.pedir('/api/estacion/fila'); } catch (x) { r = null; }
+    if (!r || !r.ok) { e.servidor = false; cambio(); return e; }
+    e.servidor = true; e.trabajos = r.trabajos;
+    var nuevos = r.trabajos.filter(function(t){ return t.estado === 'pendiente' && !vistos[t.id]; });
+    r.trabajos.forEach(function(t){ vistos[t.id] = 1; });
+    if (nuevos.length) dep.avisar(nuevos);
+    cambio();
+    return e;
+  }
+
+  async function cortar(id) {
+    if (e.cortando) return { ok: false, error: 'Ya hay un corte en curso' };
+    // Primero el cable: la ventanita de Chrome solo se abre dentro del clic, antes de esperar a la red.
+    if (!puerto && !(await conectar())) return { ok: false, error: e.mensaje && e.mensaje.texto };
+    var r;
+    try { r = await dep.pedir('/api/estacion/tomar', { id: id }); } catch (x) { r = { ok: false, error: 'Sin conexión con el servidor' }; }
+    if (!r || !r.ok) { aviso('err', (r && r.error) || 'No se pudo tomar el trabajo'); await revisar(); return { ok: false }; }
+    var lineas = M.lineasHpgl(r.hpgl);
+    e.cortando = { id: id, nombre: r.trabajo.nombre };
+    e.progreso = { n: 0, total: lineas.length };
+    st.detener = false; st.pausado = false; seCayo = false;
+    aviso(null);
+    if (dep.pantalla) dep.pantalla(true);
+    var res = 'hecho', detalle = '';
+    try {
+      var x = await M.enviar(escribir, lineas, st, { progreso: function(n){ e.progreso.n = n; cambio(); } });
+      if (!x.completo) {
+        res = seCayo ? 'error' : 'cancelado';
+        detalle = seCayo ? 'Se desconectó el cable en la línea ' + x.enviadas + ' de ' + lineas.length
+                         : 'Detenido en la línea ' + x.enviadas + ' de ' + lineas.length;
+        if (!seCayo) { try { await escribir(M.bytesAbortar()); } catch (z) {} }
+      }
+    } catch (z) { res = 'error'; detalle = String(z && z.message || z); }
+    if (dep.pantalla) dep.pantalla(false);
+    var fin = null;
+    try { fin = await dep.pedir('/api/estacion/terminar', { id: id, resultado: res, detalle: detalle }); } catch (z) {}
+    e.cortando = null;
+    if (res === 'hecho') aviso('ok', '✓ "' + r.trabajo.nombre + '" enviado entero al plotter.');
+    else aviso(res === 'error' ? 'err' : 'warn', (res === 'error' ? '✗ ' : '') + detalle);
+    if (!fin || !fin.ok) aviso('warn', 'El corte terminó (' + res + '), pero no pude avisarle al servidor. Quedará en "¿Se terminaron?".');
+    await revisar();
+    return { ok: res === 'hecho', resultado: res };
+  }
+  function detener() { if (e.cortando) st.detener = true; }
+  async function accion(url, body) {
+    var r;
+    try { r = await dep.pedir(url, body); } catch (x) { r = { ok: false, error: 'Sin conexión con el servidor' }; }
+    if (!r || !r.ok) aviso('err', (r && r.error) || 'No se pudo');
+    await revisar();
+    return r;
+  }
+  return {
+    estado: e, conectar: conectar, auto: auto, revisar: revisar, cortar: cortar, detener: detener,
+    quitar: function(id){ return accion('/api/estacion/quitar', { id: id }); },
+    // Trabajos que quedaron "cortando" (la estación se cerró a media corte): lo decide quien mira el plotter.
+    marcar: function(id, resultado){ return accion('/api/estacion/terminar', { id: id, resultado: resultado,
+      detalle: resultado === 'hecho' ? 'Marcado como terminado a mano' : '' }); },
+    otraVez: function(id){ return accion('/api/estacion/terminar', { id: id, resultado: 'pendiente' }); },
+  };
+}
+
+function haceCuanto(seg) {
+  seg = Math.max(0, Math.round(seg));
+  if (seg < 60) return 'hace un momento';
+  var m = Math.round(seg / 60);
+  if (m < 60) return 'hace ' + m + ' min';
+  var h = Math.round(m / 60);
+  return h < 24 ? 'hace ' + h + ' h' : 'hace ' + Math.round(h / 24) + ' días';
+}
+</script>
+
+<!-- La pantalla. -->
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var vistas = {}, recienLlegados = {}, audio = null, candado = null, relojServidor = 0;
+
+  async function pedir(url, body) {
+    var r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(body) } : {});
+    if (r.status === 401) { location.href = '/entrar'; return null; }
+    return r.json();
+  }
+  // Sonido: el navegador solo deja sonar después de un toque, por eso se prepara al primer clic.
+  function prepararAudio() {
+    try { if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+          if (audio.state === 'suspended') audio.resume(); } catch (x) {}
+  }
+  function pitido() {
+    if (!audio) return;
+    try {
+      [0, 0.35].forEach(function(t){
+        var o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
+        g.gain.setValueAtTime(0.25, audio.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + t + 0.3);
+        o.start(audio.currentTime + t); o.stop(audio.currentTime + t + 0.3);
+      });
+    } catch (x) {}
+  }
+  function avisar(nuevos) {
+    nuevos.forEach(function(t){ recienLlegados[t.id] = Date.now(); });
+    try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 300]); } catch (x) {}
+    pitido();
+  }
+  // Que la pantalla no se apague: Android frena las pestañas en segundo plano.
+  async function pantallaEncendida() {
+    try { if (navigator.wakeLock && !candado && document.visibilityState === 'visible') {
+      candado = await navigator.wakeLock.request('screen');
+      candado.addEventListener('release', function(){ candado = null; }); } } catch (x) {}
+  }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') { pantallaEncendida(); E.revisar(); } });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function medidas(t) { return t.ancho_mm ? (Math.round(t.ancho_mm) + ' × ' + Math.round(t.alto_mm) + ' mm') : ''; }
+  function vistaHtml(t) {
+    var v = vistas[t.id];
+    if (!v) {
+      vistas[t.id] = 'pidiendo';
+      pedir('/api/estacion/vista', { id: t.id }).then(function(r){ vistas[t.id] = r && r.ok ? r : 'nada'; pintar(E.estado); });
+      return '<div class="vista"></div>';
+    }
+    if (typeof v === 'string' || !v.d) return '<div class="vista"></div>';
+    var m = Math.max(v.ancho_mm, v.alto_mm) * 0.06 + 1;
+    return '<div class="vista"><svg viewBox="' + (-m) + ' ' + (-m) + ' ' + (v.ancho_mm + 2 * m) + ' ' + (v.alto_mm + 2 * m) +
+           '" preserveAspectRatio="xMidYMid meet"><path d="' + v.d + '"/></svg></div>';
+  }
+  function fila(t, botones) {
+    var nuevo = recienLlegados[t.id] && Date.now() - recienLlegados[t.id] < 60000;
+    return '<div class="trabajo' + (nuevo ? ' nuevo' : '') + '">' + vistaHtml(t) +
+      '<div class="info"><div class="nombre">' + esc(t.nombre) + '</div>' +
+      '<div class="meta">' + [medidas(t), haceCuanto(relojServidor - t.creado)].filter(Boolean).join(' · ') + '</div>' +
+      (t.detalle ? '<div class="meta">' + esc(t.detalle) + '</div>' : '') +
+      '<div class="acciones">' + botones + '</div></div></div>';
+  }
+  function pintar(e) {
+    var c = !!e.conectado;
+    $('pill').classList.toggle('ok', c);
+    $('pillTxt').textContent = !e.soporte ? 'Sin cable USB' : c ? 'Plotter conectado' : 'Conectar plotter';
+    var m = e.mensaje || (!e.servidor ? { tipo: 'warn', texto: 'Sin conexión con el servidor: reintentando…' } : null)
+         || (!e.soporte ? { tipo: 'err', texto: 'Este navegador no puede usar el cable USB. Abre la estación en Google Chrome (en Android o en computadora).' } : null);
+    $('msg').hidden = !m;
+    if (m) { $('msg').className = 'msg ' + m.tipo; $('msg').textContent = m.texto; }
+
+    $('secCortando').hidden = !e.cortando;
+    if (e.cortando) {
+      $('cortNombre').textContent = e.cortando.nombre;
+      $('cortProg').max = e.progreso.total || 1; $('cortProg').value = e.progreso.n;
+      $('cortMeta').textContent = 'Enviando al plotter: ' + e.progreso.n + ' de ' + e.progreso.total + ' líneas';
+    }
+    var ocupado = !!e.cortando;
+    var pend = e.trabajos.filter(function(t){ return t.estado === 'pendiente'; })
+                         .sort(function(a, b){ return a.creado - b.creado; });
+    $('pendientes').innerHTML = pend.length ? pend.map(function(t){
+      return fila(t, '<button class="primary" data-cortar="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>Cortar</button>' +
+                     '<button class="chico" data-quitar="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>Descartar</button>'); }).join('')
+      : '<div class="vacio">Nada por cortar. Cuando mandes un diseño a la estación, aparece aquí y el teléfono suena.</div>';
+    var dud = e.trabajos.filter(function(t){ return t.estado === 'cortando' && !(e.cortando && e.cortando.id === t.id); });
+    $('secDudosos').hidden = !dud.length;
+    $('dudosos').innerHTML = dud.map(function(t){
+      return fila(t, '<button class="chico" data-marcar="' + t.id + '" data-res="hecho">Sí, se cortó</button>' +
+                     '<button class="chico" data-marcar="' + t.id + '" data-res="pendiente">No, volver a la fila</button>'); }).join('');
+    var hist = e.trabajos.filter(function(t){ return ['hecho', 'error', 'cancelado'].indexOf(t.estado) >= 0; })
+                         .sort(function(a, b){ return b.actualizado - a.actualizado; }).slice(0, 8);
+    var NOMBRE = { hecho: 'Enviado', error: 'Falló', cancelado: 'Detenido' };
+    $('historial').innerHTML = hist.length ? hist.map(function(t){
+      return fila(t, '<span class="estado ' + t.estado + '">' + NOMBRE[t.estado] + '</span>' +
+                     '<button class="chico" data-otra="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>Cortar otra vez</button>'); }).join('')
+      : '<div class="vacio">Todavía nada.</div>';
+    var nPend = pend.length;
+    document.title = (nPend ? '(' + nPend + ') ' : '') + 'Estación de corte';
+  }
+
+  var E = crearEstacion({
+    M: PlotterMotor, nav: navigator, pedir: function(u, b){ return pedir(u, b).then(function(r){
+      if (r && r.ahora) relojServidor = r.ahora; return r; }); },
+    avisar: avisar, render: pintar,
+    baud: (function(){ try { return parseInt(localStorage.getItem('ds.plotter.baud'), 10) || 9600; } catch (x) { return 9600; } })(),
+    pantalla: function(){},
+  });
+  window.__estacion = E;   // para mirar desde la consola si algo falla
+
+  $('pill').addEventListener('click', function(){ prepararAudio(); E.conectar(); });
+  $('btnDetener').addEventListener('click', function(){ E.detener(); });
+  document.addEventListener('click', function(ev){
+    prepararAudio();
+    var b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.cortar) E.cortar(b.dataset.cortar);
+    else if (b.dataset.quitar) E.quitar(b.dataset.quitar);
+    else if (b.dataset.marcar) E.marcar(b.dataset.marcar, b.dataset.res);
+    else if (b.dataset.otra) E.otraVez(b.dataset.otra);
+  });
+
+  pintar(E.estado);
+  pantallaEncendida();
+  E.auto();
+  E.revisar();
+  setInterval(function(){ E.revisar(); pantallaEncendida(); }, 5000);
+})();
+</script>
+</body>
+</html>

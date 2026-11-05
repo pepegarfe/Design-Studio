@@ -330,6 +330,7 @@
     <button class="tbtn" id="btnSaveProject" disabled title="Guardar tu proyecto (.dstudio) para reabrirlo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Guardar</button>
     <button class="tbtn" id="btnExport" disabled title="Exportar como… — imagen (PNG/JPG), PDF o vector (SVG/DXF) para mandar al cliente o a otro programa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span>Exportar…</span></button>
     <button class="conn" id="connPill" title="Abrir panel del plotter"><span class="dot"></span><span id="connText">Desconectado</span></button>
+    <button class="tbtn" id="btnStation" disabled style="display:none" title="Mandar este diseño a la estación de corte del taller: el teléfono avisa y alguien toca Cortar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><span>A la estación</span></button>
     <button class="cta" id="btnSendTop" disabled><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-14 9z"/></svg>Enviar al plotter</button>
   </header>
 
@@ -1657,7 +1658,7 @@ var PlotterMotor = (function(){
     }
     var _on=el('alignTo').querySelector('.on');
     el('alignToLbl').textContent=(_on&&_on.getAttribute('data-to')==='workarea')?'a la hoja de trabajo':'a la selección';
-    el('btnSaveProject').disabled=!has; el('btnSendTop').disabled=!has; el('btnQuote').disabled=!has; el('btnExport').disabled=!has;
+    el('btnSaveProject').disabled=!has; el('btnSendTop').disabled=!has; el('btnStation').disabled=!has; el('btnQuote').disabled=!has; el('btnExport').disabled=!has;
     el('fileName').textContent=state.name||'sin diseño';
     var m=mode();
     if(!has){ ['fx','fy','fw','fh'].forEach(function(id){el(id).value='0.0';}); el('fr').value='0'; el('fs').value='100'; el('metaSize').textContent='—'; el('stSel').textContent=''; return; }
@@ -3491,6 +3492,9 @@ var PlotterMotor = (function(){
   window.addEventListener('load',function(){
     if(api()) return;
     fetch('/api/update_check').then(function(r){ return r.json(); }).then(function(r){
+      // La estación de corte es de la versión web y de cuentas reales (la prueba no tiene fila).
+      if(r && r.web && !r.invitado){ window.DS_ESTACION = true;
+        if(state.machine!=='cnc') el('btnStation').style.display=''; }
       if(!r || !r.invitado) return;
       window.DS_INVITADO = true;
       var b = document.createElement('div');
@@ -3769,6 +3773,16 @@ var PlotterMotor = (function(){
   function enviarYa(){ P.send(hpglPayload()).then(function(r){ if(r&&r.ok){ watchSend('Enviando al plotter…'); } else toast((r&&r.error)||'No se pudo enviar'); }); }
   el('sendCancel').addEventListener('click',function(){ P.cancel(); });
   el('btnSendTop').addEventListener('click',sendToPlotter);
+  // Estación de corte: el servidor arma el HPGL (el mismo de "Enviar") y lo deja en la fila;
+  // el teléfono del taller avisa y espera a que alguien toque Cortar.
+  el('btnStation').addEventListener('click',function(){ if(!hasDoc()) return;
+    var b=el('btnStation'); b.disabled=true;
+    var datos=hpglPayload(); datos.nombre=state.name||'Diseño';
+    postJSON('/api/estacion/mandar',datos).then(function(r){
+      if(r&&r.ok) toast('Mandado a la estación ✓ ('+r.pendientes+(r.pendientes===1?' trabajo esperando)':' trabajos esperando)'));
+      else toast((r&&r.error)||'No se pudo mandar a la estación'); })
+     .catch(function(){ toast('No se pudo mandar a la estación'); })
+     .then(function(){ b.disabled=!hasDoc(); }); });
 
   // ===== Fase 4: área de trabajo (config persistente, por máquina) =====
   function openWA(){ var cncMode=state.machine==='cnc';
@@ -3840,6 +3854,7 @@ var PlotterMotor = (function(){
     // toggle de arriba. (Antes hacía `cncMode?'cnc':'design'` y te sacaba del diseño de golpe.)
     setSideMode('design');
     el('btnSendTop').style.display=cncMode?'none':'';   // la CNC trabaja offline (archivo por USB), no hay envío
+    el('btnStation').style.display=(cncMode||!window.DS_ESTACION)?'none':'';
     el('connPill').style.display=cncMode?'none':'';
     state.work = cncMode ? ((state.cnc&&state.cnc.work)||[1220,2440]) : state.plotterWork;
     state.sheets = cncMode ? ((state.cnc&&state.cnc.sheets)||1) : 1;

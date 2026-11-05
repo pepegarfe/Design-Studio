@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-05T19:40:34.364Z
+  modified: 2026-11-05T20:24:43.783Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -215,7 +215,22 @@ teléfono (está hecha para computadora).
 - Lección: ante un "no se puede", buscar a alguien que YA lo hizo con el mismo chip antes de razonar
   sobre especificaciones.
 
-## Idea: "Estación de corte" con un Android viejo (5-nov-2026) — en diseño, sin construir
+## "Estación de corte" con un Android viejo (5-nov-2026) — ✅ CONSTRUIDA, ⏳ falta la prueba de Jose
+- Construida: `estacion.py` (fila por cuenta, 30 pendientes, 20 de historial, vista previa del
+  HPGL), `/estacion` (pantalla para teléfono: avisa con vibración y pitido, espera "Cortar",
+  Detener, "¿Se terminaron?" para los que quedaron a medias, "Cortar otra vez") y el botón
+  "A la estación" en la app (solo web y cuentas reales). Auditoría 169/169 con los dos servidores
+  (sección K); `node web/test_estacion.mjs` 27 OK, con 2 casos de control (corta sola; cable
+  arrancado anotado como "detenido") atrapados.
+- Decisiones de Jose: avisa y espera (no corta sola); servidor = su Mac + túnel; "Probar sin
+  cuenta" se QUEDA; dominio `studio.builtbyjose.tech`.
+- ⚠️ `builtbyjose.tech` está registrado en **Squarespace** con DNS de Squarespace, y su raíz y
+  `www` son el **portafolio de Jose en Lovable** (185.158.133.1), sin correo (sin MX). Para el
+  túnel con nombre fijo hay que mudar el DNS a Cloudflare (gratis) copiando esos 2 registros en
+  "DNS only": lo hace Jose en los paneles; yo comparo los registros antes de cambiar nameservers.
+- `cloudflared` instalado (brew, 2026.10.7). Ningún túnel encendido.
+
+### Diseño original (antes de construir)
 - Jose preguntó si el TELÉFONO podía ser el servidor → NO recomendado (Termux, librerías compiladas
   dudosas, Samsung mata procesos en segundo plano, datos en el teléfono). Lo que SÍ: el teléfono como
   ESTACIÓN fija en el taller: Chrome en una pantalla "Estación de corte" que pide trabajos a una fila

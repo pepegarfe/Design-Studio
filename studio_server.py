@@ -10,6 +10,7 @@ La lógica pesada (leer SVG/DXF/AI, HPGL, plotter) se reutiliza de plotter_contr
 """
 import os
 import json
+import html
 import tempfile
 import socket
 import re
@@ -32,6 +33,7 @@ import nest_ops as nester
 import updater
 import export_ops as exporter
 import web_auth as auth
+import estacion
 import plotter_control as core
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -500,6 +502,73 @@ def api_hpgl():
         return _json({'ok': False, 'error': f'No se pudo generar el HPGL: {e}'})
     return _json({'ok': True, 'hpgl': hpgl, 'lines': hpgl.count('\n') + 1, 'bytes': len(hpgl)})
 
+
+
+# ── Estación de corte (estacion.py): un Android fijo en el taller corta lo que le manden ──
+_SIN_ESTACION = {'ok': False, 'error': 'La estación de corte es para cuentas: en la prueba sin '
+                                       'cuenta no hay fila de trabajos.'}
+
+
+def _motor_plotter():
+    """El <script id="motor-plotter"> de studio_ui.html, tal cual: la estación corta con el
+    MISMO motor (y el mismo driver FTDI de Android) que la app, sin una segunda copia."""
+    with open(os.path.join(HERE, 'studio_ui.html'), encoding='utf-8') as f:
+        m = re.search(r'<script id="motor-plotter">[\s\S]*?</script>', f.read())
+    return m.group(0) if m else ''
+
+
+@app.get('/estacion')
+def estacion_pagina():
+    if auth.es_invitado(_yo()):
+        redirect('/')
+    with open(os.path.join(HERE, 'estacion.html'), encoding='utf-8') as f:
+        pagina = f.read()
+    return _sin_cache(pagina.replace('<!--MOTOR-PLOTTER-->', _motor_plotter())
+                            .replace('{{USUARIO}}', html.escape(_yo() or '')))
+
+
+@app.post('/api/estacion/mandar')
+def api_estacion_mandar():
+    if auth.es_invitado(_yo()):
+        return _json(_SIN_ESTACION)
+    try:
+        data = request.json or {}
+        hpgl = build_hpgl(data)   # el MISMO que corta el escritorio
+    except Exception as e:
+        return _json({'ok': False, 'error': f'No se pudo generar el HPGL: {e}'})
+    return _json(estacion.mandar(hpgl, data.get('nombre')))
+
+
+@app.get('/api/estacion/fila')
+def api_estacion_fila():
+    return _json(_SIN_ESTACION if auth.es_invitado(_yo()) else estacion.fila())
+
+
+def _estacion(f, *campos):
+    if auth.es_invitado(_yo()):
+        return _json(_SIN_ESTACION)
+    d = request.json or {}
+    return _json(f(*[d.get(c) for c in campos]))
+
+
+@app.post('/api/estacion/tomar')
+def api_estacion_tomar():
+    return _estacion(estacion.tomar, 'id')
+
+
+@app.post('/api/estacion/terminar')
+def api_estacion_terminar():
+    return _estacion(estacion.terminar, 'id', 'resultado', 'detalle')
+
+
+@app.post('/api/estacion/quitar')
+def api_estacion_quitar():
+    return _estacion(estacion.quitar, 'id')
+
+
+@app.post('/api/estacion/vista')
+def api_estacion_vista():
+    return _estacion(estacion.vista, 'id')
 
 
 @app.get('/api/test_square')
