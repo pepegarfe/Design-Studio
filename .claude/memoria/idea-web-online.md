@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-05T19:19:56.872Z
+  modified: 2026-11-05T19:40:34.364Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -214,6 +214,21 @@ teléfono (está hecha para computadora).
   `public/index.html`; ⚠️ **wrangler necesita Node 22**: `export PATH="/opt/homebrew/opt/node@22/bin:$PATH"`.
 - Lección: ante un "no se puede", buscar a alguien que YA lo hizo con el mismo chip antes de razonar
   sobre especificaciones.
+
+## Idea: "Estación de corte" con un Android viejo (5-nov-2026) — en diseño, sin construir
+- Jose preguntó si el TELÉFONO podía ser el servidor → NO recomendado (Termux, librerías compiladas
+  dudosas, Samsung mata procesos en segundo plano, datos en el teléfono). Lo que SÍ: el teléfono como
+  ESTACIÓN fija en el taller: Chrome en una pantalla "Estación de corte" que pide trabajos a una fila
+  del servidor y los manda por WebUSB. No corre el motor.
+- ✅ **Android viejo de Jose probado (5-nov)** con la página de prueba: detectó el plotter y movió en el aire.
+- Por resolver: cable OTG en "Y" (cargar y hablar con el plotter a la vez; no todo teléfono lo admite),
+  pestaña al frente con pantalla encendida, el permiso USB de Android puede volver a pedirse al
+  reconectar, y la fila solo de cuentas autorizadas. Propuesta: la estación AVISA y espera un toque de
+  "Cortar" (que el plotter nunca arranque sin nadie mirando).
+- Servidor recomendado para "solo yo": **su Mac + túnel gratis de Cloudflare** (US$0, sin cambiar
+  código, datos donde están). ⚠️ Trampa: el túnel entra desde la propia Mac → todo visitante parece
+  "esta computadora"; revisar `es_esta_computadora()` con `DS_PROXY=1` antes de prenderlo.
+  Después: mini-PC en el taller, o Railway con volume cuando haya clientes.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las
