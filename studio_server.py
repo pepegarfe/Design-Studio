@@ -48,8 +48,9 @@ BaseRequest.MEMFILE_MAX = LIMITE
 # en la red del taller) va APAGADO: en internet el plotter está en la mesa de quien corta, no
 # junto al servidor, y es una puerta de más. Se prende con DS_PLOTTER_SERVIDOR=1.
 PLOTTER_EN_SERVIDOR = os.environ.get('DS_PLOTTER_SERVIDOR') == '1'
-SIN_PLOTTER = ('Para conectar el plotter abre Design Studio en Chrome o Edge de computadora: '
-               'Safari, Firefox y el iPad no pueden usar el cable USB.')
+SIN_PLOTTER = ('Para conectar el plotter abre Design Studio en Chrome o Edge de computadora, o en '
+               'Chrome de un teléfono o tablet Android (con dirección https). Safari, Firefox, '
+               'iPhone e iPad no pueden usar el cable USB.')
 
 
 def _workarea():

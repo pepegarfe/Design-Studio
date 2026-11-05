@@ -254,5 +254,126 @@ async function hastaTerminar(W) {
   ok(s.connected && pedidos.length === 1, 'clic de conectar estando ya conectado: no vuelve a abrir nada');
 }
 
+// ── 8. ANDROID: el mismo conector, pero el cable va por WebUSB con driver FTDI propio ──────
+// Chrome en Android tiene navigator.serial, pero SOLO con Bluetooth: si la app lo usara, el
+// plotter nunca aparecería. Por eso aquí el serial de mentira revienta si alguien lo toca.
+function chipUsb({ vendor = 0x0403, tomado = false } = {}) {
+  const c = { control: [], llegado: [], abierto: false, reclamado: false };
+  const intf = { interfaceNumber: 0, alternate: { endpoints: [
+    { endpointNumber: 1, direction: 'in', type: 'bulk' }, { endpointNumber: 2, direction: 'out', type: 'bulk' }] } };
+  c.dev = {
+    vendorId: vendor, productId: 0x6001, configuration: null,
+    async open() { c.abierto = true; },
+    async selectConfiguration() { this.configuration = { interfaces: [intf] }; },
+    async claimInterface() { if (tomado) throw new Error('Unable to claim interface.'); c.reclamado = true; },
+    async controlTransferOut(s) { c.control.push([s.requestType, s.request, s.value, s.index]); return { status: 'ok' }; },
+    async transferOut(ep, d) { await dormir(0); if (ep !== 2 || d.length > 64) return { status: 'stall' }; c.llegado.push(...d); return { status: 'ok' }; },
+    async close() { c.abierto = false; c.reclamado = false; },
+  };
+  return c;
+}
+function montarAndroid({ permitidos = [], elegido = null, conUsb = true, ua = 'Mozilla/5.0 (Linux; Android 16; SM-S921B) Chrome/142' } = {}) {
+  const avisos = [], escuchas = {}, pedidos = [], tocoSerial = [];
+  const usb = {
+    getDevices: async () => permitidos.map(c => c.dev),
+    requestDevice: async op => { pedidos.push(op); if (!elegido) { const e = new Error('nada'); e.name = 'NotFoundError'; throw e; }
+                                 if (!permitidos.includes(elegido)) permitidos.push(elegido); return elegido.dev; },
+    addEventListener: (n, f) => { escuchas[n] = f; },
+  };
+  const serial = new Proxy({}, { get: (_, k) => { if (k === 'esUsb') return undefined;   // un Web Serial real no lo tiene
+    tocoSerial.push(k); return () => Promise.reject(new Error('solo Bluetooth')); } });
+  const ctx = {
+    TextEncoder, setTimeout, Date, Promise, Uint8Array, Array, Error, String, parseInt, parseFloat, Math, Map,
+    navigator: conUsb ? { userAgent: ua, usb, serial } : { userAgent: ua, serial },
+    localStorage: (() => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = v; } }; })(),
+    portLabels: {}, ws: () => ctx.WSP,
+    setConnUI: c => avisos.push('conn:' + c), toast: m => avisos.push('toast:' + m),
+    postJSON: (u, b) => Promise.resolve(u === '/api/hpgl' ? { ok: true, hpgl: esc.hpgl } : { ok: false }),
+    fetch: u => Promise.resolve({ json: () => (u === '/api/test_square' ? { ok: true, hpgl: esc.test_square_hpgl } : { ok: false }) }),
+  };
+  vm.createContext(ctx);
+  vm.runInContext(motor + '\n' + conector + '\n;globalThis.WSP = WSP;', ctx);
+  return { W: ctx.WSP, avisos, escuchas, pedidos, permitidos, tocoSerial, portLabels: ctx.portLabels };
+}
+{
+  const chip = chipUsb();
+  const { W, pedidos, tocoSerial, portLabels } = montarAndroid({ elegido: chip });
+  ok(W.disponible() && W.usb, 'Android: la app elige el cable por WebUSB, no el Web Serial de Bluetooth');
+  const s = await W.rapido(false);
+  ok(s.ok && s.connected && pedidos.length === 1 && JSON.stringify(pedidos[0].filters) === '[{"vendorId":1027}]',
+     'Android: un clic abre la ventanita de Chrome filtrada a chips FTDI y conecta');
+  ok(JSON.stringify(chip.control) === JSON.stringify([['vendor', 0, 0, 1], ['vendor', 1, 0x0303, 1], ['vendor', 2, 0, 1],
+     ['vendor', 4, 8, 1], ['vendor', 3, 0x4138, 0]]),
+     'Android: le dice al chip lo mismo que la página que cortó en el Galaxy (reinicio, DTR/RTS, sin flujo, 8N1, 9600)');
+  ok(portLabels[s.port] === 'Cable USB — FTDI', 'Android: el cable sale como "Cable USB — FTDI"');
+  await dormir(5);
+  ok(txt(chip.llegado) === esc.conectar, 'Android: al conectar manda el mismo IN; que el escritorio');
+  const casos = [
+    ['jog_der_2.5', () => W.jog('right', 2.5)], ['jog_abajo_0.33', () => W.jog('down', 0.33)],
+    ['jog_izq_10', () => W.jog('left', 10)], ['jog_arriba_1', () => W.jog('up', 1)],
+    ['pluma_abajo', () => W.pen(true)], ['pluma_arriba', () => W.pen(false)],
+    ['origen', () => W.command('origin')], ['casa', () => W.command('home')],
+    ['enviar', () => W.send(esc.diseno)], ['test_corte', () => W.testcut()], ['cancelar', () => W.cancel()],
+  ];
+  for (const [nombre, accion] of casos) {
+    chip.llegado.length = 0;
+    const r = await accion();
+    if (r && r.total !== undefined) await hastaTerminar(W);
+    await dormir(5);
+    const igual = txt(chip.llegado) === esc[nombre];
+    ok(igual, `Android · ${nombre}: mismos bytes que el escritorio (${chip.llegado.length} bytes)` +
+       (igual ? '' : `\n        navegador:  ${JSON.stringify(txt(chip.llegado)).slice(0, 200)}\n        escritorio: ${JSON.stringify(esc[nombre]).slice(0, 200)}`));
+  }
+  const d = await W.disconnect();
+  ok(!d.connected && !chip.abierto, 'Android: desconectar suelta el cable');
+  ok(tocoSerial.length === 0, 'Android: nunca tocó el Web Serial de Bluetooth' + (tocoSerial.length ? ' (tocó ' + tocoSerial + ')' : ''));
+}
+{
+  const chip = chipUsb();
+  const { W, pedidos } = montarAndroid({ permitidos: [chip] });
+  const s = await W.rapido(false);
+  ok(s.ok && s.connected && pedidos.length === 0, 'Android, segunda vez: conecta directo, sin ventanita');
+}
+{
+  const chip = chipUsb(), otro = chipUsb({ vendor: 0x1a86 });
+  const { W } = montarAndroid({ permitidos: [otro, chip] });
+  const r = await W.ports();
+  ok(r.items.filter(i => i.kind === 'usb').length === 1, 'Android: un cable CH340 (sin driver) no aparece en la lista');
+}
+{
+  const chip = chipUsb();
+  const { W, escuchas, avisos } = montarAndroid({ permitidos: [chip] });
+  escuchas.connect({ device: chip.dev });
+  await dormir(10);
+  ok((await W.status()).connected && avisos.some(x => /Plotter conectado/.test(x)), 'Android: enchufar el cable con la página abierta conecta solo');
+  escuchas.disconnect({ device: chip.dev });
+  ok(avisos.includes('conn:false') && avisos.some(a => /Se desconectó/.test(a)) && !(await W.status()).connected,
+     'Android: desenchufar avisa y queda desconectado');
+}
+{
+  const chip = chipUsb();
+  const { W } = montarAndroid({ elegido: chip });
+  await W.rapido(false);
+  const r1 = await W.send(esc.diseno);
+  await dormir(30);
+  await W.cancel();
+  const p = await hastaTerminar(W);
+  ok(r1.ok && p.cancelled && p.sent < p.total && txt(chip.llegado).endsWith('\x1bIN;\n'),
+     `Android: cancelar a medias para en la línea ${p.sent} de ${p.total} y manda ESC + IN;`);
+}
+{
+  const { W } = montarAndroid({ elegido: chipUsb({ tomado: true }) });
+  const s = await W.rapido(false);
+  ok(s.ok === false && /ya está abierto/.test(s.error), 'Android: cable tomado por otra app → ' + s.error);
+}
+{
+  const { W } = montarAndroid({ conUsb: false });
+  ok(!W.disponible(), 'Android por http (sin WebUSB): no ofrece el Web Serial de Bluetooth, que nunca vería el plotter');
+}
+{
+  const { W } = montarAndroid({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/142' });
+  ok(W.disponible() && !W.usb, 'computadora con WebUSB y Web Serial: sigue usando Web Serial');
+}
+
 console.log(fallos ? `\n${fallos} FALLA(S)` : '\nTodo OK');
 process.exit(fallos ? 1 : 0);

@@ -160,6 +160,12 @@ ese archivo. **No separar en varios archivos sin pedido explícito.**
   **sin consola**: sin ese registro, un cuelgue al arrancar **no deja ningún rastro** y solo queda
   adivinar. En un arranque sano escribe seis líneas y se desarma solo.
 - **Regla:** fallo **intermitente** = dos cosas compitiendo; fallo en **una sola máquina** = mide ahí, no deduzcas.
+- ⚠️ **Plotter en el navegador: en ANDROID no usar `navigator.serial`.** Existe, pero solo ve
+  puertos **Bluetooth**: el plotter nunca aparecería, sin error. Allá el cable va por **WebUSB**
+  con un driver FTDI propio (`serieUsb`/`abrirFtdi` en `<script id="motor-plotter">`) disfrazado
+  de puerto Web Serial, y lo elige `serieDelNavegador()`. En computadora es al revés: WebUSB no
+  sirve (el driver del sistema tiene tomado el chip). Solo FTDI; CH340/Prolific/CP210x no están.
+  Probado en el Galaxy de Jose (Android 16). Prueba: `node web/test_plotter_web.mjs`.
 
 ---
 

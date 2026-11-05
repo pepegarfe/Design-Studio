@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-05T19:10:27.136Z
+  modified: 2026-11-05T19:19:56.872Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -193,7 +193,12 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
   pasó limpio 9 seguidas sin que se tocara esa parte; causa sin investigar.
 
 ## WebUSB en Android (5-nov-2026) — ✅ PROBADO por Jose en su Galaxy (Android 16): conectó, movió en el aire y CORTÓ el cuadrado
-⏳ Siguiente: meter el conector WebUSB en `studio_ui.html` (hoy solo existe en la página de prueba).
+✅ **En la app (5-nov)**: el conector Web Serial (`WSP`) no se tocó; se le cambió el cable
+(`serieDelNavegador`: Android → WebUSB disfrazado de serial). `test_plotter_web.mjs` → 72 OK, con
+los 11 comandos de Android byte a byte iguales al escritorio y 2 casos de control (driver roto,
+Android usando Bluetooth) atrapados. ⏳ Falta: Jose con la APP en el Galaxy (necesita https o el
+ajuste de chrome://flags hacia el servidor de la Mac) y ver si la interfaz se puede usar en un
+teléfono (está hecha para computadora).
 - Jose tiene **Samsung Galaxy con Android 16** y adaptador OTG. Primero le dije "hoy no" mirando solo
   Web Serial: en Android, `navigator.serial` solo lista **Bluetooth**; el cable llega con Android 17
   y solo en aparatos "configurados para exponer puertos serie" (Chromium, intent to ship, M148).
