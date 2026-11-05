@@ -1,8 +1,11 @@
 ---
 name: idea-web-online
-description: Design Studio en el navegador — plan de 5 fases EN MARCHA (fases 1-3 probadas por Jose; fase 4 en código, sin probar por él)
+description: "Design Studio en el navegador — plan de 5 fases EN MARCHA (fases 1-3 probadas por Jose; fase 4 en código, sin probar por él)"
 metadata:
+  node_type: memory
   type: project
+  originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
+  modified: 2026-11-05T19:10:27.136Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -28,7 +31,8 @@ La cara (HTML/CSS/JS) es la misma que la de escritorio; solo cambia el transport
 ⚠️ Esta nota decía que "un navegador **no puede** tocar el puerto serie". **Era falso**: la API
 **Web Serial** (Chrome/Edge de escritorio, desde 2021) habla con dispositivos USB-serial con
 permiso del usuario, y el plotter es un FTDI FT232R (ver [[plotter-puerto-usb]]). Límites reales:
-- **Solo Chrome/Edge en computadora**: ni Safari, ni Firefox, ni iPad/teléfono.
+- **Web Serial por cable: solo Chrome/Edge en computadora**: ni Safari, ni Firefox, ni iPhone/iPad.
+  ⚠️ **ANDROID SÍ tiene camino (corregido 5-nov-2026)**: ver "WebUSB en Android" abajo.
 - ⚠️ **XON/XOFF no existe en Web Serial** (`flowControl` solo `none`/`hardware`): habría que
   escuchar a mano 0x13/0x11 y pausar el envío. Sin eso, un diseño largo se corta mal SIN error.
   Es lo PRIMERO que hay que probar con el plotter real.
@@ -187,6 +191,24 @@ Decisión de Jose: arranca solo él/su taller, pero **los datos se construyen YA
 - ⚠️ DECIDIR ANTES DE PUBLICAR: cualquiera de internet podrá usar el procesador sin contraseña.
 - Falla "plotter que pide pausas" de `test_plotter_web.mjs`: INTERMITENTE. Salió 2 veces y luego
   pasó limpio 9 seguidas sin que se tocara esa parte; causa sin investigar.
+
+## WebUSB en Android (5-nov-2026) — ✅ PROBADO por Jose en su Galaxy (Android 16): conectó, movió en el aire y CORTÓ el cuadrado
+⏳ Siguiente: meter el conector WebUSB en `studio_ui.html` (hoy solo existe en la página de prueba).
+- Jose tiene **Samsung Galaxy con Android 16** y adaptador OTG. Primero le dije "hoy no" mirando solo
+  Web Serial: en Android, `navigator.serial` solo lista **Bluetooth**; el cable llega con Android 17
+  y solo en aparatos "configurados para exponer puertos serie" (Chromium, intent to ship, M148).
+  Jose pidió investigar bien → el camino real es **WebUSB + driver FTDI propio**: Chrome Android lo
+  tiene hace años y RadioFoundry (PR #312) lo usa con un **FT232R en Galaxy S22**. En Mac/Windows NO
+  sirve (el driver del sistema tiene tomado el chip) — allá sigue Web Serial.
+- `web/prueba_webusb.html`: conectar (filtro FTDI 0x0403), mover en el aire (PR, sin PD) y cuadrado.
+  Driver = 5 mensajes de control (reset, DTR/RTS 0x0303, sin flujo, 8N1 0x0008, baud 9600 = 0x4138) y
+  envío por paquetes de 64. Solo ENVÍA (el plotter es mudo). `node web/test_webusb.mjs` → 29 OK con
+  chip simulado; cuadrado byte a byte = escritorio.
+- **Publicada en https://prueba-plotter.builtbyjose.workers.dev** (Worker de Cloudflare solo con esa
+  página; WebUSB exige https). Se publica desde una carpeta con `wrangler.jsonc` +
+  `public/index.html`; ⚠️ **wrangler necesita Node 22**: `export PATH="/opt/homebrew/opt/node@22/bin:$PATH"`.
+- Lección: ante un "no se puede", buscar a alguien que YA lo hizo con el mismo chip antes de razonar
+  sobre especificaciones.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las

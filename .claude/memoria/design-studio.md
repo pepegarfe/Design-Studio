@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 661c489b-f53b-4842-91af-46e807877393
-  modified: 2026-07-29T18:03:07.073Z
+  modified: 2026-11-05T19:04:33.300Z
 ---
 
 # Design Studio — la interfaz nueva (rebuild)
@@ -675,7 +675,7 @@ contra el despachador real de pywebview sin GUI + prueba de punta a punta abrien
 el caché borrado → ventana viva y caché reescrito completo (60439 B) **después** de cargar, no
 antes. ❌ **Este arreglo era un defecto real pero NO era la causa del cuelgue** — siguió pasando.
 
-## 29-jul-2026: LA CAUSA RAÍZ del cuelgue en Windows — `api.window` → `api._window` — ✅ `v2026.07.29.2`
+## 29-jul-2026: LA CAUSA RAÍZ del cuelgue en Windows — `api.window` → `api._window` — ✅ `v2026.07.29.2` (COMMIT 72e3ec4)
 
 **Un abrazo mortal (deadlock), y era código nuestro.** `api.window = win` le colgaba la ventana al
 objeto que se le pasa a `js_api`. pywebview **RECORRE** ese objeto para saber qué métodos exponerle
