@@ -153,6 +153,8 @@ try:
     ok(st == 400 and 'al menos 8'.encode() in cuerpo, 'contraseña corta → la rechaza')
     st, h, cuerpo = formulario('/crear', {'usuario': 'jose', 'clave': 'una-clave-larga', 'clave2': 'otra-clave-larga'})
     ok(st == 400 and 'no son iguales'.encode() in cuerpo, 'las dos contraseñas distintas → lo dice')
+    st, h, cuerpo = formulario('/invitado', {})
+    ok(st == 403 and not h.get('Set-Cookie'), 'servidor sin dueño: la prueba sin cuenta no se abre')
     CLAVE = 'prueba-' + uuid.uuid4().hex[:10]
     st, h, cuerpo = formulario('/crear', {'usuario': 'Jose', 'clave': CLAVE, 'clave2': CLAVE})
     galleta = (h.get('Set-Cookie') or '').split(';')[0]
@@ -293,6 +295,343 @@ try:
     ld = pedir('/api/autosave_load')
     ok(json.dumps(marca)[1:-1] in json.dumps(ld), 'autoguardar y recuperar', 'el dato vuelve' if json.dumps(marca)[1:-1] in json.dumps(ld) else str(ld)[:150])
     pedir('/api/autosave_clear', {})
+
+    # ═══ FASE 4: varias cuentas, cada una con lo suyo ═══════════════════════════════════════
+    import socket as _sk
+    import threading as _th
+    from concurrent.futures import ThreadPoolExecutor
+
+    def galleta_de(cabeceras):
+        return (cabeceras.get('Set-Cookie') or '').split(';')[0]
+
+    def entrar(usuario, clave):
+        st, h, _ = formulario('/entrar', {'usuario': usuario, 'clave': clave})
+        return galleta_de(h) if st in (302, 303) else None
+
+    def api(ruta, galleta, datos=None):
+        """Un pedido a la API con la sesión indicada. (estado, respuesta ya leída)"""
+        if datos is None:
+            st, _, c = http_crudo('GET', ruta, cookie=galleta)
+        else:
+            st, _, c = http_crudo('POST', ruta, json.dumps(datos).encode(), {'Content-Type': 'application/json'}, galleta)
+        try:
+            return st, json.loads(c)
+        except ValueError:
+            return st, {'crudo': c}
+
+    def subir(ruta, galleta, nombre, contenido):
+        b = uuid.uuid4().hex
+        cuerpo = (f'--{b}\r\nContent-Disposition: form-data; name="file"; filename="{nombre}"\r\n'
+                  'Content-Type: application/octet-stream\r\n\r\n').encode() + contenido + f'\r\n--{b}--\r\n'.encode()
+        st, _, c = http_crudo('POST', ruta, cuerpo, {'Content-Type': f'multipart/form-data; boundary={b}'}, galleta)
+        return json.loads(c)
+
+    def cuentas_post(galleta, **campos):
+        return formulario('/cuentas', campos, cookie=galleta)
+
+    def clave_temporal(html_):
+        import re as _re
+        m = _re.search(rb'<code>([^<]+)</code>', html_)
+        return m.group(1).decode() if m else None
+
+    YO = entrar('jose', CLAVE)
+
+    # A. La cuenta del dueño hereda lo de antes; el original no se toca
+    DATOS_WEB = os.path.join(COPIA, '_datos_web')
+    with open(os.path.join(COPIA, 'cnc_config.json'), 'rb') as f:
+        cnc_comun = f.read()
+    with open(os.path.join(COPIA, 'plotter_config.json'), 'rb') as f:
+        area_comun = f.read()
+    herencia = json.loads(cnc_comun)
+    _, cfg = api('/api/cnc', YO)
+    ok([t.get('cut') for t in cfg['tools']] == [t.get('cut') for t in herencia['tools']] and
+       os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'cnc_config.json')),
+       'el dueño conserva sus fresas: su carpeta nace con una copia')
+
+    # B. Altas: solo el dueño, y con contraseña temporal
+    st, h, c = cuentas_post(YO, accion='alta', usuario='Ana')
+    TEMP_ANA = clave_temporal(c)
+    ok(st == 200 and TEMP_ANA and len(TEMP_ANA) >= 12, 'el dueño crea una cuenta y ve su contraseña temporal')
+    guardado = open(os.path.join(DATOS_WEB, 'usuarios.json'), encoding='utf-8').read()
+    ok(TEMP_ANA not in guardado and 'ana' in json.loads(guardado), 'la temporal tampoco queda guardada')
+    for malo in ('..', '.', '.oculto', 'a/b', '../../etc', 'a', 'ñandú', ''):
+        st, h, c = cuentas_post(YO, accion='alta', usuario=malo)
+        ok(st == 400 and clave_temporal(c) is None and malo not in json.load(open(os.path.join(DATOS_WEB, 'usuarios.json'), encoding='utf-8')),
+           f'nombre de cuenta peligroso o inválido {malo!r} → rechazado')
+    st, h, c = cuentas_post(YO, accion='alta', usuario='ana')
+    ok(st == 400 and 'ya existe'.encode() in c, 'cuenta repetida → rechazada')
+
+    # C. La temporal obliga a cambiarla antes de hacer nada
+    ANA = entrar('ana', TEMP_ANA)
+    ok(ANA, 'la cuenta nueva entra con su temporal')
+    st, h, _ = http_crudo('GET', '/', cookie=ANA)
+    ok(st == 302 and h.get('Location', '').endswith('/clave'), 'con temporal, la página manda a cambiarla', h.get('Location'))
+    st, r = api('/api/cnc', ANA)
+    ok(st == 401 and r.get('login'), 'con temporal, la API no responde')
+    ok(not os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'ana')), 'con temporal, todavía no se le crea carpeta')
+    CLAVE_ANA = 'ana-' + uuid.uuid4().hex[:12]
+    st, h, c = formulario('/clave', {'actual': 'equivocada', 'nueva': CLAVE_ANA, 'nueva2': CLAVE_ANA}, cookie=ANA)
+    ok(st == 400 and 'actual no es correcta'.encode() in c, 'cambiar sin saber la actual → rechazado')
+    st, h, c = formulario('/clave', {'actual': TEMP_ANA, 'nueva': CLAVE_ANA, 'nueva2': 'otra-distinta'}, cookie=ANA)
+    ok(st == 400 and 'no son iguales'.encode() in c, 'las dos nuevas distintas → lo dice')
+    st, h, c = formulario('/clave', {'actual': TEMP_ANA, 'nueva': 'corta', 'nueva2': 'corta'}, cookie=ANA)
+    ok(st == 400 and 'al menos 8'.encode() in c, 'contraseña nueva corta → la rechaza')
+    st, h, c = formulario('/clave', {'actual': TEMP_ANA, 'nueva': TEMP_ANA, 'nueva2': TEMP_ANA}, cookie=ANA)
+    ok(st == 400 and 'distinta'.encode() in c, 'no sirve "cambiarla" por la misma')
+    st, h, c = formulario('/clave', {'actual': TEMP_ANA, 'nueva': CLAVE_ANA, 'nueva2': CLAVE_ANA}, cookie=ANA)
+    ANA_VIEJA, ANA = ANA, galleta_de(h)
+    ok(st in (302, 303) and ANA.startswith('ds_sesion='), 'cambio de contraseña hecho, sigue dentro')
+    ok(api('/api/workarea', ANA)[0] == 200, 'con la definitiva, ya puede trabajar')
+    ok(api('/api/workarea', ANA_VIEJA)[0] == 401, 'las sesiones de antes del cambio quedan muertas')
+    ok(entrar('ana', TEMP_ANA) is None and entrar('ana', CLAVE_ANA), 'la temporal ya no sirve; la nueva sí')
+
+    # D. Cada cuenta ve SOLO lo suyo
+    st, h, c = http_crudo('GET', '/cuentas', cookie=ANA)
+    ok(st == 403, 'una cuenta normal no ve la pantalla de cuentas')
+    st, h, c = cuentas_post(ANA, accion='alta', usuario='colado')
+    ok(st == 403 and 'colado' not in json.load(open(os.path.join(DATOS_WEB, 'usuarios.json'), encoding='utf-8')), 'una cuenta normal no crea cuentas')
+    st, h, c = cuentas_post(ANA, accion='desactivar', usuario='jose')
+    ok(st == 403, 'una cuenta normal no desactiva a nadie')
+    ok(api('/api/update_check', YO)[1].get('dueno') is True and api('/api/update_check', ANA)[1].get('dueno') is False,
+       'la interfaz sabe quién es dueño (para mostrar el enlace)')
+    _, cfg_ana = api('/api/cnc', ANA)
+    import studio_backend as _sb
+    ok([t['cut'] for t in cfg_ana['tools']] == [t['cut'] for t in _sb.CNC_DEFAULTS['tools']],
+       'la cuenta nueva arranca con fresas de fábrica, no con las del dueño')
+    _, antes_yo = api('/api/cnc', YO)
+    tools = json.loads(json.dumps(cfg_ana['tools']))
+    tools[0]['name'] = 'FRESA DE ANA'
+    api('/api/cnc', ANA, {'tools': tools, 'quote': {'margin': 77}, 'theme': 'dark'})
+    _, ahora_yo = api('/api/cnc', YO)
+    _, ahora_ana = api('/api/cnc', ANA)
+    ok(ahora_ana['tools'][0]['name'] == 'FRESA DE ANA' and ahora_ana['quote']['margin'] == 77 and ahora_ana['theme'] == 'dark',
+       'los cambios de una cuenta se guardan')
+    ok(ahora_yo['tools'] == antes_yo['tools'] and ahora_yo['quote'] == antes_yo['quote'] and ahora_yo['theme'] == antes_yo['theme'],
+       'fresas, tarifas y tema de una cuenta NO tocan a la otra')
+    area_yo = api('/api/workarea', YO)[1]['work']
+    api('/api/set_workarea', ANA, {'w': 1234, 'h': 567})
+    ok(api('/api/workarea', ANA)[1]['work'] == [1234, 567] and api('/api/workarea', YO)[1]['work'] == area_yo, 'el área de trabajo es por cuenta')
+    proyecto = {'marca': uuid.uuid4().hex, 'objects': [{'pts': [[0, 0], [1, 1]]}]}
+    api('/api/autosave_save', ANA, proyecto)
+    ok(api('/api/autosave_load', YO)[1].get('exists') is False, 'el autoguardado de una cuenta NO lo ve la otra')
+    ok(api('/api/autosave_load', ANA)[1].get('project', {}).get('marca') == proyecto['marca'], 'y su dueña sí lo recupera')
+    subir('/api/trace_upload', YO, 'yo.png', PNG)
+    r = api('/api/trace', ANA, {'mode': 'bw'})[1]
+    ok(r.get('ok') is False and 'No hay imagen' in (r.get('error') or ''), 'el calco de una cuenta NO usa la imagen subida por otra', r.get('error'))
+    ok(subir('/api/trace_upload', ANA, 'ana.png', PNG).get('ok') and api('/api/trace', ANA, {'mode': 'bw'})[1].get('ok') and
+       api('/api/trace', YO, {'mode': 'bw'})[1].get('ok'), 'cada cuenta calca su propia imagen a la vez')
+    ok(len(os.listdir(TEMPS)) <= 2, 'el calco deja a lo sumo una imagen por cuenta en el disco', str(os.listdir(TEMPS)))
+    pieza = {'rings': [[[0, 0], [40, 0], [40, 30], [0, 30]]]}
+    trabajo = {'sheet': [200, 200], 'margin': 2, 'gap': 2, 'rots': [0], 'units': [pieza] * 6}
+    jid = api('/api/nest_start', ANA, trabajo)[1].get('job')
+    ok(jid and 'desconocido' in (api('/api/nest_status', YO, {'job': jid})[1].get('error') or ''),
+       'el acomodo de una cuenta NO lo puede leer otra (aunque adivine el número)')
+    for _ in range(100):
+        r = api('/api/nest_status', ANA, {'job': jid})[1]
+        if r.get('done'):
+            break
+        time.sleep(0.1)
+    ok(r.get('done') and r.get('placed'), 'su dueña sí recibe el resultado del acomodo', f"{len(r.get('placed') or [])} piezas")
+    for _ in range(6):
+        api('/api/nest_start', YO, trabajo)
+    ok(api('/api/nest_status', ANA, {'job': jid})[1].get('ok'), 'los acomodos de otra cuenta no le borran el suyo')
+
+    # E. Desactivar y restablecer
+    st, h, c = cuentas_post(YO, accion='desactivar', usuario='jose')
+    ok(st == 400 and api('/api/workarea', YO)[0] == 200, 'el dueño no puede desactivarse a sí mismo')
+    st, h, c = cuentas_post(YO, accion='desactivar', usuario='ana')
+    ok(st == 200 and api('/api/workarea', ANA)[0] == 401, 'desactivar saca a la cuenta AL INSTANTE, con la sesión ya abierta')
+    ok(entrar('ana', CLAVE_ANA) is None, 'desactivada, ya no puede entrar')
+    ok(os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'ana', 'cnc_config.json')), 'desactivar NO borra sus datos')
+    cuentas_post(YO, accion='activar', usuario='ana')
+    ANA = entrar('ana', CLAVE_ANA)
+    ok(ANA and api('/api/cnc', ANA)[1]['tools'][0]['name'] == 'FRESA DE ANA', 'al reactivarla vuelve con todo lo suyo')
+    st, h, c = cuentas_post(YO, accion='restablecer', usuario='ana')
+    TEMP2 = clave_temporal(c)
+    ok(TEMP2 and api('/api/workarea', ANA)[0] == 401 and entrar('ana', CLAVE_ANA) is None,
+       'restablecer: la contraseña olvidada deja de servir y se cierran sus sesiones')
+    ANA = entrar('ana', TEMP2)
+    st, h, _ = http_crudo('GET', '/api/workarea', cookie=ANA)
+    ok(st == 401, 'y entra con temporal, obligada a cambiarla otra vez')
+    st, h, _ = formulario('/clave', {'actual': TEMP2, 'nueva': CLAVE_ANA + 'x', 'nueva2': CLAVE_ANA + 'x'}, cookie=ANA)
+    ANA = galleta_de(h)
+    st, h, c = cuentas_post(YO, accion='restablecer', usuario='jose')
+    ok(st == 400 and clave_temporal(c) is None and entrar('jose', CLAVE), 'la contraseña del dueño no se restablece por esa vía')
+
+    # F. Varios a la vez
+    # Un pedido que se queda a medias (alguien con mala conexión). Con el servidor de antes, que
+    # atendía de a uno, esto congelaba a TODOS mientras durara.
+    lento = _sk.create_connection(('127.0.0.1', PUERTO), timeout=10)
+    lento.sendall((f'POST /api/autosave_save HTTP/1.1\r\nHost: x\r\nCookie: {YO}\r\n'
+                   'Content-Type: application/json\r\nContent-Length: 1000\r\n\r\n{').encode())
+    time.sleep(0.3)
+    t0 = time.time()
+    st, r = api('/api/workarea', ANA)
+    ok(st == 200 and time.time() - t0 < 3, 'un pedido atascado de una cuenta NO congela a las demás', f'{time.time() - t0:.2f} s')
+    lento.close()
+    # Un acomodo pesado de verdad, y mientras tanto otra cuenta trabaja.
+    pesado = {'sheet': [3000, 3000], 'margin': 2, 'gap': 2,
+              'units': [{'rings': [[[0, 0], [30 + i % 40, 0], [30 + i % 40, 20 + i % 25], [10, 40], [0, 20 + i % 25]]]} for i in range(120)]}
+    jid = api('/api/nest_start', YO, pesado)[1].get('job')
+    tiempos = []
+    for _ in range(8):
+        t0 = time.time(); api('/api/workarea', ANA); tiempos.append(time.time() - t0)
+    enmarcha = not api('/api/nest_status', YO, {'job': jid})[1].get('done')
+    ok(enmarcha and max(tiempos) < 2, 'durante un acomodo largo, otra cuenta sigue trabajando', f'lo más lento: {max(tiempos):.2f} s (seguía en marcha: {enmarcha})')
+    for _ in range(600):
+        if api('/api/nest_status', YO, {'job': jid})[1].get('done'):
+            break
+        time.sleep(0.2)
+    # Dos cambios simultáneos de la misma cuenta: los dos tienen que sobrevivir.
+    perdidos = 0
+    with ThreadPoolExecutor(2) as hilos:
+        for _ in range(25):
+            api('/api/cnc', ANA, {'theme': 'light', 'units': 'mm'})
+            list(hilos.map(lambda p: api('/api/cnc', ANA, p), [{'theme': 'dark'}, {'units': 'in'}]))
+            c = api('/api/cnc', ANA)[1]
+            perdidos += not (c['theme'] == 'dark' and c['units'] == 'in')
+    ok(perdidos == 0, 'dos cambios a la vez en la misma cuenta: no se pierde ninguno', f'{perdidos} de 25 rondas perdieron uno')
+    # Mezcla pesada: cada resultado tiene que ser el correcto, y el de SU cuenta.
+    EJEMPLO_SVG = {f: subir('/api/parse', YO, f'x.{f}', d).get('paths') for f, d in (('svg', SVG), ('dxf', DXF), ('ai', AI))}
+    disenio = {'name': 'x', 'paths': [[[0, 0], [50, 0], [50, 50], [0, 50], [0, 0]]]}
+    malos = []
+    CUENTAS = {'jose': YO, 'ana': ANA}
+
+    def trabajo_mixto(n):
+        quien = 'jose' if n % 2 else 'ana'
+        g = CUENTAS[quien]
+        marca = f'{quien}-{n}-{uuid.uuid4().hex}'
+        api('/api/autosave_save', g, {'marca': quien, 'n': marca, 'objects': [{'pts': [[0, 0], [1, 1]]}]})
+        v = api('/api/autosave_load', g)[1].get('project', {})
+        if v.get('marca') != quien:
+            malos.append(f'autoguardado de {quien} devolvió {v.get("marca")!r}')
+        for f, d in (('svg', SVG), ('dxf', DXF), ('ai', AI)):
+            r = subir('/api/parse', g, f'x.{f}', d)
+            if r.get('paths') != EJEMPLO_SVG[f]:
+                malos.append(f'abrir {f} a la vez dio otro resultado: {str(r.get("error"))[:80]}')
+        for fmt, inicio in (('pdf', b'%PDF'), ('png', b'\x89PNG')):
+            st, _, c = http_crudo('POST', '/api/export', json.dumps({**disenio, 'format': fmt}).encode(), {'Content-Type': 'application/json'}, g)
+            if st != 200 or not c.startswith(inicio):
+                malos.append(f'exportar {fmt}: {st} {c[:60]!r}')
+        tema = api('/api/cnc', g)[1]
+        if quien == 'ana' and tema['tools'][0]['name'] != 'FRESA DE ANA':
+            malos.append('ana recibió otras fresas: ' + tema['tools'][0]['name'])
+        if quien == 'jose' and tema['tools'][0]['name'] == 'FRESA DE ANA':
+            malos.append('jose recibió las fresas de ana')
+
+    with ThreadPoolExecutor(12) as hilos:
+        list(hilos.map(trabajo_mixto, range(60)))
+    ok(not malos, '60 tandas simultáneas de 2 cuentas (autoguardar, abrir SVG/DXF/AI, PDF, PNG, fresas): todo correcto', '; '.join(malos[:3]))
+    ok(srv.poll() is None, 'el servidor sobrevivió a la mezcla')
+
+    # G. Nada fue a parar al archivo común, ni al revés
+    ok(open(os.path.join(COPIA, 'cnc_config.json'), 'rb').read() == cnc_comun and
+       open(os.path.join(COPIA, 'plotter_config.json'), 'rb').read() == area_comun and
+       not os.path.exists(os.path.join(COPIA, 'autosave.dstudio')),
+       'los archivos comunes quedaron idénticos: nada se escribió fuera de las carpetas de cuenta')
+    sobras = [n for _r, _d, fs in os.walk(DATOS_WEB) for n in fs if n.endswith('.tmp')] + \
+             [d for _r, ds_, _f in os.walk(DATOS_WEB) for d in ds_ if d.endswith('.armando')]
+    ok(not sobras, 'no quedan archivos a medio escribir', str(sobras))
+
+    # H. El escritorio sigue como siempre: sin cuenta, la config de la instalación
+    ok(core._config_path() == core._config_compartida() == core.Path(core.__file__).parent / 'plotter_config.json',
+       'escritorio: sigue usando su carpeta de siempre')
+
+    # I. Catálogo de fuentes propio
+    cat = os.path.join(COPIA, '_catalogo')
+    os.makedirs(cat)
+    shutil.copyfile('/System/Library/Fonts/Supplemental/Arial.ttf', os.path.join(cat, 'Arial.ttf'))
+    salida = subprocess.run([sys.executable, '-c', 'import json,text_vector as t;r=t.list_fonts();print(json.dumps(sorted({f["path"] for f in r["fonts"]})))'],
+                            cwd=COPIA, env=dict(os.environ, DS_FUENTES=cat), capture_output=True, text=True, timeout=120)
+    try:
+        rutas = json.loads(salida.stdout.strip().splitlines()[-1])
+    except Exception:
+        rutas = []
+    ok(rutas == [os.path.join(cat, 'Arial.ttf')], 'con catálogo propio, solo se ofrecen esas fuentes (no las de la máquina)', str(rutas)[:120] or salida.stderr[-200:])
+
+    # ═══ Prueba sin cuenta ══════════════════════════════════════════════════════════════════
+    def abrir_prueba():
+        st, h, c = formulario('/invitado', {})
+        return st, h, c, galleta_de(h)
+
+    st, h, c = http_crudo('GET', '/entrar')
+    ok(b'Probar sin cuenta' in c, 'la pantalla de entrada ofrece probar sin cuenta')
+    usuarios_antes = open(os.path.join(DATOS_WEB, 'usuarios.json'), 'rb').read()
+    st, h, c, P1 = abrir_prueba()
+    ok(st in (302, 303) and P1.startswith('ds_sesion=') and 'Max-Age' not in (h.get('Set-Cookie') or '') and 'HttpOnly' in (h.get('Set-Cookie') or ''),
+       'un clic y entra: la cookie muere al cerrar el navegador', (h.get('Set-Cookie') or '')[:70])
+    P2 = abrir_prueba()[3]
+    ok(http_crudo('GET', '/', cookie=P1)[0] == 200, 'con la prueba se abre la aplicación')
+    r = api('/api/update_check', P1)[1]
+    ok(r.get('invitado') is True and r.get('dueno') is False, 'la interfaz sabe que es una prueba (para avisarlo)')
+    ok(r.get('usuario') not in usuarios_antes.decode() and open(os.path.join(DATOS_WEB, 'usuarios.json'), 'rb').read() == usuarios_antes,
+       'la prueba no crea ninguna cuenta')
+    fresas_yo = api('/api/cnc', YO)[1]['tools']
+    c1 = api('/api/cnc', P1)[1]
+    ok([t['cut'] for t in c1['tools']] == [t['cut'] for t in _sb.CNC_DEFAULTS['tools']], 'arranca con valores de fábrica, no con los tuyos')
+    tools = json.loads(json.dumps(c1['tools'])); tools[0]['name'] = 'FRESA DE PRUEBA'
+    api('/api/cnc', P1, {'tools': tools})
+    api('/api/set_workarea', P1, {'w': 111, 'h': 222})
+    ok(api('/api/cnc', P1)[1]['tools'][0]['name'] == 'FRESA DE PRUEBA' and api('/api/workarea', P1)[1]['work'] == [111, 222],
+       'mientras dura, los ajustes funcionan')
+    ok(api('/api/cnc', P2)[1]['tools'][0]['name'] != 'FRESA DE PRUEBA' and api('/api/cnc', YO)[1]['tools'] == fresas_yo and api('/api/workarea', YO)[1]['work'] != [111, 222],
+       'no tocan a otro visitante ni a las cuentas reales')
+    api('/api/autosave_save', P1, {'objects': [{'pts': [[0, 0], [1, 1]]}]})
+    ok(api('/api/autosave_load', P1)[1].get('exists') is False, 'el autoguardado no guarda nada')
+    carpetas = os.listdir(os.path.join(DATOS_WEB, 'invitados'))
+    ok(len(carpetas) == 2 and not any(os.path.exists(os.path.join(DATOS_WEB, 'invitados', n, 'autosave.dstudio')) for n in carpetas), 'ni deja el archivo en el disco')
+    ok(http_crudo('GET', '/cuentas', cookie=P1)[0] == 403 and cuentas_post(P1, accion='alta', usuario='colada')[0] == 403 and
+       cuentas_post(P1, accion='desactivar', usuario='ana')[0] == 403, 'una prueba no administra cuentas')
+    st, h, _ = http_crudo('GET', '/clave', cookie=P1)
+    ok(st in (302, 303) and formulario('/clave', {'actual': 'x', 'nueva': 'y' * 10, 'nueva2': 'y' * 10}, cookie=P1)[0] in (302, 303), 'una prueba no tiene contraseña que cambiar')
+    st, h, c = cuentas_post(YO, accion='alta', usuario='invitado:1893456000-0123456789abcdef')
+    ok(st == 400, 'una cuenta real no se puede llamar como una prueba')
+    st, h, _ = formulario('/invitado', {}, cookie=YO)
+    ok(st in (302, 303) and not h.get('Set-Cookie') and api('/api/update_check', YO)[1].get('usuario') == 'jose', 'con tu sesión abierta, el botón no te saca de tu cuenta')
+    ok(subir('/api/trace_upload', P1, 'p.png', PNG).get('ok') and api('/api/trace', P1, {'mode': 'bw'})[1].get('ok'), 'una prueba puede calcar')
+    imagenes = len(os.listdir(TEMPS))
+    # Un acomodo a la vez
+    largo = {'sheet': [3000, 3000], 'margin': 2, 'gap': 2, 'units': [{'rings': [[[0, 0], [30 + i % 40, 0], [30 + i % 40, 20 + i % 25], [10, 40], [0, 20 + i % 25]]]} for i in range(120)]}
+    j1 = api('/api/nest_start', P1, largo)[1]
+    j2 = api('/api/nest_start', P1, largo)[1]
+    ok(j1.get('ok') and j2.get('ok') is False and 'a la vez' in (j2.get('error') or ''), 'una prueba corre un solo acomodo a la vez', j2.get('error'))
+    ok(api('/api/nest', P1, largo)[1].get('ok') is False, 'y no puede saltarse el tope por el otro camino')
+    # Salir borra todo
+    st, h, _ = http_crudo('GET', '/salir', cookie=P1)
+    ok(len(os.listdir(os.path.join(DATOS_WEB, 'invitados'))) == 1, 'al salir, su carpeta desaparece')
+    ok(api('/api/workarea', P1)[0] == 401, 'y su cookie ya no sirve, aunque alguien la haya copiado')
+    ok(len(os.listdir(TEMPS)) == imagenes - 1, 'y se borra la imagen que calcaba')
+    P3 = abrir_prueba()[3]
+    ok(api('/api/workarea', P3)[1]['work'] != [111, 222] and api('/api/cnc', P3)[1]['tools'][0]['name'] != 'FRESA DE PRUEBA', 'volver a probar empieza de cero')
+    respuestas = [abrir_prueba()[0] for _ in range(8)]
+    ok(respuestas[-1] == 429, 'muchas pruebas seguidas desde la misma dirección → frena', str(respuestas))
+    ok(http_crudo('GET', '/api/workarea', cookie=YO)[0] == 200 and entrar('jose', CLAVE), 'ese freno no afecta a quien tiene cuenta')
+    # Tope general, vencimiento y reinicio: sin esperar 2 horas, directo sobre el módulo
+    ensayo = tempfile.mkdtemp(prefix='ds_prueba_', dir=COPIA)
+    guion = '''
+import json, time, web_auth as a
+a.crear_cuenta("dueno", "x" * 12)
+s = [a.abrir_invitado({"REMOTE_ADDR": f"10.0.0.{i}"}) for i in range(a.MAX_INVITADOS + 1)]
+r = {"tope": s[-1][2] or "", "pasaron": sum(1 for x in s if x[0])}
+r["valida"] = a.usuario_de(s[0][0]) == s[0][1]
+real = time.time
+time.time = lambda: real() + a.DURACION_INVITADO + 5
+r["vencida_rechazada"] = a.usuario_de(s[0][0]) is None
+r["purgadas"] = len(a.purgar_invitados())
+time.time = real
+n = a.abrir_invitado({"REMOTE_ADDR": "10.0.1.1"})
+r["todas"] = a.purgar_invitados(todos=True) == [n[1]] and a.usuario_de(n[0]) is None
+r["cuentas"] = list(a._usuarios())
+print(json.dumps(r))
+'''
+    sal = subprocess.run([sys.executable, '-c', guion], cwd=COPIA, env=dict(os.environ, DS_DATOS=ensayo), capture_output=True, text=True, timeout=120)
+    try:
+        r = json.loads(sal.stdout.strip().splitlines()[-1])
+    except Exception:
+        r = {}
+    ok(r.get('pasaron') == 20 and 'muchas pruebas' in r.get('tope', ''), 'máximo 20 pruebas a la vez en todo el servidor', str(r)[:150] or sal.stderr[-200:])
+    ok(r.get('valida') and r.get('vencida_rechazada') and r.get('purgadas') == 20, 'a las 2 horas la cookie deja de valer y la carpeta se borra', sal.stderr[-200:])
+    ok(r.get('todas') and r.get('cuentas') == ['dueno'], 'reiniciar borra todas las pruebas y ninguna cuenta real')
 
     # Z. fuerza bruta (al final: deja bloqueada la dirección de la prueba)
     for _ in range(8):

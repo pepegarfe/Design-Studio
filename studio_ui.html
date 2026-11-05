@@ -3389,6 +3389,19 @@ var PlotterMotor = (function(){
   else { window.addEventListener('resize',function(){ if(userZoomed&&view.ready) draw(); else fitView(); }); }
   window.addEventListener('pywebviewready',loadWork);
   window.addEventListener('load',function(){ if(!api()) loadWork(); });
+  // Prueba sin cuenta: que se vea siempre que nada se guarda, y una salida a mano.
+  window.addEventListener('load',function(){
+    if(api()) return;
+    fetch('/api/update_check').then(function(r){ return r.json(); }).then(function(r){
+      if(!r || !r.invitado) return;
+      window.DS_INVITADO = true;
+      var b = document.createElement('div');
+      b.id = 'avisoPrueba';
+      b.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9000;max-width:calc(100vw - 32px);padding:7px 14px;border-radius:999px;background:#1d1d1b;color:#fff;font-size:12.5px;box-shadow:0 2px 10px rgba(0,0,0,.3)';
+      b.innerHTML = 'Modo de prueba: nada se guarda · <a href="/salir" style="color:#ff9a5c">Salir</a>';
+      document.body.appendChild(b);
+    }).catch(function(){});
+  });
   setTimeout(function(){ loadWork(); },350);
   requestAnimationFrame(fitView);
 
@@ -3410,7 +3423,7 @@ var PlotterMotor = (function(){
     var FILTROS = CHIPS.map(function(v){ return {usbVendorId:v}; });
     function esDePlotter(p){ var f = (p.getInfo && p.getInfo()) || {}; return CHIPS.indexOf(f.usbVendorId) >= 0; }
     var prog = {active:false, sent:0, total:0, done:false, error:null, cancelled:false};
-    function recordar(k, v){ try{ if(v === undefined) return localStorage.getItem('ds.plotter.'+k); localStorage.setItem('ds.plotter.'+k, String(v)); }catch(e){} return null; }
+    function recordar(k, v){ if(typeof DS_INVITADO !== 'undefined' && DS_INVITADO && v !== undefined) return null; try{ if(v === undefined) return localStorage.getItem('ds.plotter.'+k); localStorage.setItem('ds.plotter.'+k, String(v)); }catch(e){} return null; }
     // El navegador no da /dev/cu.usbserial-…: da el fabricante del chip (0x0403 = FTDI, el del 721).
     function etiqueta(p, i, n){ var f = (p.getInfo && p.getInfo()) || {};
       return (f.usbVendorId === 0x0403 ? 'Cable USB — FTDI' : 'Cable USB') + (n > 1 ? ' #'+(i+1) : ''); }
@@ -5139,7 +5152,7 @@ var PlotterMotor = (function(){
       el('upCur').textContent='v '+((r&&r.current)||'—');
       upChip(r);
       if(!r||!r.ok){ el('upMsg').textContent=(r&&r.error)||'No se pudo consultar GitHub.'; return; }
-      if(r.web){ el('upMsg').innerHTML='Estás usando la <b>versión web</b>: siempre es la más reciente, no hay nada que instalar.<br><br><a href="/salir">Cerrar sesión</a>'; return; }
+      if(r.web){ el('upMsg').innerHTML='Estás usando la <b>versión web</b>: siempre es la más reciente, no hay nada que instalar.<br><br>Cuenta: <b>'+(r.invitado?'prueba':(r.usuario||''))+'</b><br>'+(r.invitado?'Modo de prueba: lo que cambies no se guarda':'<a href="/clave">Cambiar contraseña</a>')+(r.dueno?' · <a href="/cuentas">Cuentas</a>':'')+' · <a href="/salir">Cerrar sesión</a>'; return; }
       if(r.dev){ el('upMsg').innerHTML='Estás corriendo Design Studio <b>desde el código</b> (modo desarrollo): aquí se actualiza con <b>git pull</b>, no con el instalador.<br><br>Última publicada: <b>'+(r.latest||'—')+'</b>'; return; }
       if(!r.newer){ el('upMsg').innerHTML='Ya tienes la versión más reciente (<b>'+r.current+'</b>).'; return; }
       var mb = r.size? ' · '+Math.round(r.size/1048576)+' MB' : '';

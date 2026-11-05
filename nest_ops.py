@@ -21,6 +21,7 @@ por 'rot' y luego trasladar (dx,dy) — la UI aplica exactamente eso al doc.
 """
 
 import math
+import threading
 
 try:
     from shapely.geometry import Polygon, LineString, box
@@ -328,18 +329,21 @@ def _nest_core(data, report):
 
 _JOBS = {}
 _JOB_SEQ = [0]
+_SEQ_LOCK = threading.Lock()
 
 
-def nest_start(data):
+def nest_start(data, dueno=None):
+    """`dueno`: la cuenta que lo lanzó (web). Solo ella puede consultarlo, y el tope de trabajos
+    guardados es por cuenta: si fuera común, los acomodos de otros le borrarían el suyo a medias."""
     if not HAS_SHAPELY:
         return {'ok': False, 'error': _NEED}
-    import threading
-    _JOB_SEQ[0] += 1
-    jid = str(_JOB_SEQ[0])
-    job = {'runs': [], 'done': False, 'result': None, 'error': None}
-    _JOBS[jid] = job
-    for k in list(_JOBS.keys())[:-4]:              # no acumular trabajos viejos
-        _JOBS.pop(k, None)
+    with _SEQ_LOCK:
+        _JOB_SEQ[0] += 1
+        jid = str(_JOB_SEQ[0])
+        job = {'runs': [], 'done': False, 'result': None, 'error': None, 'dueno': dueno}
+        _JOBS[jid] = job
+        for k in [k for k, j in _JOBS.items() if j['dueno'] == dueno][:-4]:   # no acumular viejos
+            _JOBS.pop(k, None)
 
     def work():
         try:
@@ -356,10 +360,21 @@ def nest_start(data):
     return {'ok': True, 'job': jid}
 
 
-def nest_status(data):
+def en_marcha(dueno):
+    return sum(1 for j in list(_JOBS.values()) if j['dueno'] == dueno and not j['done'])
+
+
+def olvidar(dueno):
+    """Borra los trabajos de esa cuenta (al cerrar una prueba sin cuenta)."""
+    with _SEQ_LOCK:
+        for k in [k for k, j in _JOBS.items() if j['dueno'] == dueno]:
+            _JOBS.pop(k, None)
+
+
+def nest_status(data, dueno=None):
     o = data or {}
     job = _JOBS.get(str(o.get('job') or ''))
-    if not job:
+    if not job or job['dueno'] != dueno:   # el de otra cuenta "no existe": mismo mensaje
         return {'ok': False, 'error': 'Trabajo de acomodo desconocido.'}
     if job['done'] and job['error']:
         return {'ok': False, 'error': job['error']}

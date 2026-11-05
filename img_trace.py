@@ -47,18 +47,22 @@ def _potrace_bin():
     raise RuntimeError('No se encontró potrace. Instálalo con: brew install potrace')
 
 
-def set_source(path):
+def set_source(path, estado=None):
+    """`estado`: dónde recordar la imagen. Sin él, el común (escritorio: un solo usuario).
+    La versión web pasa uno por cuenta para que un usuario no calque la imagen de otro."""
+    st = _STATE if estado is None else estado
     try:
         im = Image.open(path)
-        _STATE['path'] = path
-        _STATE['name'] = os.path.basename(path)
-        return {'ok': True, 'size': [im.width, im.height], 'name': _STATE['name']}
+        st['path'] = path
+        st['name'] = os.path.basename(path)
+        return {'ok': True, 'size': [im.width, im.height], 'name': st['name']}
     except Exception as e:
         return {'ok': False, 'error': f'No se pudo abrir la imagen: {e}'}
 
 
-def has_source():
-    return bool(_STATE.get('path')) and os.path.exists(_STATE['path'])
+def has_source(estado=None):
+    st = _STATE if estado is None else estado
+    return bool(st.get('path')) and os.path.exists(st['path'])
 
 
 def _svg_to_paths(svg_path):
@@ -89,10 +93,11 @@ def _prep_bw(path, threshold, invert, max_side=1400):
     return g.point(lambda p: 0 if p <= threshold else 255, 'L').convert('1')
 
 
-def trace(options):
-    if not has_source():
+def trace(options, estado=None):
+    st = _STATE if estado is None else estado
+    if not has_source(st):
         return {'ok': False, 'error': 'No hay imagen cargada.'}
-    path = _STATE['path']
+    path = st['path']
     mode = options.get('mode', 'bw')
     svg = tempfile.mktemp(suffix='.svg')
     sobras = [svg]   # archivos de trabajo: se borran al terminar, salga bien o mal
@@ -139,4 +144,4 @@ def trace(options):
                 pass
     if not paths:
         return {'ok': False, 'error': 'El calco no encontró trazos (prueba otro umbral o invertir).'}
-    return {'ok': True, 'name': _STATE['name'], 'paths': paths, 'bbox': bbox}
+    return {'ok': True, 'name': st['name'], 'paths': paths, 'bbox': bbox}

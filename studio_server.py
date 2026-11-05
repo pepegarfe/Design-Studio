@@ -13,6 +13,9 @@ import json
 import tempfile
 import socket
 import re
+import time
+import threading
+import contextlib
 import http.cookies
 
 from bottle import Bottle, BaseRequest, static_file, request, response, HTTPResponse, redirect
@@ -29,6 +32,7 @@ import nest_ops as nester
 import updater
 import export_ops as exporter
 import web_auth as auth
+import plotter_control as core
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get('DS_PORT', 8765))   # otro puerto: lo usa web/auditar_servidor.py
@@ -100,7 +104,7 @@ def entrar_post():
 
 @app.post('/crear')
 def crear_post():
-    # Solo la PRIMERA cuenta, y solo desde esta computadora. Las demás se darán de alta en la fase 4.
+    # Solo la PRIMERA cuenta, y solo desde esta computadora. Las demás las crea el dueño en /cuentas.
     if auth.hay_cuentas() or not auth.es_esta_computadora(request.environ):
         return _pantalla(_modo_sin_sesion(), 'No se puede crear la cuenta desde aquí.', status=403)
     usuario = (request.forms.getunicode('usuario') or '').strip().lower()
@@ -113,10 +117,108 @@ def crear_post():
     _abrir_sesion(usuario)
 
 
+@app.post('/invitado')
+def invitado_post():
+    # Sin cuentas el servidor aún no tiene dueño: nada se abre antes de eso.
+    if not auth.INVITADOS_ACTIVOS or not auth.hay_cuentas():
+        return _pantalla(_modo_sin_sesion(), 'La prueba sin cuenta no está disponible.', status=403)
+    # Con una sesión abierta no se reemplaza: otra página no puede sacarte de tu cuenta con un formulario.
+    if auth.usuario_de(request.get_cookie(auth.COOKIE)):
+        redirect('/')
+    _limpiar_vencidos()
+    cookie, usuario, err = auth.abrir_invitado(request.environ)
+    if err:
+        return _pantalla('entrar', err, status=429)
+    # Sin max_age: la cookie muere al cerrar el navegador (y a las 2 horas, por dentro).
+    response.set_cookie(auth.COOKIE, cookie, path='/', httponly=True, samesite='lax', secure=_es_https())
+    redirect('/')
+
+
+def _limpiar_invitado(usuario):
+    """Lo que un visitante deja en memoria y en temporales, además de su carpeta."""
+    tmp = _CALCO.pop(usuario, {}).get('tmp')
+    if tmp:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+    nester.olvidar(usuario)
+
+
+def _limpiar_vencidos(todos=False):
+    for u in auth.purgar_invitados(todos):
+        _limpiar_invitado(u)
+
+
 @app.get('/salir')
 def salir():
+    quien = auth.usuario_de(request.get_cookie(auth.COOKIE))
+    if auth.es_invitado(quien):
+        auth.cerrar_invitado(quien)
+        _limpiar_invitado(quien)
     response.delete_cookie(auth.COOKIE, path='/')
     redirect('/entrar')
+
+
+def _yo():
+    return request.environ.get('ds.usuario')   # lo pone _guardia, que ya comprobó la sesión
+
+
+def _sin_cache(html_, status=200):
+    # no-store: la página puede llevar una contraseña temporal; que no quede en el historial.
+    return HTTPResponse(body=html_, status=status, headers={'Content-Type': 'text/html; charset=utf-8',
+                                                            'Cache-Control': 'no-store'})
+
+
+@app.get('/clave')
+def clave_get():
+    if auth.es_invitado(_yo()):
+        redirect('/')
+    return _sin_cache(auth.pagina_clave(obligada=auth.debe_cambiar_clave(_yo())))
+
+
+@app.post('/clave')
+def clave_post():
+    yo = _yo()
+    if auth.es_invitado(yo):
+        redirect('/')
+    nueva = request.forms.getunicode('nueva') or ''
+    if nueva != (request.forms.getunicode('nueva2') or ''):
+        err = 'Las dos contraseñas nuevas no son iguales.'
+    else:
+        err = auth.cambiar_clave(request.environ, yo, request.forms.getunicode('actual') or '', nueva)
+    if err:
+        return _sin_cache(auth.pagina_clave(err, auth.debe_cambiar_clave(yo)), 400)
+    _abrir_sesion(yo)   # cambiar la contraseña invalida las sesiones: esta sigue con una nueva
+
+
+def _solo_dueno():
+    if not auth.es_dueno(_yo()):
+        raise HTTPResponse(body='Solo la cuenta del dueño puede ver esto.', status=403,
+                           headers={'Content-Type': 'text/plain; charset=utf-8'})
+
+
+@app.get('/cuentas')
+def cuentas_get():
+    _solo_dueno()
+    return _sin_cache(auth.pagina_cuentas())
+
+
+@app.post('/cuentas')
+def cuentas_post():
+    _solo_dueno()
+    accion = request.forms.getunicode('accion')
+    usuario = (request.forms.getunicode('usuario') or '').strip().lower()
+    clave, err = None, None
+    if accion == 'alta':
+        clave, err = auth.alta(usuario)
+    elif accion == 'restablecer':
+        clave, err = auth.restablecer_clave(usuario)
+    elif accion in ('activar', 'desactivar'):
+        err = auth.poner_activa(usuario, accion == 'activar')
+    else:
+        err = 'Acción desconocida.'
+    return _sin_cache(auth.pagina_cuentas(err or '', usuario, clave or ''), 400 if err else 200)
 
 
 @app.get('/')
@@ -175,7 +277,11 @@ def api_tap():
     return _json(_cnc_tap(request.json or {}))
 
 
-_TRACE_TMP = [None]   # la imagen que el calco está usando ahora
+_CALCO = {}   # cuenta → la imagen que su calco está usando ahora
+
+
+def _calco():
+    return _CALCO.setdefault(_yo(), {})
 
 
 @app.post('/api/trace_upload')
@@ -187,11 +293,12 @@ def api_trace_upload():
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
     tmp.close()
     up.save(tmp.name, overwrite=True)
-    r = tracer.set_source(tmp.name)
+    est = _calco()
+    r = tracer.set_source(tmp.name, est)
     # El calco relee la imagen en cada ajuste, así que esta se queda; la ANTERIOR ya no
     # la usa nadie. Sin esto cada imagen subida se quedaba en el disco para siempre.
     if r.get('ok'):
-        sobra, _TRACE_TMP[0] = _TRACE_TMP[0], tmp.name
+        sobra, est['tmp'] = est.get('tmp'), tmp.name
     else:
         sobra = tmp.name   # no se pudo abrir: no sirve para nada
     if sobra:
@@ -204,7 +311,7 @@ def api_trace_upload():
 
 @app.post('/api/trace')
 def api_trace():
-    return _json(tracer.trace(request.json or {}))
+    return _json(tracer.trace(request.json or {}, _calco()))
 
 
 @app.get('/api/fonts')
@@ -258,26 +365,40 @@ def api_divide():
     return _json(geo.divide_op(request.json or {}))
 
 
+SIN_ACOMODO = 'En la prueba sin cuenta se corre un acomodo a la vez: espera a que termine.'
+
+
 @app.post('/api/nest')
 def api_nest():
+    if auth.es_invitado(_yo()):   # este camino no se puede contar: en la prueba solo va nest_start
+        return _json({'ok': False, 'error': SIN_ACOMODO})
     return _json(nester.nest_op(request.json or {}))
 
 
 @app.post('/api/nest_start')
 def api_nest_start():
-    return _json(nester.nest_start(request.json or {}))
+    if auth.es_invitado(_yo()) and nester.en_marcha(_yo()):
+        return _json({'ok': False, 'error': SIN_ACOMODO})
+    return _json(nester.nest_start(request.json or {}, _yo()))
 
 
 @app.post('/api/nest_status')
 def api_nest_status():
-    return _json(nester.nest_status(request.json or {}))
+    return _json(nester.nest_status(request.json or {}, _yo()))
+
+
+# ⚠️ PyMuPDF (exportar PDF/PNG/JPG, abrir .ai) NO aguanta dos hilos a la vez: lo dice su documentación y
+# el fallo puede tumbar TODO el servidor, no solo ese pedido. Va de uno en uno.
+_PYMUPDF = threading.Lock()
 
 
 @app.post('/api/export')
 def api_export():
     """Devuelve el archivo YA GENERADO como descarga (no JSON: son binarios y pesan)."""
     d = request.json or {}
-    r = exporter.export_bytes(d.get('format'), d)
+    # PNG y JPG también: se generan a partir del PDF.
+    with (contextlib.nullcontext() if d.get('format') in ('svg', 'dxf') else _PYMUPDF):
+        r = exporter.export_bytes(d.get('format'), d)
     if not r.get('ok'):
         return _json(r)
     tipos = {'png': 'image/png', 'jpg': 'image/jpeg', 'pdf': 'application/pdf',
@@ -297,7 +418,8 @@ _SIN_UPDATE = {'ok': False, 'error': 'La versión web no se instala: siempre es 
 
 @app.get('/api/update_check')
 def api_update_check():
-    return _json({'ok': True, 'web': True, 'newer': False, 'current': updater.current_version()})
+    return _json({'ok': True, 'web': True, 'newer': False, 'current': updater.current_version(),
+                  'usuario': _yo(), 'dueno': auth.es_dueno(_yo()), 'invitado': auth.es_invitado(_yo())})
 
 
 @app.post('/api/update_start')
@@ -317,18 +439,24 @@ def api_update_apply():
 
 @app.post('/api/autosave_save')
 def api_autosave_save():
+    if auth.es_invitado(_yo()):
+        return _json({'ok': True})   # la prueba sin cuenta no deja nada guardado
     from studio_backend import autosave_save as f
     return _json(f(request.json or {}))
 
 
 @app.get('/api/autosave_load')
 def api_autosave_load():
+    if auth.es_invitado(_yo()):
+        return _json({'ok': True, 'exists': False})
     from studio_backend import autosave_load as f
     return _json(f())
 
 
 @app.post('/api/autosave_clear')
 def api_autosave_clear():
+    if auth.es_invitado(_yo()):
+        return _json({'ok': True})
     from studio_backend import autosave_clear as f
     return _json(f())
 
@@ -346,7 +474,8 @@ def api_parse():
     tmp.close()
     try:
         up.save(tmp.name, overwrite=True)
-        r = load_vector(tmp.name)   # el MISMO lector que el escritorio
+        with (_PYMUPDF if ext == '.ai' else contextlib.nullcontext()):
+            r = load_vector(tmp.name)   # el MISMO lector que el escritorio
     finally:
         try:
             os.unlink(tmp.name)
@@ -445,7 +574,9 @@ def _lan_ip():
         return '127.0.0.1'
 
 
-PUBLICAS = ('/entrar', '/crear', '/salir')
+PUBLICAS = ('/entrar', '/crear', '/salir', '/invitado')
+# Lo que la cuenta del dueño hereda de cuando no había cuentas (se copia, no se mueve).
+HEREDA_EL_DUENO = ('plotter_config.json', 'cnc_config.json', 'autosave.dstudio')
 SEGURIDAD = [('X-Content-Type-Options', 'nosniff'),   # el navegador no "adivina" tipos de archivo
              ('X-Frame-Options', 'DENY'),             # nadie puede meter la app dentro de otra página
              ('Referrer-Policy', 'same-origin')]
@@ -453,7 +584,9 @@ SEGURIDAD = [('X-Content-Type-Options', 'nosniff'),   # el navegador no "adivina
 
 def _guardia(wsgi):
     """Antes de bottle: sin sesión válida no se llega a NINGUNA ruta (salvo entrar/salir).
-    Va por fuera de bottle para que ninguna ruta nueva se quede sin protección por olvido."""
+    Va por fuera de bottle para que ninguna ruta nueva se quede sin protección por olvido.
+    Aquí también se fija la carpeta de datos de la cuenta, por la misma razón: ninguna ruta
+    tiene que acordarse de pedirla, y por lo tanto ninguna puede olvidarlo."""
     def con_guardia(environ, start_response):
         def responder(status, headers, exc_info=None):
             return start_response(status, list(headers) + SEGURIDAD, exc_info)
@@ -463,6 +596,7 @@ def _guardia(wsgi):
             return [cuerpo]
 
         ruta = environ.get('PATH_INFO') or '/'
+        carpeta = None
         if ruta not in PUBLICAS:
             try:
                 c = http.cookies.SimpleCookie(environ.get('HTTP_COOKIE') or '')
@@ -476,6 +610,13 @@ def _guardia(wsgi):
                         {'ok': False, 'login': True, 'error': 'Tu sesión terminó: vuelve a entrar.'}).encode('utf-8'))
                 return corto('302 Found', 'text/plain', b'', [('Location', '/entrar')])
             environ['ds.usuario'] = usuario
+            # Contraseña temporal: nada funciona hasta cambiarla.
+            if ruta != '/clave' and auth.debe_cambiar_clave(usuario):
+                if ruta.startswith('/api/'):
+                    return corto('401 Unauthorized', 'application/json; charset=utf-8', json.dumps(
+                        {'ok': False, 'login': True, 'error': 'Primero cambia tu contraseña temporal.'}).encode('utf-8'))
+                return corto('302 Found', 'text/plain', b'', [('Location', '/clave')])
+            carpeta = auth.carpeta_de(usuario, core._config_compartida().parent, HEREDA_EL_DUENO)
         try:
             largo = int(environ.get('CONTENT_LENGTH') or 0)
         except ValueError:
@@ -483,19 +624,56 @@ def _guardia(wsgi):
         if largo > LIMITE:
             return corto('413 Request Entity Too Large', 'application/json; charset=utf-8', json.dumps(
                 {'ok': False, 'error': f'Es demasiado grande (más de {LIMITE // 1048576} MB).'}).encode('utf-8'))
-        return wsgi(environ, responder)
+        ficha = core._CARPETA_USUARIO.set(carpeta)
+        try:
+            return wsgi(environ, responder)
+        finally:
+            core._CARPETA_USUARIO.reset(ficha)   # el hilo atenderá a otra cuenta después
     return con_guardia
+
+
+def _servir(wsgi):
+    """Atiende a varios a la vez: si no, el acomodo largo de uno congela a todos.
+    waitress (para internet) si está instalado; si no, la versión simple de Python, que basta en
+    la Mac. La auditoría corre con las dos."""
+    try:
+        from waitress import serve
+    except ImportError:
+        from socketserver import ThreadingMixIn
+        from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, make_server
+
+        class Servidor(ThreadingMixIn, WSGIServer):
+            daemon_threads = True
+
+        class Callado(WSGIRequestHandler):
+            def log_message(self, *a):
+                pass
+        print('  (servidor: el simple de Python)')
+        make_server('0.0.0.0', PORT, wsgi, server_class=Servidor, handler_class=Callado).serve_forever()
+        return
+    print('  (servidor: waitress)')
+    # ⚠️ clear_untrusted_proxy_headers=False: por defecto waitress BORRA X-Forwarded-For, y sin esa
+    # cabecera web_auth cree que el visitante está en esta computadora: alguien de fuera podría
+    # crear la cuenta del dueño, y detrás de un proxy el bloqueo por fallos sería uno para todos.
+    serve(wsgi, host='0.0.0.0', port=PORT, threads=8, max_request_body_size=LIMITE,
+          clear_untrusted_proxy_headers=False)
 
 
 def main():
     import threading
     threading.Thread(target=texter.list_fonts, daemon=True).start()   # calienta el caché de fuentes
+    _limpiar_vencidos(todos=True)   # reiniciar borra las pruebas que hubieran quedado
+
+    def barrer():
+        while True:
+            time.sleep(600)
+            _limpiar_vencidos()
+    threading.Thread(target=barrer, daemon=True).start()
     ip = _lan_ip()
     print(f"Design Studio en:")
     print(f"  · esta Mac:        http://localhost:{PORT}")
     print(f"  · otros dispositivos (misma red): http://{ip}:{PORT}")
-    from bottle import run
-    run(_guardia(app), host='0.0.0.0', port=PORT, quiet=True)
+    _servir(_guardia(app))
 
 
 if __name__ == '__main__':

@@ -17,7 +17,32 @@ import threading
 
 import plotter_control as core
 
+# La versión web atiende a varios a la vez. Dos cosas que antes no podían pasar:
+# - leer un archivo mientras otro pedido lo escribe (se vería a medias, y cnc_get() caería a los
+#   valores de fábrica: el siguiente guardado BORRARÍA las fresas) → _escribir() es de un golpe;
+# - dos cambios seguidos pisándose (leer-cambiar-guardar) → _CONFIG_EN_FILA los pone en fila.
+_CONFIG_EN_FILA = threading.RLock()
 
+
+def _en_fila(f):
+    def con_fila(*a, **k):
+        with _CONFIG_EN_FILA:
+            return f(*a, **k)
+    con_fila.__name__, con_fila.__doc__ = f.__name__, f.__doc__
+    return con_fila
+
+
+def _escribir(p, texto):
+    """Escribe el archivo de un golpe: quien lo lea ve el viejo o el nuevo, nunca uno a medias."""
+    tmp = p.with_name(f'{p.name}.{threading.get_ident()}.tmp')
+    try:
+        tmp.write_text(texto, encoding='utf-8')
+        os.replace(tmp, p)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+@_en_fila
 def set_workarea(w, h):
     """Guarda el área de trabajo en la misma config que usa el original."""
     try:
@@ -33,7 +58,7 @@ def set_workarea(w, h):
                 data = {}
         data['work_w'] = w
         data['work_h'] = h
-        p.write_text(json.dumps(data), encoding='utf-8')
+        _escribir(p, json.dumps(data))
         return {'ok': True, 'work': [w, h]}
     except Exception as e:
         return {'ok': False, 'error': str(e)}
@@ -88,8 +113,7 @@ def plotter_prefs():
 
 def _prefs_save(port, baud):
     try:
-        _prefs_path().write_text(json.dumps({'port': port, 'baud': int(baud)}),
-                                 encoding='utf-8')
+        _escribir(_prefs_path(), json.dumps({'port': port, 'baud': int(baud)}))
     except Exception:
         pass      # sin permisos de escritura no es motivo para impedir el corte
 
@@ -244,6 +268,7 @@ def _apply_preset_fixes(data, rev):
     return True
 
 
+@_en_fila
 def cnc_get():
     """Config del CNC completa (defaults + lo guardado encima), migrando esquemas viejos."""
     data = json.loads(json.dumps(CNC_DEFAULTS))   # copia profunda de los defaults
@@ -262,15 +287,15 @@ def cnc_get():
                 data['tools'] = _migrate_tools_v1(data['tools'], data['materials'])
                 if not any(t['id'] == data['tool_sel'] for t in data['tools']):
                     data['tool_sel'] = data['tools'][0]['id']
-                p.write_text(json.dumps({k: data[k] for k in
+                _escribir(p, json.dumps({k: data[k] for k in
                                          ('machine', 'theme', 'units', 'fillview', 'sheets', 'work',
                                           'material', 'materials', 'tool_sel', 'tools')},
-                                        ensure_ascii=False, indent=1), encoding='utf-8')
+                                        ensure_ascii=False, indent=1))
             if not any(m['id'] == data['material'].get('type') for m in data['materials']):
                 data['material']['type'] = data['materials'][0]['id']
             if fix:   # aparte: si no se puede escribir, la corrección igual vale en memoria
                 try:
-                    p.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
+                    _escribir(p, json.dumps(data, ensure_ascii=False, indent=1))
                 except Exception:
                     pass
     except Exception:
@@ -279,6 +304,7 @@ def cnc_get():
     return data
 
 
+@_en_fila
 def cnc_set(patch):
     """Aplica un cambio parcial (solo las llaves presentes) y persiste. Devuelve la config completa."""
     try:
@@ -391,7 +417,7 @@ def cnc_set(patch):
             cur['tool_sel'] = str(patch['tool_sel'])
         if not any(t['id'] == cur['tool_sel'] for t in cur['tools']):
             cur['tool_sel'] = cur['tools'][0]['id']
-        _cnc_path().write_text(json.dumps(cur, ensure_ascii=False, indent=1), encoding='utf-8')
+        _escribir(_cnc_path(), json.dumps(cur, ensure_ascii=False, indent=1))
         cur['ok'] = True
         return cur
     except Exception as e:
@@ -811,7 +837,7 @@ def _autosave_path():
 
 def autosave_save(data):
     try:
-        _autosave_path().write_text(json.dumps(data or {}, ensure_ascii=False), encoding='utf-8')
+        _escribir(_autosave_path(), json.dumps(data or {}, ensure_ascii=False))
         return {'ok': True}
     except Exception as e:
         return {'ok': False, 'error': str(e)}

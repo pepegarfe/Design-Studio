@@ -36,6 +36,10 @@ import plotter_control as core   # reusa el Douglas-Peucker del motor (_simplify
 # ---------------------------------------------------------------- fuentes del sistema
 
 def _font_dirs():
+    # Servidor en internet: su catálogo propio, no las fuentes de la máquina donde corre.
+    catalogo = os.environ.get('DS_FUENTES')
+    if catalogo:
+        return [catalogo]
     home = os.path.expanduser('~')
     if sys.platform == 'darwin':
         return ['/System/Library/Fonts', '/System/Library/Fonts/Supplemental',
@@ -80,11 +84,10 @@ _CACHE_V = 2          # subirlo invalida cachés viejos en disco (p.ej. al agreg
 
 
 def _cache_file():
-    """El caché de fuentes vive junto a la config del CNC (mismo criterio: carpeta
-    de configuración de la app, no /tmp)."""
+    """El caché de fuentes vive junto a la config de la instalación (no en /tmp). Es COMÚN a
+    todas las cuentas: las fuentes son las mismas y escanearlas tarda ~5 s."""
     try:
-        from studio_backend import _cnc_path
-        return os.path.join(os.path.dirname(_cnc_path()), 'fonts_cache.json')
+        return str(core._config_compartida().with_name('fonts_cache.json'))
     except Exception:
         return os.path.join(os.path.expanduser('~'), '.builtbyjose_fonts_cache.json')
 

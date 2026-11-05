@@ -6,6 +6,7 @@ Plotter Antike — Controlador de Plotter de Corte
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import threading
+import contextvars
 import math
 import re
 import os
@@ -67,7 +68,19 @@ def _migrar_config(base, nueva):
         pass   # sin config previa, o sin permisos: se arranca con la de fábrica
 
 
+# Versión web: la carpeta de la cuenta que hizo ESTE pedido (la pone studio_server.py). Es por
+# pedido y no una variable común porque el servidor atiende a varios a la vez: con una variable
+# común, un usuario leería la config del otro. En el escritorio siempre está vacía.
+_CARPETA_USUARIO = contextvars.ContextVar('ds_carpeta_usuario', default=None)
+
+
 def _config_path():
+    """La config de la cuenta del pedido en curso (web) o la de la instalación (escritorio)."""
+    d = _CARPETA_USUARIO.get()
+    return Path(d) / 'plotter_config.json' if d else _config_compartida()
+
+
+def _config_compartida():
     """Ruta persistente para la config: AppData/Library cuando es exe, dir del script si no."""
     if getattr(sys, 'frozen', False):
         base = _config_base()
