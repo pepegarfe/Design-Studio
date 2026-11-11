@@ -13,7 +13,7 @@ import time
 
 AQUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, AQUI)
-sys.argv[0] = os.path.join(AQUI, 'design_studio.py')
+sys.argv[0] = os.path.join(AQUI, 'studio_server.py')
 
 import plotter_control as core
 import studio_backend as be

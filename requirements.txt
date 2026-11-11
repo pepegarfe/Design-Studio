@@ -1,4 +1,0 @@
-pyserial>=3.5
-svgpathtools>=1.6
-ezdxf>=1.1
-pymupdf>=1.24,<2

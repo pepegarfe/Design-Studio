@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#C81C68">
+<meta name="theme-color" content="#171A20">
 <title>Estación de corte</title>
+<link rel="manifest" href="/estacion.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/iconos/estacion-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/iconos/estacion-192.png">
+<link rel="apple-touch-icon" href="/iconos/estacion-180.png">
 <!--
   ESTACIÓN DE CORTE: un teléfono Android viejo, fijo en el taller y enchufado al plotter, con
   esta página abierta en Chrome. Pregunta al servidor cada pocos segundos si hay trabajos;
@@ -173,6 +177,7 @@ function crearEstacion(dep) {
     SER.addEventListener('connect', function(ev){ auto(ev.target); });
   }
 
+  var build0 = null;
   async function revisar() {
     var r;
     // De paso le dice al servidor "aquí hay una estación, y (no) tiene el plotter conectado":
@@ -180,6 +185,12 @@ function crearEstacion(dep) {
     try { r = await dep.pedir('/api/estacion/fila', { plotter: !!e.conectado }); } catch (x) { r = null; }
     if (!r || !r.ok) { e.servidor = false; cambio(); return e; }
     e.servidor = true; e.trabajos = r.trabajos;
+    // Actualización automática: el servidor manda su `build` con la fila. Si cambió, esta
+    // página ya es código viejo → se recarga sola, pero NUNCA a medio corte.
+    if (r.build) {
+      if (!build0) build0 = r.build;
+      else if (r.build !== build0 && !e.cortando && dep.recargar) { dep.recargar(); return e; }
+    }
     var nuevos = r.trabajos.filter(function(t){ return t.estado === 'pendiente' && !vistos[t.id]; });
     r.trabajos.forEach(function(t){ vistos[t.id] = 1; });
     if (nuevos.length) dep.avisar(nuevos);
@@ -354,6 +365,7 @@ function haceCuanto(seg) {
     M: PlotterMotor, nav: navigator, pedir: function(u, b){ return pedir(u, b).then(function(r){
       if (r && r.ahora) relojServidor = r.ahora; return r; }); },
     avisar: avisar, render: pintar,
+    recargar: function(){ location.reload(); },
     baud: (function(){ try { return parseInt(localStorage.getItem('ds.plotter.baud'), 10) || 9600; } catch (x) { return 9600; } })(),
     pantalla: function(){},
   });

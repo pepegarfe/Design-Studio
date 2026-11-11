@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Design Studio</title>
+<meta name="theme-color" content="#D11E68">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/iconos/studio-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/iconos/studio-192.png">
+<link rel="apple-touch-icon" href="/iconos/studio-180.png">
 <style>
   :root{
     --bg:#0E1013; --panel:#171A20; --rail:#131519; --line:#282D36; --line-2:#333A45;
@@ -3524,6 +3529,28 @@ var PlotterMotor = (function(){
       document.body.appendChild(b);
     }).catch(function(){});
   });
+  // ===== Actualización automática (versión web / app instalada) =====
+  // El servidor da un `build` que cambia con cada despliegue. Si cambia mientras esta página
+  // está abierta, ya es código viejo: sin diseño en la mesa se recarga sola; con diseño NO
+  // (se perdería lo que no está guardado) y sale un botón que se queda hasta que lo pulses.
+  var buildMio=null, avisoBuild=false;
+  function revisarBuild(){ if(api()||document.hidden) return;
+    fetch('/api/update_check').then(function(r){ return r.json(); }).then(function(r){
+      if(!r||!r.build) return;
+      if(buildMio===null){ buildMio=r.build; return; }
+      if(r.build===buildMio||avisoBuild) return;
+      if(!hasDoc()){ location.reload(); return; }
+      avisoBuild=true;
+      var b=document.createElement('div');
+      b.style.cssText='position:fixed;left:16px;bottom:44px;z-index:9000;max-width:calc(100vw - 32px);padding:9px 12px;border-radius:10px;background:var(--panel);color:var(--ink);border:1px solid var(--accent);font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.3);display:flex;gap:10px;align-items:center';
+      b.innerHTML='<span>Hay una <b>versión nueva</b> de Design Studio. Guarda tu trabajo y actualiza.</span>';
+      var k=document.createElement('button'); k.className='pbtn acc'; k.textContent='Actualizar'; k.style.cssText='height:28px;padding:0 12px;flex:none';
+      k.addEventListener('click',function(){ location.reload(); });
+      b.appendChild(k); document.body.appendChild(b);
+    }).catch(function(){}); }
+  window.addEventListener('load',function(){ if(api()) return; revisarBuild();
+    setInterval(revisarBuild,120000);
+    document.addEventListener('visibilitychange',revisarBuild); });
   setTimeout(function(){ loadWork(); },350);
   requestAnimationFrame(fitView);
 

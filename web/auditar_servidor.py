@@ -21,12 +21,13 @@ import uuid
 import shutil
 import tempfile
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.argv[0] = os.path.abspath(__file__)   # pywebview busca la carpeta del script al importarse
+sys.argv[0] = os.path.abspath(__file__)
 COPIA = tempfile.mkdtemp(prefix='ds_auditoria_')
 for _n in os.listdir(_REPO):
     if _n.endswith(('.py', '.json', '.html', '.js')) or _n in ('version.txt',):
         shutil.copy2(os.path.join(_REPO, _n), COPIA)
 shutil.copytree(os.path.join(_REPO, 'vendor'), os.path.join(COPIA, 'vendor'))
+shutil.copytree(os.path.join(_REPO, 'iconos'), os.path.join(COPIA, 'iconos'))   # los logos de las PWA
 # Puerto PROPIO y libre: si se usara el 8765 y Jose tiene su servidor abierto, las pruebas le
 # pegarían al SUYO (con su configuración real) sin darse cuenta. Pasó el 2-nov-2026.
 import socket
@@ -134,7 +135,7 @@ if srv.poll() is not None:
 
 try:
     import plotter_control as core
-    import design_studio as ds          # el camino del ESCRITORIO, para comparar
+    import studio_backend as ds         # el MOTOR llamado directo, para comparar (antes: la app de escritorio)
 
 
     # 0. SEGURIDAD (fase 3) — antes de entrar, nada se abre
@@ -221,7 +222,7 @@ try:
     for nombre, contenido in [('m.svg', SVG), ('m.dxf', DXF), ('m.ai', AI)]:
         web = pedir('/api/parse', archivo=(nombre, contenido))
         p = os.path.join(COPIA, '_tmp_' + nombre); open(p, 'wb').write(contenido)
-        esc = ds._load_vector(p); os.unlink(p)
+        esc = ds.load_vector(p); os.unlink(p)
         igual = web.get('ok') and web.get('paths') == esc.get('paths') and web.get('bbox') == esc.get('bbox')
         ok(igual, f'abrir {nombre[-3:].upper()}: idéntico al escritorio',
            f"{len(web.get('paths') or [])} trazados" if web.get('ok') else web.get('error'))
@@ -249,7 +250,7 @@ try:
 
     # 4. área de trabajo y CNC (escriben config: por eso va sobre la copia)
     wa = pedir('/api/workarea')
-    ok(wa.get('work') == list(ds._load_workarea()), 'leer área de trabajo', wa.get('work'))
+    ok(wa.get('work') == list(ds.load_workarea()), 'leer área de trabajo', wa.get('work'))
     cnc = pedir('/api/cnc')
     ok(cnc.get('tools') and cnc.get('materials'), 'leer configuración CNC (fresas y materiales)', f"{len(cnc.get('tools') or [])} fresas")
     tx = pedir('/api/tools_export')
@@ -633,6 +634,36 @@ print(json.dumps(r))
     ok(r.get('pasaron') == 20 and 'muchas pruebas' in r.get('tope', ''), 'máximo 20 pruebas a la vez en todo el servidor', str(r)[:150] or sal.stderr[-200:])
     ok(r.get('valida') and r.get('vencida_rechazada') and r.get('purgadas') == 20, 'a las 2 horas la cookie deja de valer y la carpeta se borra', sal.stderr[-200:])
     ok(r.get('todas') and r.get('cuentas') == ['dueno'], 'reiniciar borra todas las pruebas y ninguna cuenta real')
+
+    # J2. APPS INSTALABLES (PWA): dos apps distintas, con su logo, visibles SIN sesión
+    m1 = http_crudo('GET', '/manifest.webmanifest')
+    m2 = http_crudo('GET', '/estacion.webmanifest')
+    try:
+        j1, j2 = json.loads(m1[2]), json.loads(m2[2])
+    except Exception:
+        j1 = j2 = {}
+    ok(m1[0] == 200 and m2[0] == 200 and 'manifest+json' in m1[1].get('Content-Type', '')
+       and (j1.get('id'), j1.get('start_url'), j2.get('id'), j2.get('start_url'), j2.get('scope'))
+       == ('/', '/', '/estacion', '/estacion', '/estacion') and j1.get('name') != j2.get('name'),
+       'dos manifiestos sin sesión: Design Studio ("/") y Estación de corte ("/estacion"), cada uno con su id',
+       str((m1[0], m2[0], j1.get('id'), j2.get('id'))))
+    fuentes = [i['src'] for j in (j1, j2) for i in j.get('icons', [])] + [
+        '/iconos/studio-32.png', '/iconos/estacion-32.png', '/iconos/studio-180.png', '/iconos/estacion-180.png',
+        '/favicon.ico']
+    malos = [u for u in fuentes if not (lambda r: r[0] == 200 and r[2][:4] in (b'\x89PNG', b'\x00\x00\x01\x00'))(http_crudo('GET', u))]
+    ok(len(fuentes) == 11 and not malos and not (set(i['src'] for i in j1['icons']) & set(i['src'] for i in j2['icons'])),
+       'los 11 iconos (y /favicon.ico) se sirven sin sesión, son imágenes de verdad, y cada app tiene los SUYOS', str(malos))
+    ok(all(http_crudo('GET', u)[0] in (302, 404) for u in
+           ('/iconos/../usuarios.json', '/iconos/%2e%2e/web_auth.py', '/iconos/studio_server.py', '/iconos/')),
+       'por /iconos/ no se saca nada que no sea un icono')
+    pag = http_crudo('GET', '/', cookie=YO)[2].decode('utf-8', 'replace')
+    est = http_crudo('GET', '/estacion', cookie=YO)[2].decode('utf-8', 'replace')
+    ok('href="/manifest.webmanifest"' in pag and '/iconos/studio-32.png' in pag
+       and 'href="/estacion.webmanifest"' in est and '/iconos/estacion-32.png' in est and '/iconos/studio' not in est,
+       'cada página enlaza SU manifiesto y SU icono de pestaña')
+    b1 = api('/api/update_check', YO)[1].get('build')
+    ok(b1 and len(b1) == 12 and api('/api/estacion/fila', YO)[1].get('build') == b1,
+       'el servidor publica su versión (build) al editor y a la estación: es lo que dispara la actualización sola', str(b1))
 
     # K. ESTACIÓN DE CORTE: cada cuenta tiene SU fila; lo que se corta es el MISMO HPGL de "Enviar"
     cuadro = {'paths': [[[0, 0], [50, 0], [50, 30], [0, 30], [0, 0]]], 'speed': 300, 'pressure': 120,

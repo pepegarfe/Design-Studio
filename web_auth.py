@@ -472,6 +472,11 @@ def _marco(pestana, titulo, sub, cuerpo, ancho=360):
     e = html.escape
     return f'''<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Design Studio · {e(pestana)}</title>
+<meta name="theme-color" content="#D11E68">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="/iconos/studio-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/iconos/studio-192.png">
+<link rel="apple-touch-icon" href="/iconos/studio-180.png">
 <style>
 :root{{--bg:#f4f4f2;--card:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#dcdcd6;--acc:#e8590c;--bad:#c92a2a}}
 @media (prefers-color-scheme:dark){{:root{{--bg:#151515;--card:#1f1f1f;--ink:#ececea;--muted:#9a9a94;--line:#333;--acc:#ff7a2e;--bad:#ff6b6b}}}}

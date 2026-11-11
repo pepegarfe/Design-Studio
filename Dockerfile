@@ -30,7 +30,8 @@ COPY . .
 # producción con una función muerta sin ningún error. tkinter: el motor (plotter_control.py)
 # lo importa de entrada aunque en el servidor no se dibuje ninguna ventana.
 RUN python -c "import tkinter, bottle, waitress, fitz, shapely, PIL, fontTools, vtracer, ezdxf, serial; \
-import img_trace, studio_server; print('potrace:', img_trace._potrace_bin()); print('piezas OK')"
+import img_trace, studio_server; print('potrace:', img_trace._potrace_bin()); print('piezas OK')" \
+ && for f in studio.ico studio-192.png studio-512.png estacion.ico estacion-192.png estacion-512.png; do test -s iconos/$f || { echo "FALTA iconos/$f (los logos de las PWA)"; exit 1; }; done
 
 # ⚠️ DS_IP_CABECERA, NO DS_PROXY: en Railway el último X-Forwarded-For es SU servidor de borde
 # (cambia en cada pedido) y el bloqueo de 8 fallos no funcionaba. X-Real-IP la sobrescribe

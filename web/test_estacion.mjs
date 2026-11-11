@@ -50,7 +50,7 @@ function servidorFalso(trabajos = []) {
     s.llamadas.push([url, body]);
     if (s.caido) throw new Error('sin red');
     const t = body && s.trabajos.find(x => x.id === body.id);
-    if (url === '/api/estacion/fila') return { ok: true, trabajos: s.trabajos.map(({ hpgl, ...x }) => x), ahora: 100 };
+    if (url === '/api/estacion/fila') return { ok: true, trabajos: s.trabajos.map(({ hpgl, ...x }) => x), ahora: 100, build: s.build };
     if (url === '/api/estacion/tomar') {
       if (!t || t.estado !== 'pendiente') return { ok: false, error: 'Ese trabajo no está esperando' };
       t.estado = 'cortando'; return { ok: true, hpgl: t.hpgl, trabajo: { id: t.id, nombre: t.nombre } };
@@ -81,8 +81,25 @@ function montar({ permitidos = [], elegido = null, android = true, conUsb = true
   vm.createContext(ctx);
   vm.runInContext(motor + '\n' + logica + '\n;globalThis.PM = PlotterMotor;', ctx);
   const E = ctx.crearEstacion({ M: ctx.PM, nav, pedir: srv.pedir, avisar: n => avisos.push(n.map(t => t.id)),
-                                render: e => pinturas.push(JSON.parse(JSON.stringify(e))), baud: 9600 });
+                                render: e => pinturas.push(JSON.parse(JSON.stringify(e))), baud: 9600,
+                                recargar: () => { srv.recargas = (srv.recargas || 0) + 1; } });
   return { E, srv, avisos, escuchas, pedidos, pinturas, ctx };
+}
+
+// 0 · Actualización automática: si el servidor cambia de versión, la estación se recarga sola
+{
+  const srv = servidorFalso([]);
+  srv.build = 'v1';
+  const { E } = montar({ permitidos: [chipUsb()], srv });
+  await E.revisar(); await E.revisar();
+  ok(!srv.recargas, 'misma versión del servidor: la estación no se recarga');
+  srv.build = 'v2';
+  await E.revisar();
+  ok(srv.recargas === 1, 'el servidor cambió de versión (despliegue): la estación se recarga sola');
+  E.estado.cortando = true; srv.recargas = 0; srv.build = 'v3';
+  await E.revisar();
+  ok(!srv.recargas, 'pero NUNCA a medio corte: espera a que termine');
+  E.estado.cortando = false;
 }
 
 // 1 · Llega un trabajo: avisa UNA vez, no corta solo

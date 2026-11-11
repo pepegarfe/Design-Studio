@@ -11,12 +11,20 @@ arquitectura se descubre en `plotter_control.py` — no se documenta aquí para 
 
 ## Qué es
 
-App de escritorio **Python/tkinter** (un solo archivo, `plotter_control.py`, ~3600 líneas) que
-controla un **plotter de corte** por puerto serial/USB. Abre un vector (SVG, DXF, AI), deja
-acomodarlo y lo envía al plotter en **HPGL**. Corre en Windows, Mac y Linux.
+**Design Studio**: una app **web** (servidor `studio_server.py` + interfaz `studio_ui.html`) para
+diseñar vectores y cortarlos en **plotter** (HPGL por cable, desde el navegador) o en **CNC**
+(exporta `.tap`). Vive en línea en Railway y se instala como **dos PWA**: el editor (`/`) y la
+estación de corte (`/estacion`).
 
-**Se distribuye compilada** (PyInstaller). No es una librería ni tiene módulos propios: todo vive en
-ese archivo. **No separar en varios archivos sin pedido explícito.**
+⚠️ **Desde el 11-nov-2026 NO hay app de escritorio** (decisión de Jose): se borraron
+`design_studio.py` (pywebview), el instalador, la CI de releases y `updater.py`. Consecuencias que
+NO se deducen del código:
+- **`plotter_control.py` se queda**: es el MOTOR (parsers, HPGL, config) que importan el backend y
+  el servidor. Dentro todavía trae la app tkinter vieja (`PlotterApp`), que ya nadie abre — por eso
+  el servidor necesita `libtk`. **No separar el archivo sin pedido explícito.**
+- **`studio_ui.html` conserva las ramas `api()`** (el puente de pywebview): hoy `api()` siempre es
+  falso y esas ramas son código muerto. No construir sobre ellas.
+- Las apps de escritorio ya instaladas siguen abriendo, pero **no reciben nada nuevo**.
 
 ---
 
@@ -58,7 +66,7 @@ ese archivo. **No separar en varios archivos sin pedido explícito.**
   apply, que ya empuja; hacerlo en ambos duplica el historial). **`open_file()` limpia ambos stacks**
   (`_undo_stack` y `_redo_stack`).
 - **Rutas de recursos y config: usar `_resource()` y `_config_path()`**, nunca hardcodear. Es lo que
-  hace que funcione igual como script y como exe de PyInstaller (config en AppData en Windows).
+  hace que cada cuenta de la web lea SU carpeta (ver `.claude/rules/servidor-web.md`).
 - ⚠️ **TODO JSON con `encoding='utf-8'` EXPLÍCITO**: sin él Python usa el codepage del SO (**cp1252
   en Windows**) y un `″` —lo llevan los nombres de fresa de fábrica— hace que `write_text` **trunque
   el archivo a 0 BYTES** y la config se pierda EN SILENCIO. **En Mac nunca falla**, así que no
@@ -159,17 +167,8 @@ ese archivo. **No separar en varios archivos sin pedido explícito.**
 - **`_set_led` no debe tocar `self.sb_led` directo** — usar `_set_sb_led()`, que tiene guard
   `hasattr` (a `_set_led` se le llama antes de que exista el LED de la barra de estado).
 
-### Design Studio (`design_studio.py`, pywebview) — lo que costó tres días
+### Reglas de diagnóstico y plotter en el navegador
 
-- ⚠️ **NUNCA cuelgues del objeto `js_api` un atributo PÚBLICO que sea un objeto**: pywebview
-  **recorre** ese objeto para exponer sus métodos y **se mete dentro**. Con la ventana colgada ahí
-  toca `window.width`, cuyo getter pide el tamaño **a la ventana nativa que aún nace en otro hilo**
-  → **abrazo mortal: "No responde" para siempre** (~2 de 3 arranques, solo Windows; es una carrera
-  y en Mac se gana). Por eso **`api._window`** — pywebview salta los nombres con `_`. **Ese guion
-  bajo no es estilo, es el arreglo.**
-- **No quitar `arranque.log` ni el vigilante `faulthandler`** de `main()`. La app se distribuye
-  **sin consola**: sin ese registro, un cuelgue al arrancar **no deja ningún rastro** y solo queda
-  adivinar. En un arranque sano escribe seis líneas y se desarma solo.
 - **Regla:** fallo **intermitente** = dos cosas compitiendo; fallo en **una sola máquina** = mide ahí, no deduzcas.
 - ⚠️ **Plotter en el navegador: en ANDROID no usar `navigator.serial`.** Existe, pero solo ve
   puertos **Bluetooth**: el plotter nunca aparecería, sin error. Allá el cable va por **WebUSB**
@@ -225,50 +224,31 @@ La app **arranca sin ninguna dependencia** y solo deshabilita la función que fa
 
 ---
 
-## Distribución y auto-actualización (operativo, no obvio)
+## Distribución: dos PWA y actualización automática (operativo, no obvio)
 
-**Desde el 25-jul-2026 solo se distribuye Design Studio** (decisión de Jose). La app tkinter sigue
-en el repo como motor y como respaldo, pero **ya no se compila ni se publica**.
-
-- **CI** (`.github/workflows/release.yml`): al publicar un tag compila Design Studio para **Windows
-  y Mac (Apple Silicon)** y sube `DesignStudio-Windows.zip` / `DesignStudio-Mac.zip` al release.
-- **⚠️ La etiqueta del release debe ser SOLO números** (`v2026.07.25`, `v2026.07.25.2`). La CI lo
-  valida y aborta si no. Motivo: las versiones se comparan **número a número** (`vkey()` en
-  `updater.py`) — una letra al final se ignora y dos releases empatarían. **Nunca comparar
-  versiones como texto**: `'2026.7.10' > '2026.7.9'` es FALSO en texto (era un bug real, corregido
-  en ambas apps).
-- **Auto-update** (`updater.py`, compartido escritorio/servidor): consulta
-  `releases/latest`, elige el .zip por sistema (y por procesador si hubiera varios), descarga con
-  avance y **lanza un ayudante externo** (bash en Mac, PowerShell en Windows) que espera a que la
-  app muera, la reemplaza y la relanza. Un programa **no puede sobrescribirse a sí mismo**.
-  - **Solo actúa con `sys.frozen`**; como script se niega y manda a `git pull`.
-  - `version.txt = "dev"` = modo desarrollo: nunca ofrece actualizar.
-  - ⚠️ El ayudante espera por el **estado** del proceso (`ps -o stat=`), no con `kill -0`: un
-    proceso **zombi** sigue "existiendo" y la espera no terminaría nunca (pasó en pruebas).
-- **⚠️ En Mac, comprimir/descomprimir un `.app` SIEMPRE con `ditto`** (`-c -k --keepParent` /
-  `-x -k`), nunca con el `zipfile` de Python ni `zip` a secas: se pierden los **enlaces simbólicos**
-  y el **permiso de ejecución**, y la app llega rota al otro lado.
-- **Recetas de compilación** (`DesignStudio.spec` — **sí va a git**, ya no es el auto-generado):
-  `crear_icono_studio.py` (iconos) y `preparar_potrace.py` (mete potrace y su dylib en `vendor/`,
-  reapuntados a `@loader_path` y re-firmados). Sin ese `vendor/`, **el calco B/N no existe** en la
-  máquina del usuario final: potrace es un programa aparte que aquí solo está por Homebrew.
-- **`DesignStudio --diagnostico`** imprime qué piezas trae la app y cuáles faltan. La CI lo corre
-  tras compilar: una app puede arrancar perfecta y tener el texto o el acomodo muertos porque una
-  librería no quedó empaquetada.
-- ⚠️ **`pymupdf<2` fijo en la CI.** PyMuPDF 2.0 (oct-2026) arrastra `pymupdf-layout`, que se
-  activa al importar y busca un modelo `.yaml` que PyInstaller no empaqueta: **la app no arranca**
-  (`v2026.10.28` salió así). Antes de quitar el tope, compila y corre `--diagnostico` en local.
-  En Windows el diagnóstico va con `Start-Process -Wait`: llamado a secas, el código de error del
-  `.exe` de ventana se perdía y la app rota pasó como "éxito".
-- **Mac sin firmar** (Jose no tiene cuenta de Apple): la primera vez hay que abrirla con
-  **clic derecho → Abrir**, o `xattr -cr` si dice "está dañada". Va explicado en las notas del release.
-- ⚠️ **Windows: `instalar_studio.ps1` DEBE hacer `Unblock-File` recursivo** tras copiar. Windows
-  marca (`Zone.Identifier`) todo lo que sale de un `.zip` del navegador y **.NET se NIEGA a cargar
-  un ensamblado marcado**: sin pythonnet, pywebview no dibuja ventana y **la app no arranca**.
-  Síntoma: *"Failed to resolve Python.Runtime.Loader.Initialize"* **con la ruta del DLL** — está
-  ahí, solo bloqueado. La auto-actualización no se ve afectada (`urllib`+`zipfile` no marcan). El
-  `.bat` lanza el `.ps1` con `-ExecutionPolicy Bypass`, que ignora la marca. **El `.ps1` se
-  mantiene 100% ASCII**: PowerShell 5.1 lee UTF-8 sin BOM como ANSI y destroza los acentos.
+- **Desplegar = `git push` a `master`**: Railway reconstruye el `Dockerfile` y reinicia (~1 min).
+- **Dos apps instalables en el mismo sitio**, cada una con su manifiesto, su `id` y su logo
+  (`MANIFIESTOS` en `studio_server.py`): **Design Studio** (`/`, cuadro magenta con la cabeza de
+  corte) y **Estación de corte** (`/estacion`, cuadro oscuro con el botón de cortar). Los logos
+  salen de `python3 web/crear_iconos_pwa.py` → `iconos/` (**sí va a git**: el servidor los sirve).
+- ⚠️ **El manifiesto, `/favicon.ico` y `/iconos/*` son PÚBLICOS** (`PUBLICAS` y el prefijo en
+  `_guardia`): el navegador los pide **sin cookie** y antes de entrar. Si un recurso nuevo de la
+  PWA queda detrás de la sesión, recibe un 302 a `/entrar` y la app **deja de ser instalable sin
+  ningún error visible**.
+- ⚠️ **Cada página enlaza SU icono con `<link rel="icon">`** (editor, estación y las de
+  `web_auth._marco`). Sin ese enlace Chrome muestra lo que tenga guardado para el dominio.
+- ⚠️ **A propósito NO hay service worker que guarde copias.** La app necesita al servidor para
+  todo, y una copia guardada es justo lo que deja a un teléfono con la versión vieja. La
+  actualización va así: `/` se sirve con `no-cache`, el servidor publica `BUILD` (huella de sus
+  `.py/.html/.js`, cambia en cada despliegue) en `/api/update_check` y en la fila de la estación;
+  la estación **se recarga sola cuando no está cortando**, y el editor se recarga solo **si no hay
+  diseño abierto** (si lo hay, deja un botón "Actualizar": recargar tiraría lo no guardado).
+  **Si agregas un service worker, esta garantía se rompe**: mídelo antes.
+- ⚠️ **Para probar si una página es instalable, el oyente de `beforeinstallprompt` va DENTRO de la
+  página**: puesto después desde fuera llega tarde y parece que no es instalable (pasó con la
+  estación, 11-nov-2026).
+- ⚠️ **`pymupdf<2` fijo** (`requirements-servidor.txt`): PyMuPDF 2.0 arrastra `pymupdf-layout`,
+  que al importar busca un modelo `.yaml`. Antes de quitar el tope, construye la imagen y prueba.
 
 ---
 
@@ -283,13 +263,16 @@ en el repo como motor y como respaldo, pero **ya no se compila ni se publica**.
 ## Ejecución (desarrollo)
 
 ```bash
-python plotter_control.py          # Python 3.8+ con tkinter
-pip install pyserial ezdxf pymupdf # o instalar_dependencias.bat
+/opt/homebrew/bin/python3 studio_server.py     # el sitio, en http://127.0.0.1:8765
+pip install -r requirements-servidor.txt
 ```
+
+Pruebas: `python3 web/auditar_servidor.py` (sobre una copia), `python3 auditar_gcode.py`,
+`node web/test_plotter_web.mjs`, `node web/test_estacion.mjs`, `node web/test_webusb.mjs`.
 
 - **En macOS: usar un Python con Tk 8.6+ (no el del sistema).** El Tk 8.5.9 de `/usr/bin/python3`
   se rompe con el Modo Oscuro y pinta todos los fondos en negro. Detalles y la config de la Mac de
   Jose en [[MEMORY]] (`estado.md`).
 - **No quitar el bloque `if sys.platform == 'darwin':`** del inicio de `PlotterApp.__init__` (fuerza
   tema `clam` + paleta clara). Solo aplica en Mac a propósito: en Windows/Linux el tema nativo se ve
-  bien y no debe alterarse (el `.exe` distribuido debe verse nativo).
+  bien y no debe alterarse.

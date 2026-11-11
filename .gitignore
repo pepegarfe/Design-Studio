@@ -16,12 +16,11 @@ fonts_cache.json
 autosave.dstudio
 arranque.log
 
-# Generados por el empaquetado (los crea la CI en cada release, no van a git):
-#   crear_icono_studio.py -> studio.ico / studio.icns
-#   preparar_potrace.py   -> vendor/
-# ⚠️ DesignStudio.spec SÍ va a git: ya no es el auto-generado, es la receta de compilación.
-studio.ico
-studio.icns
+# Restos locales de cuando había app de escritorio (no van a git).
+# ⚠️ Con '/' al inicio: sin él, `studio.ico` también escondía iconos/studio.ico, que SÍ va
+# a git (es el /favicon.ico del sitio).
+/studio.ico
+/studio.icns
 vendor/
 
 # Cuentas y llave de sesión de la versión web (web_auth.py). NUNCA a git.

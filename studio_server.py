@@ -30,7 +30,6 @@ import text_vector as texter
 import geo_ops as geo
 import curve_fit as fitter
 import nest_ops as nester
-import updater
 import export_ops as exporter
 import web_auth as auth
 import estacion
@@ -245,9 +244,72 @@ def cuentas_post():
     return _sin_cache(auth.pagina_cuentas(err or '', usuario, clave or ''), 400 if err else 200)
 
 
+# ── Apps instalables (PWA) y actualización automática ─────────────────────────────────────
+# Hay DOS apps en el mismo sitio: el editor ("/") y la estación de corte ("/estacion"), cada
+# una con su manifiesto, su `id` y su logo (iconos/, generados por web/crear_iconos_pwa.py).
+#
+# ⚠️ A propósito NO hay service worker que guarde copias: la app necesita al servidor para
+# todo, y una copia guardada es justo lo que deja a un teléfono con la versión VIEJA. La
+# actualización va así: las páginas se sirven con `no-cache` (el navegador pregunta siempre) y
+# cada una compara `BUILD` contra el suyo — si cambió, se recarga sola (la estación, cuando no
+# está cortando; el editor, si no hay diseño abierto, y si lo hay ofrece un botón).
+def _build():
+    import hashlib
+    h = hashlib.sha256()
+    for n in sorted(os.listdir(HERE)):
+        if n.endswith(('.py', '.html', '.js')):
+            try:
+                with open(os.path.join(HERE, n), 'rb') as f:
+                    h.update(n.encode() + f.read())
+            except OSError:
+                pass
+    return h.hexdigest()[:12]
+
+
+BUILD = _build()   # cambia con cada despliegue (el servidor arranca de nuevo)
+
+_ICONOS = lambda n: [  # noqa: E731
+    {'src': f'/iconos/{n}-192.png', 'sizes': '192x192', 'type': 'image/png'},
+    {'src': f'/iconos/{n}-512.png', 'sizes': '512x512', 'type': 'image/png'},
+    {'src': f'/iconos/{n}-maskable-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'}]
+MANIFIESTOS = {
+    '/manifest.webmanifest': {
+        'id': '/', 'start_url': '/', 'scope': '/', 'name': 'Design Studio', 'short_name': 'Studio',
+        'description': 'Diseña y corta en plotter o CNC.', 'lang': 'es', 'display': 'standalone',
+        'background_color': '#EDEEF1', 'theme_color': '#D11E68', 'icons': _ICONOS('studio')},
+    '/estacion.webmanifest': {
+        'id': '/estacion', 'start_url': '/estacion', 'scope': '/estacion', 'name': 'Estación de corte',
+        'short_name': 'Estación', 'description': 'La fila de corte del taller, junto al plotter.',
+        'lang': 'es', 'display': 'standalone', 'background_color': '#171A20', 'theme_color': '#171A20',
+        'icons': _ICONOS('estacion')},
+}
+
+
+def _manifiesto():
+    return HTTPResponse(body=json.dumps(MANIFIESTOS[request.path], ensure_ascii=False),
+                        headers={'Content-Type': 'application/manifest+json; charset=utf-8',
+                                 'Cache-Control': 'no-cache'})
+
+
+for _ruta in MANIFIESTOS:
+    app.get(_ruta)(_manifiesto)
+
+
+@app.get('/iconos/<nombre:re:[a-z0-9-]+\\.(?:png|ico)>')
+def icono(nombre):
+    return static_file(nombre, root=os.path.join(HERE, 'iconos'))
+
+
+@app.get('/favicon.ico')
+def favicon():
+    return static_file('studio.ico', root=os.path.join(HERE, 'iconos'))
+
+
 @app.get('/')
 def index():
-    return static_file('studio_ui.html', root=HERE)
+    r = static_file('studio_ui.html', root=HERE)
+    r.set_header('Cache-Control', 'no-cache')   # que el navegador pregunte SIEMPRE si cambió
+    return r
 
 
 @app.get('/three.bundle.js')
@@ -437,12 +499,20 @@ def api_export():
 
 # La versión web no se instala ni se actualiza sola: siempre es la que corre el servidor.
 # Antes, update_start descargaba CUALQUIER dirección que se le pasara.
+def _version():
+    try:   # 'utf-8-sig': se come el BOM si el archivo lo trae
+        with open(os.path.join(HERE, 'version.txt'), encoding='utf-8-sig') as f:
+            return f.read().strip() or 'dev'
+    except OSError:
+        return 'dev'
+
+
 _SIN_UPDATE = {'ok': False, 'error': 'La versión web no se instala: siempre es la más reciente.'}
 
 
 @app.get('/api/update_check')
 def api_update_check():
-    return _json({'ok': True, 'web': True, 'newer': False, 'current': updater.current_version(),
+    return _json({'ok': True, 'web': True, 'newer': False, 'current': _version(), 'build': BUILD,
                   'usuario': _yo(), 'dueno': auth.es_dueno(_yo()), 'invitado': auth.es_invitado(_yo())})
 
 
@@ -568,7 +638,7 @@ def api_estacion_mandar():
 @app.get('/api/estacion/fila')
 def api_estacion_fila():
     with estacion.en(_fila_de_estacion()):
-        return _json(estacion.fila())
+        return _json({**estacion.fila(), 'build': BUILD})
 
 
 # Latido de la estación: cada vez que la página de la estación pide la fila (cada 5 s) dice si
@@ -702,7 +772,9 @@ def _lan_ip():
         return '127.0.0.1'
 
 
-PUBLICAS = ('/entrar', '/crear', '/salir', '/invitado')
+PUBLICAS = ('/entrar', '/crear', '/salir', '/invitado',
+            # el manifiesto y los iconos los pide el navegador SIN cookie (y antes de entrar)
+            '/manifest.webmanifest', '/estacion.webmanifest', '/favicon.ico')
 # Lo que la cuenta del dueño hereda de cuando no había cuentas (se copia, no se mueve).
 HEREDA_EL_DUENO = ('plotter_config.json', 'cnc_config.json', 'autosave.dstudio')
 SEGURIDAD = [('X-Content-Type-Options', 'nosniff'),   # el navegador no "adivina" tipos de archivo
@@ -725,7 +797,7 @@ def _guardia(wsgi):
 
         ruta = environ.get('PATH_INFO') or '/'
         carpeta = None
-        if ruta not in PUBLICAS:
+        if ruta not in PUBLICAS and not ruta.startswith('/iconos/'):
             try:
                 c = http.cookies.SimpleCookie(environ.get('HTTP_COOKIE') or '')
                 token = c[auth.COOKIE].value if auth.COOKIE in c else None
