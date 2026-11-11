@@ -305,8 +305,17 @@ teléfono (está hecha para computadora).
   no meterlo en una variable: no se separa); `railway ssh -- python -c` destroza comillas →
   mandar el guion en base64. ✅ Jose entró con su cuenta en la dirección provisional y vio los
   trabajos de `angel` (11-nov); push hecho, despliegue desde GitHub `f51f36b` con
-  `DS_IP_CABECERA=X-Real-IP` comprobado dentro del contenedor. **Fase C cerrada.** Luego **Fase D**:
-  congelar, recopiar datos frescos, CNAME `studio` → Railway (⚠️ nube GRIS, o volver a medir).
+  `DS_IP_CABECERA=X-Real-IP` comprobado dentro del contenedor. **Fase C cerrada.** 🚧 **Fase D A MEDIAS (11-nov, 14:10→)**: dominio propio
+  agregado en Railway (id `02200809-1c47-474e-866f-4907a9ef8fcd`), TXT `_railway-verify.studio`
+  puesto por Jose, CNAME `studio` → `ja26vv3j.up.railway.app` con nube GRIS, servidor de la Mac
+  APAGADO (datos Mac = volumen, comparados 3 veces). ⚠️ **Certificado ATORADO en
+  `ISSUING / POLLING_AUTHORIZATIONS` >80 min → SITIO CAÍDO** (Railway presenta `*.up.railway.app`).
+  Todo lo comprobable está bien (sin CAA, http llega a `railway-edge`). Es un problema CONOCIDO
+  de Railway (muchos hilos en station.railway.com; no se puede reintentar mientras está en
+  ISSUING). Sospecha: agregué el dominio ANTES de mover el CNAME (apuntaba al túnel) → la próxima
+  vez, mover el CNAME primero. Jose eligió esperar. **Regreso**: CNAME `studio` →
+  `d37c7f4e-ab94-4f38-845d-d6d022cd318b.cfargotunnel.com` con nube NARANJA + servidor de la Mac +
+  `cloudflared tunnel run design-studio` (Jose cerró esa Terminal).
 - ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
   derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
