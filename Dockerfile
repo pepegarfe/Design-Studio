@@ -10,8 +10,10 @@
 #    contenedor se borra en cada despliegue.
 FROM python:3.12-slim
 
+# libtk8.6: la imagen "slim" trae el módulo tkinter pero NO la librería que carga
+# ("libtk8.6.so: cannot open shared object file", primera compilación en Railway, 11-nov-2026).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends potrace \
+ && apt-get install -y --no-install-recommends potrace libtk8.6 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
