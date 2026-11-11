@@ -278,7 +278,9 @@ teléfono (está hecha para computadora).
   despliegue: se rehacen solas, ~5 s); en volumen vacío NADIE puede crear la cuenta del dueño
   (viene de fuera) → copiar `datos_web` ANTES de abrirlo; si Cloudflare queda con nube naranja
   delante de Railway, el ÚLTIMO X-Forwarded-For podría ser Cloudflare y no el visitante → medir.
-  Siguiente: permiso para commit + `git push` y para crear el proyecto en Railway.
+  ✅ Commit `6af9da8` y push (subió también 16 commits viejos sin subir; revisados: sin datos
+  privados; la CI solo corre con tags `v*`). Siguiente: **Fase B**, crear el proyecto en Railway
+  (pedir permiso: cuesta).
 - ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
   derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
@@ -293,7 +295,8 @@ teléfono (está hecha para computadora).
   arrancar con `PYTHONPATH=~/.local/ds-waitress`. Antes estaba en un scratchpad de /private/tmp y
   **macOS lo vació** (quedó solo `__pycache__`): el servidor arrancaba sin error con "el simple de
   Python" y la auditoría también, creyendo usar waitress. Señal: la línea `(servidor: …)` del
-  arranque. ⏳ El servidor en línea de esa tarde seguía con el simple (falta reiniciarlo).
+  arranque. ✅ Reiniciado con waitress el 11-nov (la fila del taller estaba toda "hecho": 2 de `angel`, la
+  estación compartida ya funcionó con otra cuenta).
 - ⏳ Mañana 12-nov: confirmar que el briefing de Omniseller llegó a bandeja (primer envío tras la
   mudanza del DNS).
 
