@@ -1,11 +1,11 @@
 ---
 name: idea-web-online
-description: "Design Studio en el navegador — plan de 5 fases EN MARCHA (fases 1-3 probadas por Jose; fase 4 en código, sin probar por él)"
+description: "Design Studio en el navegador — EN MARCHA: en línea en studio.builtbyjose.tech (Mac + túnel), estación compartida, plan de mudanza a Railway"
 metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-11T18:18:39.215Z
+  modified: 2026-11-11T18:41:24.346Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -258,7 +258,22 @@ teléfono (está hecha para computadora).
   `datos_web/` está en .gitignore); C) dirección provisional `*.up.railway.app`, copiar datos con
   `secreto.key` (mantiene sesiones), **MEDIR cómo llega la IP del visitante** (trampa del bloqueo)
   y probar todo; D) congelar, copiar datos frescos, CNAME `studio` → Railway (regreso: volver al
-  túnel en 1 min); E) apagar la Mac como servidor tras unos días.
+  túnel en 1 min); E) apagar la Mac como servidor tras unos días. Jose YA tiene cuenta Railway
+  (Omniseller, Gungry; CLI logueada en la Mac): no hay cuenta nueva, el costo se suma (~US$3–8/mes
+  calculado, no medido). Sin Docker en la Mac: la receta solo se prueba en Railway.
+
+### Pendientes al 11-nov-2026 (fin de sesión)
+- ✅ La estación YA cortó en real (5 trabajos "hecho" de Jose esa mañana, antes de compartirla).
+- ⏳ **Fase A de Railway**: ofrecida, SIN permiso aún. Luego pedir permiso para `git push` y para
+  crear el proyecto.
+- ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
+  derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
+- ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
+  a la estación compartida.
+- ⏳ Servidor y túnel corren A MANO desde la sesión (se caen si la Mac duerme); con Railway ya no
+  hace falta dejarlos permanentes.
+- ⏳ Mañana 12-nov: confirmar que el briefing de Omniseller llegó a bandeja (primer envío tras la
+  mudanza del DNS).
 
 ### Diseño original (antes de construir)
 - Jose preguntó si el TELÉFONO podía ser el servidor → NO recomendado (Termux, librerías compiladas
