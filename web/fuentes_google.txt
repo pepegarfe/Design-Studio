@@ -1,0 +1,210 @@
+# Familias de Google Fonts que se instalan en el servidor (web/preparar_fuentes.py).
+# Salen de cruzar las fuentes de la Mac de Jose con el catálogo de Google (11-nov-2026): las
+# 206 que existen en Google. Las de Apple/Microsoft (Helvetica, Futura, Arial...) NO pueden ir:
+# su licencia no permite subirlas a un servidor. Una familia por línea, nombre exacto de Google.
+ABeeZee
+Abel
+Abril Fatface
+Acme
+Albert Sans
+Alegreya Sans
+Aleo
+Alfa Slab One
+Almarai
+Alumni Sans
+Amiri
+Andada Pro
+Anek Telugu
+Antic Slab
+Anton
+Archivo
+Archivo Black
+Archivo Narrow
+Arimo
+Arvo
+Asap
+Assistant
+Atkinson Hyperlegible
+Baloo 2
+Barlow
+Barlow Condensed
+Barlow Semi Condensed
+Be Vietnam Pro
+Bebas Neue
+Bitter
+Black Ops One
+Bodoni Moda
+Bree Serif
+Bricolage Grotesque
+Bungee
+Cabin
+Cairo
+Cardo
+Catamaran
+Caveat
+Chakra Petch
+Changa One
+Cinzel
+Comfortaa
+Cormorant
+Cormorant Garamond
+Crimson Pro
+Crimson Text
+DM Mono
+DM Sans
+DM Serif Display
+DM Serif Text
+Dancing Script
+Delius
+Domine
+Dosis
+EB Garamond
+Encode Sans
+Epilogue
+Exo
+Exo 2
+Figtree
+Fira Code
+Fira Sans
+Fira Sans Condensed
+Fjalla One
+Frank Ruhl Libre
+Fraunces
+Fredoka
+Geist
+Geist Mono
+Geologica
+Google Sans
+Google Sans Flex
+Gravitas One
+Great Vibes
+Hammersmith One
+Hanken Grotesk
+Heebo
+Hind
+Hind Siliguri
+IBM Plex Mono
+IBM Plex Sans
+IBM Plex Sans Arabic
+IBM Plex Sans Condensed
+IBM Plex Serif
+Inconsolata
+Indie Flower
+Instrument Sans
+Instrument Serif
+Inter
+Inter Tight
+JetBrains Mono
+Josefin Sans
+Jost
+Kalam
+Kanit
+Karla
+LINE Seed JP
+Lato
+League Spartan
+Lexend
+Lexend Deca
+Libre Baskerville
+Libre Franklin
+Lilita One
+Literata
+Lobster
+Lobster Two
+Lora
+Luckiest Guy
+M PLUS 1p
+Manrope
+Marcellus
+Maven Pro
+Merriweather
+Merriweather Sans
+Montserrat
+Montserrat Alternates
+Mukta
+Mukta Mahee
+Mulish
+News Cycle
+Newsreader
+Noto Sans
+Noto Serif
+Nunito
+Nunito Sans
+Oleo Script
+Onest
+Open Sans
+Orbitron
+Oswald
+Outfit
+Overpass
+Oxygen
+PT Mono
+PT Sans
+PT Sans Caption
+PT Sans Narrow
+PT Serif
+PT Serif Caption
+Pacifico
+Permanent Marker
+Play
+Playfair Display
+Plus Jakarta Sans
+Poppins
+Press Start 2P
+Prompt
+Public Sans
+Questrial
+Quicksand
+Rajdhani
+Raleway
+Ramabhadra
+Red Hat Display
+Red Hat Text
+Rethink Sans
+Roboto
+Roboto Condensed
+Roboto Flex
+Roboto Mono
+Roboto Serif
+Roboto Slab
+Rubik
+Russo One
+STIX Two Math
+STIX Two Text
+Saira
+Saira Condensed
+Sanchez
+Sarabun
+Satisfy
+Schibsted Grotesk
+Shadows Into Light
+Share Tech
+Signika
+Slabo 27px
+Smooch Sans
+Sofia Sans
+Sora
+Source Code Pro
+Source Sans 3
+Source Serif 4
+Space Grotesk
+Space Mono
+Spectral
+Syne
+Tajawal
+Teko
+Titan One
+Titillium Web
+Ubuntu
+Unbounded
+Urbanist
+Varela Round
+Viga
+Vollkorn
+Work Sans
+Yanone Kaffeesatz
+Yellowtail
+Zen Kaku Gothic New
+Zen Maru Gothic
+Zeyada
+Zilla Slab

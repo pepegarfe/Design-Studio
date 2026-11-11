@@ -1,0 +1,13 @@
+# Librerías del SERVIDOR web (studio_server.py), las que instala el Dockerfile para Railway.
+# Versiones = las que corren hoy en la Mac (11-nov-2026), donde está probado todo.
+# requirements.txt es otra cosa: el de la app de escritorio.
+bottle==0.13.4
+waitress==3.0.2
+pymupdf==1.28.0      # ⚠️ <2: la 2.0 trae pymupdf-layout y la app no arranca (ver CLAUDE.md)
+shapely==2.1.2
+numpy==2.5.1
+pillow==12.3.0
+fonttools==4.63.0
+vtracer==0.6.15
+ezdxf==1.4.4
+pyserial==3.5        # se importa aunque en el servidor no haya plotter conectado

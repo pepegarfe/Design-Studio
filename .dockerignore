@@ -1,0 +1,18 @@
+# Lo que NO se copia al servidor. ⚠️ datos_web sobre todo: las cuentas se copian a mano al
+# volumen en la Fase C, nunca dentro de la imagen.
+datos_web/
+.git/
+.claude/
+build/
+dist/
+vendor/
+__pycache__/
+*.pyc
+.DS_Store
+plotter_config.json
+cnc_config.json
+plotter_prefs.json
+fonts_cache.json
+autosave.dstudio
+arranque.log
+*.zip
