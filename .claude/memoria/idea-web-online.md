@@ -216,6 +216,12 @@ teléfono (está hecha para computadora).
   sobre especificaciones.
 
 ## "Estación de corte" con un Android viejo (5-nov-2026) — ✅ CONSTRUIDA, ⏳ falta la prueba de Jose
+- **11-nov-2026, dicho por Jose (no lo vi yo)**: la **tablet Fire HD 8** (proyecto `~/fire-kiosco`)
+  **acepta el plotter** por USB-C y su **Chrome sí hace WebUSB**. Esa tablet es también el servidor
+  de `~/vigia-precios`. ⚠️ Desde el 10-nov tiene los **Servicios de Google Play apagados** (fallaban
+  en bucle): Chrome avisa "habilitar servicios de Google Play" al abrir; se ignora. No se ha
+  confirmado que WebUSB siga funcionando así: si falla, sospechar eso primero. Chrome NO se apaga
+  (Firefox no tiene WebUSB). Para cortar y cargar a la vez hace falta un OTG con entrada de carga.
 - Construida: `estacion.py` (fila por cuenta, 30 pendientes, 20 de historial, vista previa del
   HPGL), `/estacion` (pantalla para teléfono: avisa con vibración y pitido, espera "Cortar",
   Detener, "¿Se terminaron?" para los que quedaron a medias, "Cortar otra vez") y el botón
