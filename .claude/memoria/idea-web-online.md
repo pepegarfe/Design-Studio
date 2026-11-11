@@ -264,8 +264,21 @@ teléfono (está hecha para computadora).
 
 ### Pendientes al 11-nov-2026 (fin de sesión)
 - ✅ La estación YA cortó en real (5 trabajos "hecho" de Jose esa mañana, antes de compartirla).
-- ⏳ **Fase A de Railway**: ofrecida, SIN permiso aún. Luego pedir permiso para `git push` y para
-  crear el proyecto.
+- ✅ **Fase A de Railway HECHA (11-nov, sin commit ni push)**: `Dockerfile` (python 3.12-slim +
+  potrace de apt; al construir comprueba tkinter/fitz/shapely/vtracer/potrace y FALLA si falta
+  algo), `requirements-servidor.txt` (versiones de la Mac), `.dockerignore` (⚠️ excluye
+  `datos_web/`) y `web/preparar_fuentes.py` + `web/fuentes_google.txt`: las **206 familias** de la
+  Mac que existen en Google (las otras 137 son Apple/Microsoft, sin licencia para servidor) →
+  572 .ttf, 97 MB, 17 s. ⚠️ El User-Agent de Firefox 24 YA recibe .woff (0/206): va el de
+  Safari 5. Verificado sin Docker: fontTools lee las 572, "ANTIKE" en Bebas Neue = 7 contornos /
+  20.00 mm (igual que ago), auditoría **182/182 con waitress** y esas fuentes, y arranque con el
+  CMD del contenedor sobre una copia filtrada por `.dockerignore` y volumen vacío. NO probado: la
+  imagen en sí (no hay Docker en la Mac; se prueba en Railway, Fase C).
+  Notas para la Fase C: `fonts_cache.json` y la config común caen en `/app` (se pierden en cada
+  despliegue: se rehacen solas, ~5 s); en volumen vacío NADIE puede crear la cuenta del dueño
+  (viene de fuera) → copiar `datos_web` ANTES de abrirlo; si Cloudflare queda con nube naranja
+  delante de Railway, el ÚLTIMO X-Forwarded-For podría ser Cloudflare y no el visitante → medir.
+  Siguiente: permiso para commit + `git push` y para crear el proyecto en Railway.
 - ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
   derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
@@ -276,9 +289,11 @@ teléfono (está hecha para computadora).
   servidor caído. Para encenderlo: servidor con `/opt/homebrew/bin/python3 studio_server.py` y
   `PYTHONPATH` apuntando a una carpeta con waitress, y túnel `cloudflared tunnel run design-studio`
   (el modo automático de Claude NO deja abrir el túnel: lo corre Jose en su Terminal).
-  ⚠️ **waitress NO está instalado en ningún Python de la Mac**: solo vive en el scratchpad de una
-  sesión vieja (`/private/tmp/claude-501/…/44e6b81a…/scratchpad/waitress`), que macOS puede
-  borrar. Si desaparece: `pip install --target <carpeta> waitress`.
+  ⚠️ **waitress vive en `~/.local/ds-waitress`** (instalado el 11-nov con `pip install --target`):
+  arrancar con `PYTHONPATH=~/.local/ds-waitress`. Antes estaba en un scratchpad de /private/tmp y
+  **macOS lo vació** (quedó solo `__pycache__`): el servidor arrancaba sin error con "el simple de
+  Python" y la auditoría también, creyendo usar waitress. Señal: la línea `(servidor: …)` del
+  arranque. ⏳ El servidor en línea de esa tarde seguía con el simple (falta reiniciarlo).
 - ⏳ Mañana 12-nov: confirmar que el briefing de Omniseller llegó a bandeja (primer envío tras la
   mudanza del DNS).
 
