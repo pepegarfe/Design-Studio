@@ -50,9 +50,16 @@ DURACION_INVITADO = 2 * 3600
 MAX_INVITADOS = 20                     # pruebas a la vez en todo el servidor
 MAX_INVITADOS_DIRECCION = 10           # pruebas nuevas por dirección cada VENTANA
 _RE_INVITADO = re.compile(r'invitado:(\d{10,12})-([0-9a-f]{16})')
-# Detrás de un proxy (Railway, etc.) la dirección real del visitante viene en X-Forwarded-For.
+# Detrás de un proxy la dirección real del visitante viene en X-Forwarded-For.
 # Solo se le cree si se avisa con DS_PROXY=1: si no, cualquiera podría inventarse una dirección.
 DETRAS_DE_PROXY = os.environ.get('DS_PROXY') == '1'
+# DS_IP_CABECERA: la cabecera que el proxy de enfrente SOBRESCRIBE con la dirección real (en
+# Railway, 'X-Real-IP'). ⚠️ Solo una que el proxy SOBRESCRIBA: si deja pasar la del visitante, el
+# atacante la escribe. MEDIDO en Railway (11-nov-2026): X-Forwarded-For llega como
+# "<real>, <borde de Railway>", y ese ÚLTIMO valor cambia en CADA pedido (84.17.44.228, .229...):
+# con DS_PROXY=1 cada intento parecía de alguien distinto y el bloqueo de 8 fallos no llegaba nunca.
+_CABECERA_IP = os.environ.get('DS_IP_CABECERA', '').strip()
+_CLAVE_IP = 'HTTP_' + _CABECERA_IP.upper().replace('-', '_') if _CABECERA_IP else ''
 
 _lock = threading.Lock()
 _fallos = {}   # dirección → [horas de cada fallo reciente]
@@ -341,6 +348,10 @@ def direccion(environ):
     cf = environ.get('HTTP_CF_CONNECTING_IP', '').strip()
     if cf and remota in _LOCAL:
         return cf        # túnel de Cloudflare: Cloudflare rechaza (403) a quien la inventa
+    if _CLAVE_IP:
+        real = environ.get(_CLAVE_IP, '').strip()
+        if real:
+            return real  # Railway: la sobrescribe con la real aunque el visitante mande otra
     xff = environ.get('HTTP_X_FORWARDED_FOR')
     if DETRAS_DE_PROXY and xff:
         return xff.split(',')[-1].strip()   # el ÚLTIMO lo agrega el proxy de enfrente

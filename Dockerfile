@@ -32,9 +32,12 @@ COPY . .
 RUN python -c "import tkinter, bottle, waitress, fitz, shapely, PIL, fontTools, vtracer, ezdxf, serial; \
 import img_trace, studio_server; print('potrace:', img_trace._potrace_bin()); print('piezas OK')"
 
+# ⚠️ DS_IP_CABECERA, NO DS_PROXY: en Railway el último X-Forwarded-For es SU servidor de borde
+# (cambia en cada pedido) y el bloqueo de 8 fallos no funcionaba. X-Real-IP la sobrescribe
+# Railway con la real (medido el 11-nov-2026). Detrás de OTRO proxy, volver a medir.
 ENV DS_FUENTES=/app/fuentes \
     DS_DATOS=/data \
-    DS_PROXY=1 \
+    DS_IP_CABECERA=X-Real-IP \
     PYTHONUNBUFFERED=1
 
 # Railway dice el puerto en $PORT; el servidor lo lee de DS_PORT (8765 si no hay ninguno).

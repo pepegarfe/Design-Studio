@@ -787,6 +787,38 @@ print(json.dumps(casos))
            f'DS_PROXY={proxy}: dirección real por túnel/proxy, CF inventada desde el WiFi ignorada, '
            'el túnel nunca es "esta computadora"', str(c) or sal.stderr[-200:])
 
+    # Railway, tal cual se MIDIÓ (11-nov-2026, servicio de eco): llega desde 100.64.0.2, X-Real-IP =
+    # la real (la sobrescribe aunque el visitante mande otra) y X-Forwarded-For = "<real>, <borde>",
+    # con un borde DISTINTO en cada pedido. Con DS_PROXY=1 cada intento parecía de otro visitante.
+    guion_rw = r'''
+import json, web_auth as a
+def rw(borde, **extra):
+    return dict({"REMOTE_ADDR": "100.64.0.2", "HTTP_X_REAL_IP": "189.0.0.1",
+                 "HTTP_X_FORWARDED_FOR": "189.0.0.1, 84.17.44." + str(borde)}, **extra)
+print(json.dumps({
+  "intentos": sorted({a.direccion(rw(b)) for b in range(220, 230)}),
+  "inventa_cf": a.direccion(rw(1, HTTP_CF_CONNECTING_IP="6.6.6.6")),
+  "es_local": a.es_esta_computadora(rw(1)),
+  "tunel": a.direccion({"REMOTE_ADDR": "127.0.0.1", "HTTP_CF_CONNECTING_IP": "198.51.100.7",
+                        "HTTP_X_REAL_IP": "6.6.6.6"}),
+}))
+'''
+    for nombre, extra in (('DS_IP_CABECERA=X-Real-IP', {'DS_IP_CABECERA': 'X-Real-IP'}), ('DS_PROXY=1', {'DS_PROXY': '1'})):
+        sal = subprocess.run([sys.executable, '-c', guion_rw], cwd=COPIA, env=dict(os.environ, **extra),
+                             capture_output=True, text=True, timeout=60)
+        try:
+            c = json.loads(sal.stdout.strip().splitlines()[-1])
+        except Exception:
+            c = {}
+        if nombre == 'DS_PROXY=1':   # control: la configuración vieja DEBE mostrar el fallo medido
+            ok(len(c.get('intentos') or []) == 10,
+               'control: en Railway con DS_PROXY=1, 10 intentos parecen 10 visitantes (el fallo medido)', str(c))
+        else:
+            ok(c.get('intentos') == ['189.0.0.1'] and c.get('inventa_cf') == '189.0.0.1'
+               and c.get('es_local') is False and c.get('tunel') == '198.51.100.7',
+               f'{nombre} (Railway): los 10 intentos son UN visitante, CF inventada ignorada, '
+               'nunca "esta computadora", y el túnel sigue igual', str(c) or sal.stderr[-200:])
+
     # Z. fuerza bruta (al final: deja bloqueada la dirección de la prueba)
     for _ in range(8):
         formulario('/entrar', {'usuario': 'jose', 'clave': 'adivinando'})
