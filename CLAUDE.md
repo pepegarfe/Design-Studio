@@ -132,6 +132,17 @@ ese archivo. **No separar en varios archivos sin pedido explícito.**
   corte de 12.2, pero el archivo salió con **2 de 6.10** porque el formulario tenía un 2
   escrito a mano. **Antes de culpar al preset, mira cuál de los dos manda**; la cuenta del
   archivo lo delata (12.2/2 = 6.1 exacto es imposible con `pass_depth` 5.0).
+- ⚠️ **CNC: lo que el generador corrige u omite, lo AVISA** (`_cnc_warnings()` en
+  `studio_backend.py`, desde nov-2026): corte fuera de la mesa, más hondo que el material, pasada
+  mayor que el diámetro, contornos con menos puentes o sin ninguno (`tab_report`), figuras más
+  chicas que la fresa (`count_unfit`). Llegan en `warnings` de la vista previa y del `.tap`; la UI
+  los deja en una caja fija (`#tpWarn`) y **vuelve a pedirlos justo antes de guardar**. Son avisos,
+  no errores (la cama de sacrificio es legítima). **Si agregas otra corrección silenciosa al
+  generador, agrégale su aviso**: `_tab_zones` devolvía `None` y las piezas chicas salían sin
+  puentes sin que nadie se enterara. El campo "Pasadas" vuelve a automático tras cada Calcular
+  nuevo y al cambiar de fresa (`resetPasses`).
+- ⚠️ **Marchas de fábrica = las MEDIDAS girando el husillo** (`[100, 12000…18000]`, S1 parado),
+  no las del menú del handle (`_GEARS_MENU`, que `cnc_get()` reemplaza si todavía está guardada).
 - ⚠️ **Cambiar `CNC_DEFAULTS` NO llega a las instalaciones que ya existen**: `cnc_get()` toma la
   lista `tools` guardada ENTERA. Para corregir un dato de fábrica en el campo, agrega una entrada
   a `_PRESET_FIXES` (`studio_backend.py`): se aplica una sola vez por `preset_rev` y solo si la
