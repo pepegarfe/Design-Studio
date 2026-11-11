@@ -6,13 +6,19 @@ en Chrome. Desde cualquier lado se "manda a la estación" un diseño: el servido
 AVISA y espera a que alguien toque "Cortar": el plotter nunca arranca sin nadie mirando
 (decisión de Jose, 5-nov-2026: alguien tiene que poner el material).
 
-Cada cuenta tiene SU fila, en su carpeta (`core._config_path()`): la estación entra con una
-cuenta y solo ve los trabajos de esa cuenta. Una prueba sin cuenta tiene una fila chica
-(TOPES_INVITADO) en su carpeta temporal: solo la ve ESE navegador (la prueba es su cookie).
+UNA estación del taller para TODAS las cuentas (decisión de Jose, 11-nov-2026): cualquier cuenta
+manda a la misma fila, cada trabajo dice quién lo mandó (`de`) y la estación entra con cualquier
+cuenta. Vive en la carpeta común de datos del servidor (no en la de una cuenta). Una prueba sin
+cuenta tiene una fila chica (TOPES_INVITADO) en su carpeta temporal: solo la ve ESE navegador
+(la prueba es su cookie) y un desconocido nunca llega al plotter del taller.
+
+¿Qué fila? La decide el servidor con `with estacion.en(carpeta):` alrededor de cada llamada.
 
 Estados: pendiente → cortando → hecho | error | cancelado. "hecho" quiere decir ENVIADO
 entero al plotter; el 721 sigue cortando lo que guardó en su memoria.
 """
+import contextlib
+import contextvars
 import json
 import re
 import time
@@ -33,9 +39,25 @@ ID_VALIDO = re.compile(r'^[0-9a-f]{12}$')   # el id es un nombre de archivo: nad
 TERMINALES = ('hecho', 'error', 'cancelado')
 
 
+_CARPETA: 'contextvars.ContextVar[Path | None]' = contextvars.ContextVar('estacion_carpeta', default=None)
+
+
+@contextlib.contextmanager
+def en(carpeta):
+    """Todo lo de dentro trabaja sobre la fila que vive en `carpeta`."""
+    ficha = _CARPETA.set(Path(carpeta))
+    try:
+        yield
+    finally:
+        _CARPETA.reset(ficha)
+
+
 def _rutas():
-    base = Path(core._config_path())
-    return base.with_name('estacion.json'), base.with_name('estacion')
+    c = _CARPETA.get()
+    if c is None:   # sin servidor web (pruebas sueltas): junto a la config
+        base = Path(core._config_path())
+        return base.with_name('estacion.json'), base.with_name('estacion')
+    return c / 'estacion.json', c / 'estacion'
 
 
 def _leer():
@@ -69,7 +91,7 @@ def _podar(d):
 
 def _publico(t):
     return {k: t.get(k) for k in ('id', 'nombre', 'estado', 'creado', 'actualizado',
-                                  'lineas', 'bytes', 'detalle', 'ancho_mm', 'alto_mm')}
+                                  'lineas', 'bytes', 'detalle', 'ancho_mm', 'alto_mm', 'de')}
 
 
 def _trazos(hpgl):
@@ -139,7 +161,7 @@ def _buscar(d, i):
 
 
 @_en_fila
-def mandar(hpgl, nombre, invitado=False):
+def mandar(hpgl, nombre, invitado=False, de=''):
     max_pend, max_bytes, max_fila = ((TOPES_INVITADO['pendientes'], TOPES_INVITADO['bytes'],
                                       TOPES_INVITADO['fila']) if invitado
                                      else (MAX_PENDIENTES, MAX_BYTES, MAX_BYTES_FILA))
@@ -164,7 +186,8 @@ def mandar(hpgl, nombre, invitado=False):
     ahora = time.time()
     t = {'id': uuid.uuid4().hex[:12], 'nombre': nombre, 'estado': 'pendiente', 'creado': ahora,
          'actualizado': ahora, 'lineas': hpgl.count('\n') + 1, 'bytes': len(datos), 'detalle': '',
-         'ancho_mm': round((m[2] - m[0]) / 40, 1), 'alto_mm': round((m[3] - m[1]) / 40, 1)}
+         'ancho_mm': round((m[2] - m[0]) / 40, 1), 'alto_mm': round((m[3] - m[1]) / 40, 1),
+         'de': str(de or '')[:40]}
     _rutas()[1].mkdir(parents=True, exist_ok=True)
     _archivo(t['id']).write_bytes(datos)
     d['trabajos'].append(t)

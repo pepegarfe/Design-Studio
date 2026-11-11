@@ -34,9 +34,12 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   valor de X-Forwarded-For (lo escribe el atacante: esquivaba el bloqueo de 8 fallos); por túnel,
   `CF-Connecting-IP` solo si llega desde la propia Mac; detrás de otro proxy, el ÚLTIMO valor.
   `es_esta_computadora()` exige que no venga NINGUNA de las dos. Auditoría, sección "Y".
-- **Estación de corte** (`estacion.py` + `estacion.html` + `/api/estacion/*`): fila POR CUENTA en
-  su carpeta. La prueba sin cuenta también la tiene (pedido de Jose, 11-nov-2026) con topes más
-  chicos (`TOPES_INVITADO`: es pública) y solo la ve ESE navegador. ⚠️ La estación **avisa y ESPERA** un
+- **Estación de corte** (`estacion.py` + `estacion.html` + `/api/estacion/*`): **UNA fila del
+  taller para TODAS las cuentas** en `datos_web/taller/` (decisión de Jose, 11-nov-2026); cada
+  trabajo lleva `de`. La prueba sin cuenta tiene su fila chica (`TOPES_INVITADO`: es pública) en
+  su carpeta temporal y solo la ve ESE navegador. ⚠️ Qué fila usar lo decide SOLO
+  `_fila_de_estacion()` con `with estacion.en(...)`: una ruta nueva que no pase por ahí cae en la
+  carpeta de la cuenta y la estación nunca vería el trabajo. ⚠️ La estación **avisa y ESPERA** un
   toque de "Cortar" (decisión de Jose): nunca cortar al llegar el trabajo — alguien pone el
   material. ⚠️ `estacion.html` NO lleva el motor: el servidor le inserta el bloque
   `motor-plotter` de `studio_ui.html` en la marca `MOTOR-PLOTTER` (un solo driver para todo).

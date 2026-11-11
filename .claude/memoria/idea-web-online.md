@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-11T17:38:38.610Z
+  modified: 2026-11-11T18:18:39.215Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -247,6 +247,18 @@ teléfono (está hecha para computadora).
 - 11-nov, a pedido de Jose: tras entrar se vuelve a la página pedida (`?siguiente=`, validado) y la
   **prueba sin cuenta también tiene estación** (fila chica, solo de ese navegador). Auditoría 182/182
   con los dos servidores; control: quitar la validación del regreso → 2 fallas.
+- 11-nov: **estación COMPARTIDA** (Jose eligió "una sola fila, todos"): `datos_web/taller/`, cada
+  trabajo dice quién lo mandó. Las 5 cortadas reales de Jose de esa mañana quedaron en la fila
+  vieja de su cuenta (`usuarios/pepegarfe/estacion*`, todas "hecho"; nadie las lee ya).
+  Cuentas al 11-nov: `pepegarfe` (dueño) y `angel`.
+- **Plan Railway** (aprobado el plan, no la ejecución): A) Dockerfile (Python + potrace + PyMuPDF
+  + shapely), puerto de Railway (hoy lee `DS_PORT`), datos en volumen `/data` (`DS_DATOS`),
+  fuentes = **Google Fonts** (decisión de Jose; `DS_FUENTES`, licencia libre); B) Jose crea cuenta
+  Hobby US$5/mes, yo conecto el repo (⚠️ requiere `git push`: pedir permiso; el repo es PÚBLICO,
+  `datos_web/` está en .gitignore); C) dirección provisional `*.up.railway.app`, copiar datos con
+  `secreto.key` (mantiene sesiones), **MEDIR cómo llega la IP del visitante** (trampa del bloqueo)
+  y probar todo; D) congelar, copiar datos frescos, CNAME `studio` → Railway (regreso: volver al
+  túnel en 1 min); E) apagar la Mac como servidor tras unos días.
 
 ### Diseño original (antes de construir)
 - Jose preguntó si el TELÉFONO podía ser el servidor → NO recomendado (Termux, librerías compiladas

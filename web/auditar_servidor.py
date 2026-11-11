@@ -645,8 +645,13 @@ print(json.dumps(r))
     ok(t0_.get('estado') == 'pendiente' and t0_.get('nombre') == 'Letrero de prueba' and t0_.get('ancho_mm') == 50
        and t0_.get('alto_mm') == 30 and 'hpgl' not in t0_,
        'la fila dice nombre (limpio), medidas reales (50 × 30 mm) y NO arrastra el HPGL en cada consulta', str(t0_))
-    ok(api('/api/estacion/fila', ANA)[1].get('trabajos') == [], 'otra cuenta NO ve tu fila')
-    ok(api('/api/estacion/tomar', ANA, {'id': JID})[1].get('ok') is False, 'ni puede tomar tu trabajo sabiendo su número')
+    # UNA estación del taller para todas las cuentas (decisión de Jose, 11-nov-2026)
+    ok(t0_.get('de') == 'jose' and [(t['id'], t['de']) for t in api('/api/estacion/fila', ANA)[1].get('trabajos', [])] == [(JID, 'jose')],
+       'otra cuenta ve la MISMA fila del taller, y cada trabajo dice quién lo mandó', str(t0_.get('de')))
+    ra = api('/api/estacion/mandar', ANA, {**cuadro, 'nombre': 'de ana'})[1]
+    ok(ra.get('ok') and [t['de'] for t in api('/api/estacion/fila', YO)[1]['trabajos']] == ['jose', 'ana'],
+       'y lo que manda otra cuenta le llega a tu estación', str(ra))
+    api('/api/estacion/quitar', YO, {'id': ra.get('id')})
     v = api('/api/estacion/vista', YO, {'id': JID})[1]
     ok(v.get('ok') and v.get('ancho_mm') == 50 and v.get('d', '').startswith('M0.0 30.0'), 'vista previa del trabajo (Y hacia abajo, en mm)', str(v)[:120])
     with ThreadPoolExecutor(4) as hilos:
@@ -666,14 +671,16 @@ print(json.dumps(r))
     malos_id = [api('/api/estacion/tomar', YO, {'id': m})[1].get('ok') for m in ('../../usuarios', '../ana/estacion', None, 7, 'A' * 12)]
     ok(malos_id == [False] * 5 and os.path.exists(os.path.join(DATOS_WEB, 'usuarios.json')), 'números de trabajo inventados (con ../) → rechazados, sin tocar nada')
     ok(api('/api/estacion/quitar', YO, {'id': JID})[1].get('ok') and api('/api/estacion/fila', YO)[1]['trabajos'] == [] and
-       not os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'estacion', JID + '.hpgl')), 'descartar lo borra de la fila y del disco')
+       not os.path.exists(os.path.join(DATOS_WEB, 'taller', 'estacion', JID + '.hpgl')), 'descartar lo borra de la fila y del disco')
     ok(api('/api/estacion/mandar', YO, {'paths': [], 'nombre': 'vacío'})[1].get('ok') is False, 'un diseño sin trazos no entra a la fila')
     llenos = [api('/api/estacion/mandar', YO, {**cuadro, 'nombre': f'n{i}'})[1].get('ok') for i in range(31)]
-    ok(llenos.count(True) == 30 and llenos[-1] is False, 'tope de 30 trabajos esperando por cuenta')
+    ok(llenos.count(True) == 30 and llenos[-1] is False, 'tope de 30 trabajos esperando en la estación')
     for t in api('/api/estacion/fila', YO)[1]['trabajos']:
         api('/api/estacion/quitar', YO, {'id': t['id']})
-    ok(os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'estacion.json')) and
-       not os.path.exists(os.path.join(COPIA, 'estacion.json')), 'la fila vive en la carpeta de la cuenta, no en la común')
+    ok(os.path.exists(os.path.join(DATOS_WEB, 'taller', 'estacion.json')) and
+       not os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'estacion.json')) and
+       not os.path.exists(os.path.join(COPIA, 'estacion.json')),
+       'la fila del taller vive en los datos del servidor (no en la carpeta de una cuenta ni junto al programa)')
     # La prueba sin cuenta SÍ tiene estación (pedido de Jose, 11-nov-2026), con fila chica y propia.
     r3 = api('/api/estacion/mandar', P3, {**cuadro, 'nombre': 'de la prueba'})[1]
     ok(r3.get('ok') and [t['nombre'] for t in api('/api/estacion/fila', P3)[1].get('trabajos', [])] == ['de la prueba'],
@@ -701,7 +708,7 @@ print(json.dumps(r))
     st, h, c = http_crudo('GET', '/estacion', cookie=YO)
     with open(os.path.join(COPIA, 'studio_ui.html'), encoding='utf-8') as f:
         motor_app = re.search(r'<script id="motor-plotter">[\s\S]*?</script>', f.read()).group(0)
-    ok(st == 200 and motor_app.encode() in c and b'<!--MOTOR-PLOTTER-->' not in c and b'Cuenta <b>jose</b>' in c
+    ok(st == 200 and motor_app.encode() in c and b'<!--MOTOR-PLOTTER-->' not in c and b'Cuenta <b>jose</b>' in c and b'{{' not in c and 'del taller'.encode() in c
        and 'no-store' in (h.get('Cache-Control') or ''),
        'la pantalla de la estación lleva el MISMO motor del plotter que la app (con el driver de Android)')
     ok(http_crudo('GET', '/estacion')[0] in (302, 303), 'sin sesión, la estación manda a entrar')

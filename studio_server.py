@@ -534,9 +534,21 @@ def estacion_pagina():
     with open(os.path.join(HERE, 'estacion.html'), encoding='utf-8') as f:
         pagina = f.read()
     # Una prueba se llama "invitado:<vence>-<hex>": en pantalla solo "prueba sin cuenta".
-    quien = 'prueba sin cuenta' if auth.es_invitado(_yo()) else (_yo() or '')
+    invitado = auth.es_invitado(_yo())
+    quien = 'prueba sin cuenta' if invitado else (_yo() or '')
+    fila = ('Fila solo de este navegador' if invitado
+            else 'Estación del taller: recibe de todas las cuentas')
     return _sin_cache(pagina.replace('<!--MOTOR-PLOTTER-->', _motor_plotter())
+                            .replace('{{FILA}}', fila)
                             .replace('{{USUARIO}}', html.escape(quien)))
+
+
+def _fila_de_estacion():
+    """UNA estación del taller para todas las cuentas (en la carpeta común de datos); una prueba
+    sin cuenta, su fila chica en su carpeta temporal. ⚠️ Toda ruta de la estación pasa por aquí."""
+    if auth.es_invitado(_yo()):
+        return os.path.dirname(core._config_path())
+    return os.path.join(auth.DATOS, 'taller')
 
 
 @app.post('/api/estacion/mandar')
@@ -546,17 +558,22 @@ def api_estacion_mandar():
         hpgl = build_hpgl(data)   # el MISMO que corta el escritorio
     except Exception as e:
         return _json({'ok': False, 'error': f'No se pudo generar el HPGL: {e}'})
-    return _json(estacion.mandar(hpgl, data.get('nombre'), invitado=auth.es_invitado(_yo())))
+    invitado = auth.es_invitado(_yo())
+    with estacion.en(_fila_de_estacion()):
+        return _json(estacion.mandar(hpgl, data.get('nombre'), invitado=invitado,
+                                     de='' if invitado else _yo()))
 
 
 @app.get('/api/estacion/fila')
 def api_estacion_fila():
-    return _json(estacion.fila())
+    with estacion.en(_fila_de_estacion()):
+        return _json(estacion.fila())
 
 
 def _estacion(f, *campos):
     d = request.json or {}
-    return _json(f(*[d.get(c) for c in campos]))
+    with estacion.en(_fila_de_estacion()):
+        return _json(f(*[d.get(c) for c in campos]))
 
 
 @app.post('/api/estacion/tomar')

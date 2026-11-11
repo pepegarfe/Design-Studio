@@ -102,7 +102,7 @@
   </section>
 
   <footer>
-    Deja esta pantalla abierta y el teléfono cargando · Cuenta <b>{{USUARIO}}</b> ·
+    Deja esta pantalla abierta y el teléfono cargando · {{FILA}} · Cuenta <b>{{USUARIO}}</b> ·
     <a href="/">Ir a Design Studio</a>
   </footer>
 </main>
@@ -306,7 +306,7 @@ function haceCuanto(seg) {
     var nuevo = recienLlegados[t.id] && Date.now() - recienLlegados[t.id] < 60000;
     return '<div class="trabajo' + (nuevo ? ' nuevo' : '') + '">' + vistaHtml(t) +
       '<div class="info"><div class="nombre">' + esc(t.nombre) + '</div>' +
-      '<div class="meta">' + [medidas(t), haceCuanto(relojServidor - t.creado)].filter(Boolean).join(' · ') + '</div>' +
+      '<div class="meta">' + [medidas(t), t.de ? 'de ' + esc(t.de) : '', haceCuanto(relojServidor - t.creado)].filter(Boolean).join(' · ') + '</div>' +
       (t.detalle ? '<div class="meta">' + esc(t.detalle) + '</div>' : '') +
       '<div class="acciones">' + botones + '</div></div></div>';
   }
