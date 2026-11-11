@@ -140,11 +140,13 @@ CNC_DEFAULTS = {
     'material': {'thickness': 15.0, 'z_zero': 'top',   # z_zero: 'top' (cara superior) | 'bed' (cama)
                  'clearance': 5.0, 'home_end': True,   # Z segura (mm) y "volver a X0 Y0 al terminar"
                  'spinup': 10.0,                       # seg de espera tras M03 (RPM del husillo)
-                 # RPM reales de las marchas S1-S8, LEÍDAS DEL HANDLE de Jose (24-jul:
-                 # MACHINE SETUP → Spindle Setup → Spindle speed). ⚠️ S1 es la MÁS RÁPIDA
-                 # (18000) y baja 1000 por marcha hasta S8=11000 — el orden no importa:
-                 # el archivo elige por CERCANÍA de RPM, no por número.
-                 'gears': [18000, 17000, 16000, 15000, 14000, 13000, 12000, 11000],
+                 # RPM reales de las marchas S1-S8, MEDIDAS GIRANDO EL HUSILLO (24-jul), no
+                 # leídas del menú del handle: el menú decía "S1=18000 bajando 1000" y la
+                 # física lo contradijo — ⚠️ S1 está PARADO (por eso el 100: ninguna fresa la
+                 # elige) y S2→S8 SUBEN de 12000 a 18000. El archivo elige por CERCANÍA de
+                 # RPM. La tabla vieja del menú (_GEARS_MENU) mandaba 16000 RPM a S3 = 13000
+                 # reales, y 18000 a S1 = fresa bajando SIN GIRAR.
+                 'gears': [100, 12000, 13000, 14000, 15000, 16000, 17000, 18000],
                  'type': 'mdf'},                       # material ACTIVO (id de `materials`)
     'materials': [
         {'id': 'mdf', 'name': 'MDF / triplay'},
@@ -253,6 +255,11 @@ _PRESET_FIXES = [
 ]
 
 
+# La tabla de marchas que venía de fábrica hasta nov-2026 (la del menú del handle, equivocada).
+# Una instalación que TODAVÍA la tiene nunca la calibró: se le cambia por la medida.
+_GEARS_MENU = [18000, 17000, 16000, 15000, 14000, 13000, 12000, 11000]
+
+
 def _apply_preset_fixes(data, rev):
     """Aplica las correcciones de fábrica pendientes (> rev). Devuelve True si hay que guardar."""
     if rev >= _PRESET_FIXES[-1][0]:
@@ -282,6 +289,12 @@ def cnc_get():
                     data[k] = saved[k]
             fix = _apply_preset_fixes(data, int(saved.get('preset_rev', 0) or 0))
             data['material'] = {**CNC_DEFAULTS['material'], **(data.get('material') or {})}
+            try:
+                if [round(float(g)) for g in data['material'].get('gears') or []] == _GEARS_MENU:
+                    data['material']['gears'] = list(CNC_DEFAULTS['material']['gears'])
+                    fix = True
+            except (TypeError, ValueError):
+                pass
             data['quote'] = {**CNC_DEFAULTS['quote'], **(data.get('quote') or {})}
             if data['tools'] and 'cut' not in data['tools'][0]:      # esquema v1 → migrar
                 data['tools'] = _migrate_tools_v1(data['tools'], data['materials'])
@@ -495,6 +508,67 @@ def _as_job(data):
     return job, op, tps, drills, skipped, tool, material, name
 
 
+def _cnc_warnings(data, job, op, tps, drills, tool, material):
+    """Lo que el archivo haría y casi seguro NO se quiso: salirse de la mesa, morder la cama,
+    enterrar la fresa, dejar piezas sin puente u omitir figuras. Lista de frases para la UI.
+
+    ⚠️ Son AVISOS, no errores: el corte se genera igual (hay casos legítimos, como la cama
+    de sacrificio). Lo que no puede pasar es que ocurran EN SILENCIO."""
+    import cnc_gcode
+    out = []
+    dia = float(tool.get('dia', 6.0))
+    r = dia / 2.0
+    pts = [p for t in tps for p in cnc_gcode._rpts(t)] + [tuple(p[:2]) for p in (drills or [])]
+    work = data.get('work')
+    try:
+        ww, wh = float(work[0]), float(work[1])
+    except (TypeError, ValueError, IndexError):
+        ww = wh = 0.0
+    if pts and ww > 0 and wh > 0:
+        x0, x1 = min(p[0] for p in pts) - r, max(p[0] for p in pts) + r
+        y0, y1 = min(p[1] for p in pts) - r, max(p[1] for p in pts) + r
+        # Se tolera un sobrepaso de hasta UN DIÁMETRO de fresa (decisión de Jose, nov-2026):
+        # una pieza pegada al origen cortada por fuera pasa el borde por el radio en cada
+        # trabajo normal, y un aviso que sale siempre deja de leerse.
+        if x0 < -dia - 0.01 or y0 < -dia - 0.01 or x1 > ww + dia + 0.01 or y1 > wh + dia + 0.01:
+            out.append('Se sale de la mesa (%g × %g mm): la fresa iría de X %.1f a %.1f y de '
+                       'Y %.1f a %.1f.' % (ww, wh, x0, x1, y0, y1))
+    depth, start = float(job.get('depth') or 0), float(job.get('start') or 0)
+    try:
+        th = float(material.get('thickness') or 0)
+    except (TypeError, ValueError):
+        th = 0.0
+    if th > 0 and start + depth > th + 1e-6:
+        out.append('Más profundo que el material: baja %.2f mm y el material mide %g mm '
+                   '(%.2f mm de más — sin cama de sacrificio muerde la mesa).'
+                   % (start + depth, th, start + depth - th))
+    if op != 'drill' and depth > 0:
+        try:
+            per = depth / len(cnc_gcode._passes(depth, float(tool['pass_depth'])))
+        except (KeyError, TypeError, ValueError, ZeroDivisionError):
+            per = 0.0
+        if per > dia + 1e-6:
+            out.append('Cada pasada baja %.2f mm, más que el diámetro de la fresa (%g mm): '
+                       'riesgo de romperla. Revisa el campo "Pasadas".' % (per, dia))
+    if op == 'profile' and job.get('tabs'):
+        fewer, none = cnc_gcode.tab_report(tps, job['tabs'], depth)
+        if none:
+            out.append('%d contorno(s) quedan SIN puentes: son demasiado chicos para que quepa '
+                       'uno. Sujétalos de otra forma.' % none)
+        if fewer:
+            out.append('%d contorno(s) llevan menos puentes de los pedidos (no cabían todos).'
+                       % fewer)
+    if op == 'pocket' or (op == 'profile' and data.get('side') == 'inside'):
+        try:
+            paths = [[(float(p[0]), float(p[1])) for p in q] for q in (data.get('paths') or [])]
+            n = cnc_gcode.count_unfit(paths, dia, float(data.get('allowance') or 0))
+        except Exception:
+            n = 0
+        if n:
+            out.append('%d figura(s) NO se cortan: son más chicas que la fresa (%g mm).' % (n, dia))
+    return out
+
+
 def cnc_toolpaths_preview(data):
     """Trayectorias para pintar en el lienzo (+ puntos de taladro) + estimación de tiempo."""
     import cnc_gcode
@@ -507,7 +581,8 @@ def cnc_toolpaths_preview(data):
         gear = cnc_gcode.gear_for(tool.get('rpm', 18000), (material or {}).get('gears'))
         return {'ok': True, 'op': op, 'toolpaths': flat, 'drills': drills,
                 'dia': float(tool.get('dia', 6.0)), 'skipped': skipped, 'secs': round(secs),
-                'gear': gear or None}
+                'gear': gear or None,
+                'warnings': _cnc_warnings(data, job, op, tps, drills, tool, material)}
     except Exception as e:
         return {'ok': False, 'error': f'Trayectorias: {e}'}
 
@@ -528,20 +603,24 @@ def cnc_build_tap(data):
                         'Las trayectorias activas usan FRESAS DISTINTAS. Exporta un archivo '
                         'por fresa (apaga las otras trayectorias con el ojito) — en la '
                         'máquina se cambia la fresa y se vuelve a fijar el cero de Z.'}
-            jobs, skipped = [], 0
+            jobs, skipped, warns = [], 0, []
             for j in raw:
+                jd = {**j, 'material': mat, 'name': name}
                 try:
-                    job, _, _, _, sk, _, _, _ = _as_job({**j, 'material': mat, 'name': name})
+                    job, op, tps, drills, sk, tool, _, _ = _as_job(jd)
                 except Exception as e:
                     return {'ok': False, 'error': f"{j.get('label') or 'trayectoria'}: {e}"}
                 jobs.append(job)
                 skipped += sk
+                warns += ['%s: %s' % (job['label'], w)
+                          for w in _cnc_warnings(jd, job, op, tps, drills, tool, mat)]
             tap, secs = cnc_gcode.build_jobs(jobs, mat, name)
         else:
-            job, _, _, _, skipped, _, mat, name = _as_job(data)
+            job, op, tps, drills, skipped, tool, mat, name = _as_job(data)
+            warns = _cnc_warnings(data, job, op, tps, drills, tool, mat)
             tap, secs = cnc_gcode.build_jobs([job], mat, name)
         return {'ok': True, 'tap': tap, 'lines': tap.count('\n'),
-                'skipped': skipped, 'secs': round(secs)}
+                'skipped': skipped, 'secs': round(secs), 'warnings': warns}
     except Exception as e:
         return {'ok': False, 'error': f'G-code: {e}'}
 

@@ -175,7 +175,9 @@ function crearEstacion(dep) {
 
   async function revisar() {
     var r;
-    try { r = await dep.pedir('/api/estacion/fila'); } catch (x) { r = null; }
+    // De paso le dice al servidor "aquí hay una estación, y (no) tiene el plotter conectado":
+    // con eso el editor sabe si "Enviar Remoto" tiene quién lo reciba.
+    try { r = await dep.pedir('/api/estacion/fila', { plotter: !!e.conectado }); } catch (x) { r = null; }
     if (!r || !r.ok) { e.servidor = false; cambio(); return e; }
     e.servidor = true; e.trabajos = r.trabajos;
     var nuevos = r.trabajos.filter(function(t){ return t.estado === 'pendiente' && !vistos[t.id]; });

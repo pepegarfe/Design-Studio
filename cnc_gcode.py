@@ -401,14 +401,56 @@ def _tab_count(perim, tabs):
 
 
 def _tab_zones(perim, ntabs, tab_w, ramp_len):
+    """Zonas de puente repartidas por el contorno, o None si no cabe NINGUNO.
+
+    ⚠️ Si los N pedidos no caben se pone el MAYOR número que sí quepa, no cero: antes una
+    pieza chica (justo la que sale volando) se quedaba sin puentes EN SILENCIO aunque el
+    usuario los hubiera marcado. `tab_report()` cuenta los recortados para avisar."""
     zones = []
     full = tab_w + 2 * ramp_len
-    if ntabs < 1 or perim <= ntabs * full * 1.5:
+    while ntabs >= 1 and perim <= ntabs * full * 1.5:
+        ntabs -= 1
+    if ntabs < 1:
         return None
     for i in range(ntabs):
         c = perim * (i + 0.5) / ntabs
         zones.append((c - full / 2.0, c + full / 2.0))
     return zones
+
+
+def tab_report(toolpaths, tabs, depth):
+    """(contornos con MENOS puentes de los pedidos, contornos SIN ninguno). Misma cuenta
+    que `_contour_body`, para poder avisarle al usuario antes de cortar."""
+    if not tabs:
+        return 0, 0
+    tab_w = float(tabs.get('w', 8.0))
+    tab_ramp = min(float(tabs.get('h', 3.0)), float(depth)) * _TAB_SLOPE
+    fewer = none = 0
+    for rg in toolpaths:
+        pts = _rpts(rg)
+        if len(pts) < 2 or not _is_closed(pts):
+            continue
+        perim = _cum(pts)[-1]
+        n = _tab_count(perim, tabs)
+        if n <= 0:
+            continue
+        zones = _tab_zones(perim, n, tab_w, tab_ramp)
+        if zones is None:
+            none += 1
+        elif len(zones) < n:
+            fewer += 1
+    return fewer, none
+
+
+def count_unfit(paths, tool_dia, allowance=0.0):
+    """Cuántas figuras cerradas son más chicas que la fresa (cortar por DENTRO o cajear no
+    deja nada): el generador las omite, y sin esta cuenta nadie se entera."""
+    region, _ = _closed_region(paths)
+    if region is None:
+        return 0
+    r = float(tool_dia) / 2.0 + float(allowance or 0)
+    return sum(1 for poly in getattr(region, 'geoms', [region])
+               if poly.buffer(-r, quad_segs=16).is_empty)
 
 
 def _tab_z(s, zones, perim, z_cut, z_tab, ramp_len):

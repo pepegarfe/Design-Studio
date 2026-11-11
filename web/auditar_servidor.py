@@ -640,6 +640,16 @@ print(json.dumps(r))
     st, r = api('/api/estacion/mandar', YO, {**cuadro, 'nombre': '  Letrero   de prueba  '})
     ok(r.get('ok') and r.get('pendientes') == 1, 'mandar a la estación: queda 1 trabajo esperando', str(r))
     JID = r.get('id')
+    # Latido: el editor sabe si "Enviar Remoto" tiene quién lo reciba (botón único de envío)
+    e0 = api('/api/estacion/estado', ANA)[1]
+    ok(e0.get('ok') and e0.get('viva') is False and e0.get('plotter') is False and e0.get('pendientes') == 1,
+       'estado de la estación sin nadie: ni viva ni con plotter, y cuenta lo que espera', str(e0))
+    api('/api/estacion/fila', YO, {'plotter': False})
+    e1 = api('/api/estacion/estado', ANA)[1]
+    api('/api/estacion/fila', YO, {'plotter': True})
+    e2 = api('/api/estacion/estado', ANA)[1]
+    ok((e1.get('viva'), e1.get('plotter'), e2.get('viva'), e2.get('plotter')) == (True, False, True, True),
+       'la estación avisa al pedir la fila: abierta sin plotter → abierta con plotter (lo ve OTRA cuenta)', str((e1, e2)))
     fila_yo = api('/api/estacion/fila', YO)[1]
     t0_ = (fila_yo.get('trabajos') or [{}])[0]
     ok(t0_.get('estado') == 'pendiente' and t0_.get('nombre') == 'Letrero de prueba' and t0_.get('ancho_mm') == 50

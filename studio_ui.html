@@ -8,7 +8,7 @@
   :root{
     --bg:#0E1013; --panel:#171A20; --rail:#131519; --line:#282D36; --line-2:#333A45;
     --ink:#EDEFF2; --muted:#9AA2AE; --faint:#616977; --accent:#EC4A86; --accent-dim:#C33169;
-    --accent-soft:#EC4A8622; --good:#38C990; --bad:#E5484D;
+    --accent-soft:#EC4A8622; --good:#38C990; --bad:#E5484D; --warn:#E0A040;
     --canvas:#0A0C0F; --cut:#EC4A86; --grid:#181B21; --gridax:#2C333E;
     --stroke:#c7ccd4; --sel:#EC4A86; --group:#5B9DF9;
     --input:#0E1116; --hover:#ffffff10;
@@ -18,7 +18,7 @@
   :root[data-theme="light"]{
     --bg:#EDEEF1; --panel:#FFFFFF; --rail:#F4F5F7; --line:#E4E6EB; --line-2:#D3D7DE;
     --ink:#1A1D23; --muted:#576070; --faint:#98A0AD; --accent:#D11E68; --accent-dim:#AE1556;
-    --accent-soft:#D11E6814; --good:#1E9E6A; --bad:#D64541;
+    --accent-soft:#D11E6814; --good:#1E9E6A; --bad:#D64541; --warn:#B7791F;
     --canvas:#E3E5EA; --cut:#D11E68; --grid:#DADCE2; --gridax:#C2C6CE;
     --stroke:#3a4150; --sel:#D11E68; --group:#2D6FD6;
     --input:#F2F3F6; --hover:#0000000a;
@@ -30,7 +30,7 @@
     grid-template-areas:"top top top" "rail canvas inspect" "status status status";}
 
   .top{grid-area:top;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);}
-  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em;}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;}
   .brand .mk{width:23px;height:23px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));display:grid;place-content:center;}
   .brand .mk svg{width:14px;height:14px;}
   .brand small{color:var(--faint);font-weight:500;font-family:var(--mono);font-size:11px;padding-left:9px;margin-left:3px;border-left:1px solid var(--line-2);}
@@ -48,6 +48,19 @@
   .conn .dot{width:7px;height:7px;border-radius:50%;background:var(--bad);}
   .cta{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:8px;background:linear-gradient(180deg,var(--accent),var(--accent-dim));border:0;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 12px -3px var(--accent-dim);}
   .cta:disabled{opacity:.45;cursor:default;box-shadow:none;}
+  /* Botón único de envío: [● Enviar Directo/Remoto][▾]. El punto dice si ese destino está listo. */
+  .sendgrp{display:inline-flex;align-items:center;gap:1px;flex:none;}
+  .sendgrp .cta{white-space:nowrap;}
+  .sendgrp #btnSendTop{border-radius:8px 0 0 8px;padding:0 13px;}
+  .sendgrp #btnSendMenu{border-radius:0 8px 8px 0;padding:0 8px;}
+  .sendgrp #btnSendMenu svg{width:13px;height:13px;}
+  .sdot{width:9px;height:9px;border-radius:50%;flex:none;background:#9aa2ae;border:1.5px solid #fff;}
+  .sdot.ok{background:var(--good);} .sdot.warn{background:var(--warn);} .sdot.bad{background:var(--bad);}
+  #sendMenu .mi{align-items:flex-start;white-space:normal;max-width:300px;}
+  #sendMenu .mi .sdot{margin-top:4px;border-color:var(--panel);}
+  #sendMenu .mi small{display:block;color:var(--muted);font-family:var(--font);font-size:11.5px;margin:1px 0 0;padding:0;}
+  #sendMenu .mi.on b::after{content:' ✓';color:var(--accent);}
+  #sendMenu .sep{height:1px;background:var(--line);margin:4px 6px;}
   .cta svg{width:14px;height:14px;}
 
   .rail{grid-area:rail;background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:3px;}
@@ -308,6 +321,11 @@
   .sendbar{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;width:340px;box-shadow:0 14px 34px -8px #000b;z-index:41;display:none;}
   .sendbar .pb{height:6px;border-radius:3px;background:var(--input);margin:9px 0;overflow:hidden;} .sendbar .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s;}
   .sendbar .r{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);font-family:var(--mono);}
+  /* Barra superior en pantallas angostas: el botón de envío es lo ÚLTIMO que se sacrifica.
+     Medido nov-2026: completa pide ~1035 px; antes "Enviar" desaparecía a 1024 sin aviso. */
+  @media (max-width:1180px){ .brand small{display:none;} .top{gap:8px;} }
+  @media (max-width:1060px){ .top .tbtn{font-size:0;gap:0;padding:0 9px;} .top .tbtn svg{width:17px;height:17px;} }
+  @media (max-width:760px){ .brand{font-size:0;gap:0;} .top{gap:4px;padding:0 8px;} .top .tbtn{padding:0 6px;} }
 </style>
 </head>
 <body>
@@ -329,9 +347,10 @@
     <button class="tbtn" id="btnImport" title="Importar otro diseño (SVG/DXF/AI o .dstudio) SUMÁNDOLO a la mesa — no quita lo que ya está"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6m-3-3h6"/></svg>Importar</button>
     <button class="tbtn" id="btnSaveProject" disabled title="Guardar tu proyecto (.dstudio) para reabrirlo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Guardar</button>
     <button class="tbtn" id="btnExport" disabled title="Exportar como… — imagen (PNG/JPG), PDF o vector (SVG/DXF) para mandar al cliente o a otro programa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span>Exportar…</span></button>
-    <button class="conn" id="connPill" title="Abrir panel del plotter"><span class="dot"></span><span id="connText">Desconectado</span></button>
-    <button class="tbtn" id="btnStation" disabled style="display:none" title="Mandar este diseño a la estación de corte del taller: el teléfono avisa y alguien toca Cortar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><span>A la estación</span></button>
-    <button class="cta" id="btnSendTop" disabled><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-14 9z"/></svg>Enviar al plotter</button>
+    <div class="sendgrp" id="sendGrp">
+      <button class="cta" id="btnSendTop" disabled><span class="sdot" id="sendDot"></span><span id="sendLbl">Enviar Directo</span></button>
+      <button class="cta" id="btnSendMenu" title="Elegir a dónde se envía el corte · ajustes del plotter"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
   </header>
 
   <nav class="rail">
@@ -552,6 +571,7 @@
       <div class="grp-t sec">Trayectorias<span class="opname" id="tpCount"></span></div>
       <div class="tplist" id="tpList"></div>
       <div class="muted-note" id="tpEmpty">Selecciona objetos (o nada = todo), configura arriba y pulsa <b>Calcular</b>. Arrastra las filas para cambiar el orden de corte.</div>
+      <div id="tpWarn" style="display:none;margin:8px 0 2px;padding:8px 10px;border:1px solid var(--bad);border-radius:8px;color:var(--ink);font-size:12.5px;line-height:1.45;user-select:text"></div>
       <div class="rowbtns">
         <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver trayectorias</span></button>
         <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
@@ -781,6 +801,7 @@
     </div>
   </div>
 </div>
+<div class="ctxmenu" id="sendMenu"></div>
 <div class="ctxmenu" id="ctxMenu"></div>
 <div class="sendbar" id="sendbar">
   <div class="r"><b id="sendLabel">Enviando al plotter…</b><button class="pbtn" id="sendCancel" style="height:26px;padding:0 10px">Cancelar</button></div>
@@ -1658,7 +1679,7 @@ var PlotterMotor = (function(){
     }
     var _on=el('alignTo').querySelector('.on');
     el('alignToLbl').textContent=(_on&&_on.getAttribute('data-to')==='workarea')?'a la hoja de trabajo':'a la selección';
-    el('btnSaveProject').disabled=!has; el('btnSendTop').disabled=!has; el('btnStation').disabled=!has; el('btnQuote').disabled=!has; el('btnExport').disabled=!has;
+    el('btnSaveProject').disabled=!has; el('btnSendTop').disabled=!has; el('btnQuote').disabled=!has; el('btnExport').disabled=!has;
     el('fileName').textContent=state.name||'sin diseño';
     var m=mode();
     if(!has){ ['fx','fy','fw','fh'].forEach(function(id){el(id).value='0.0';}); el('fr').value='0'; el('fs').value='100'; el('metaSize').textContent='—'; el('stSel').textContent=''; return; }
@@ -3493,8 +3514,7 @@ var PlotterMotor = (function(){
     if(api()) return;
     fetch('/api/update_check').then(function(r){ return r.json(); }).then(function(r){
       // La estación de corte es de la versión web (la prueba tiene una fila chica, solo de ese navegador).
-      if(r && r.web){ window.DS_ESTACION = true;
-        if(state.machine!=='cnc') el('btnStation').style.display=''; }
+      if(r && r.web){ window.DS_ESTACION = true; if(window.DS_envio) window.DS_envio.arrancar(); }
       if(!r || !r.invitado) return;
       window.DS_INVITADO = true;
       var b = document.createElement('div');
@@ -3664,11 +3684,7 @@ var PlotterMotor = (function(){
   function setConnUI(c,port){ connected=c;
     if(port!==undefined) connPort=port||null;
     if(!c) connPort=null;
-    el('connPill').classList.toggle('ok',c);
-    // en la píldora de la barra va el nombre CORTO: no cabe la descripción entera
-    var w=wsMode();   // en el navegador no hay nombre de puerto que mostrar
-    el('connText').textContent = c ? (w ? 'Plotter conectado' : 'Conectado · '+portShort(connPort)) : (w ? 'Conectar plotter' : 'Desconectado');
-    el('connPill').title = (w && !c) ? 'Conectar el plotter' : 'Abrir panel del plotter';
+    pintarEnvio();
     el('btnConnect').textContent = c ? 'Desconectar' : 'Conectar';
     el('btnWsConnect').textContent = c ? 'Desconectar' : 'Conectar plotter';
     el('connStat').textContent = c ? ('Conectado a '+portName(connPort)) : 'Desconectado';
@@ -3732,7 +3748,6 @@ var PlotterMotor = (function(){
       setConnUI(false); if(s && s.error) toast(s.error);
       if(s && s.code==='NotFoundError' && el('plotterModal').style.display==='none') openPlotter();
       return false; }).catch(function(e){ setConnUI(false); toast('Error: '+e); return false; }); }
-  el('connPill').addEventListener('click',function(){ if(wsMode() && !connected) conectarRapido(false); else openPlotter(); });
   el('btnWsConnect').addEventListener('click',function(){
     if(connected){ P.disconnect().then(function(){ setConnUI(false); toast('Desconectado'); }); return; }
     conectarRapido(false); });
@@ -3767,22 +3782,86 @@ var PlotterMotor = (function(){
   function sendToPlotter(){ if(!hasDoc()) return;
     if(!connected){
       // en el navegador: pedir el cable en el mismo clic y, ya conectado, seguir con el corte
-      if(wsMode()){ conectarRapido(false).then(function(ok){ if(ok) enviarYa(); }); return; }
+      if(wsMode()){ siCabe(function(){ conectarRapido(false).then(function(ok){ if(ok) enviarYa(); }); }); return; }
       toast('Conecta el plotter primero'); openPlotter(); return; }
-    enviarYa(); }
+    siCabe(enviarYa); }
+  // ¿El diseño cabe en el material? Si no, se pregunta ANTES de cortar (y antes de mandar a la
+  // estación): fuera del área el plotter corta sobre el aire o sobre el borde del vinil.
+  function siCabe(seguir){ var b=bboxOf(allIdx()), w=state.work[0], h=state.work[1], t=0.05;
+    if(b[0]>=-t && b[1]>=-t && b[2]<=w+t && b[3]<=h+t){ seguir(); return; }
+    var f=function(v){ return Math.round(v*10)/10; };
+    askConfirm('El diseño se sale del material',
+      'El área de trabajo mide <b>'+f(w)+' × '+f(h)+' mm</b> y el diseño va de X <b>'+f(b[0])+'</b> a <b>'+f(b[2])+'</b> y de Y <b>'+f(b[1])+'</b> a <b>'+f(b[3])+'</b> mm.<br><br>Lo que quede fuera se cortaría fuera del material. ¿Cortar de todos modos?',
+      function(ok){ if(ok) seguir(); }); }
   function enviarYa(){ P.send(hpglPayload()).then(function(r){ if(r&&r.ok){ watchSend('Enviando al plotter…'); } else toast((r&&r.error)||'No se pudo enviar'); }); }
   el('sendCancel').addEventListener('click',function(){ P.cancel(); });
-  el('btnSendTop').addEventListener('click',sendToPlotter);
+  // ===== UN solo botón de envío (nov-2026): antes eran tres — "Conectar plotter", "A la estación"
+  // y "Enviar al plotter" — que contestaban la misma pregunta: ¿DÓNDE se corta esto?
+  //   Enviar Directo = el plotter conectado a ESTE equipo.
+  //   Enviar Remoto  = la fila de la estación del taller (alguien toca "Cortar" allá).
+  // El punto del botón dice si ese destino está listo. El destino se elige solo (lo que esté
+  // conectado) hasta que el usuario escoge uno en el menú; esa elección se recuerda.
+  var remoto={viva:false, plotter:false, pendientes:0, sabido:false}, destPref=null, remPoll=null;
+  try{ destPref=localStorage.getItem('ds_destino'); }catch(e){}
+  function puedeDirecto(){ return !!api() || wsMode(); }       // escritorio, o navegador con cable
+  function puedeRemoto(){ return !!window.DS_ESTACION; }
+  function destino(){
+    if(!puedeRemoto()) return 'directo';
+    if(!puedeDirecto()) return 'remoto';
+    if(destPref==='directo'||destPref==='remoto') return destPref;
+    return connected ? 'directo' : (remoto.plotter ? 'remoto' : 'directo'); }
+  function estadoDirecto(){ return connected ? ['ok','plotter conectado a este equipo'] : ['bad','plotter desconectado — al enviar se pide el cable']; }
+  function estadoRemoto(){ var n=remoto.pendientes, cola=n?(' · '+n+(n===1?' trabajo esperando':' trabajos esperando')):'';
+    if(!remoto.sabido) return ['','consultando la estación…'];
+    if(remoto.plotter) return ['ok','estación lista, con plotter conectado'+cola];
+    if(remoto.viva) return ['warn','estación abierta, pero SIN plotter conectado'+cola];
+    return ['','ninguna estación abierta ahora: el trabajo esperará en la fila'+cola]; }
+  function pintarEnvio(){ if(!el('sendDot')) return;
+    var d=destino(), e=(d==='remoto')?estadoRemoto():estadoDirecto();
+    el('sendDot').className='sdot'+(e[0]?' '+e[0]:'');
+    el('sendLbl').textContent=(d==='remoto')?'Enviar Remoto':'Enviar Directo';
+    el('btnSendTop').title=((d==='remoto')?'Mandar el corte a la fila de la estación del taller — ':'Cortar en el plotter de este equipo — ')+e[1]; }
+  function sondearRemoto(){ if(!puedeRemoto()||state.machine==='cnc'||document.hidden) return;
+    fetch('/api/estacion/estado').then(function(r){ return r.json(); }).then(function(r){
+      if(r&&r.ok){ remoto={viva:!!r.viva, plotter:!!r.plotter, pendientes:r.pendientes||0, sabido:true}; pintarEnvio();
+        /* menú abierto: que no enseñe un estado viejo */
+        if(el('sendMenu').style.display==='block') abrirMenuEnvio(true); } }).catch(function(){}); }
+  function cerrarMenuEnvio(){ el('sendMenu').style.display='none'; }
+  function abrirMenuEnvio(sinSondeo){ var m=el('sendMenu'), d=destino(), h='';
+    function item(id,dot,tit,sub,on){ return '<div class="mi'+(on?' on':'')+'" data-a="'+id+'">'+(dot===null?'':'<span class="sdot'+(dot?' '+dot:'')+'"></span>')+'<span><b>'+tit+'</b><small>'+sub+'</small></span></div>'; }
+    if(puedeDirecto()){ var ed=estadoDirecto(); h+=item('directo',ed[0],'Enviar Directo',ed[1],d==='directo'); }
+    else h+='<div class="mi" style="cursor:default;opacity:.6"><span class="sdot"></span><span><b>Enviar Directo</b><small>este navegador no puede usar el cable: abre Design Studio en Chrome o Edge</small></span></div>';
+    if(puedeRemoto()){ var er=estadoRemoto(); h+=item('remoto',er[0],'Enviar Remoto',er[1],d==='remoto'); }
+    h+='<div class="sep"></div>'+item('ajustes',null,'Ajustes del plotter…','conexión, mover el cabezal, corte de prueba',false);
+    if(puedeRemoto()) h+=item('fila',null,'Ver la fila de la estación','se abre en otra pestaña',false);
+    m.innerHTML=h; m.style.display='block';
+    var r=el('sendGrp').getBoundingClientRect(); m.style.top=(r.bottom+6)+'px';
+    m.style.left=Math.max(8,Math.min(r.right-m.offsetWidth, window.innerWidth-m.offsetWidth-8))+'px';
+    if(!sinSondeo) sondearRemoto(); }
+  el('btnSendMenu').addEventListener('click',function(ev){ ev.stopPropagation();
+    if(el('sendMenu').style.display==='block') cerrarMenuEnvio(); else abrirMenuEnvio(); });
+  document.addEventListener('click',function(ev){ if(!el('sendMenu').contains(ev.target)) cerrarMenuEnvio(); });
+  el('sendMenu').addEventListener('click',function(ev){ var t=ev.target.closest('.mi'); if(!t) return; var a=t.getAttribute('data-a'); if(!a) return;
+    cerrarMenuEnvio();
+    if(a==='directo'||a==='remoto'){ destPref=a; try{ localStorage.setItem('ds_destino',a); }catch(e){} pintarEnvio(); }
+    else if(a==='ajustes') openPlotter();
+    else if(a==='fila') window.open('/estacion','_blank'); });
+  el('btnSendTop').addEventListener('click',function(){ if(!hasDoc()) return;
+    if(destino()==='remoto') siCabe(mandarAEstacion); else sendToPlotter(); });
   // Estación de corte: el servidor arma el HPGL (el mismo de "Enviar") y lo deja en la fila;
   // el teléfono del taller avisa y espera a que alguien toque Cortar.
-  el('btnStation').addEventListener('click',function(){ if(!hasDoc()) return;
-    var b=el('btnStation'); b.disabled=true;
+  function mandarAEstacion(){
+    var b=el('btnSendTop'); b.disabled=true;
     var datos=hpglPayload(); datos.nombre=state.name||'Diseño';
     postJSON('/api/estacion/mandar',datos).then(function(r){
-      if(r&&r.ok) toast('Mandado a la estación ✓ ('+r.pendientes+(r.pendientes===1?' trabajo esperando)':' trabajos esperando)'));
+      if(r&&r.ok){ var e=estadoRemoto();
+        toast('Enviado a la estación ✓ — '+(remoto.plotter?'lista para cortar':(remoto.viva?'ojo: allá no hay plotter conectado':'ojo: no hay ninguna estación abierta'))+' ('+r.pendientes+(r.pendientes===1?' esperando)':' esperando)')); }
       else toast((r&&r.error)||'No se pudo mandar a la estación'); })
      .catch(function(){ toast('No se pudo mandar a la estación'); })
-     .then(function(){ b.disabled=!hasDoc(); }); });
+     .then(function(){ b.disabled=!hasDoc(); sondearRemoto(); }); }
+  window.DS_envio={ pintar:pintarEnvio, arrancar:function(){ pintarEnvio(); sondearRemoto();
+    if(!remPoll){ remPoll=setInterval(sondearRemoto,10000); document.addEventListener('visibilitychange',function(){ if(!document.hidden) sondearRemoto(); }); } } };
+  pintarEnvio();
 
   // ===== Fase 4: área de trabajo (config persistente, por máquina) =====
   function openWA(){ var cncMode=state.machine==='cnc';
@@ -3853,9 +3932,8 @@ var PlotterMotor = (function(){
     // paso de trayectorias. Primero se acomoda el diseño; al paso CNC se pasa a mano con el
     // toggle de arriba. (Antes hacía `cncMode?'cnc':'design'` y te sacaba del diseño de golpe.)
     setSideMode('design');
-    el('btnSendTop').style.display=cncMode?'none':'';   // la CNC trabaja offline (archivo por USB), no hay envío
-    el('btnStation').style.display=(cncMode||!window.DS_ESTACION)?'none':'';
-    el('connPill').style.display=cncMode?'none':'';
+    el('sendGrp').style.display=cncMode?'none':'';   // la CNC trabaja offline (archivo por USB), no hay envío
+    if(window.DS_envio) window.DS_envio.pintar();
     state.work = cncMode ? ((state.cnc&&state.cnc.work)||[1220,2440]) : state.plotterWork;
     state.sheets = cncMode ? ((state.cnc&&state.cnc.sheets)||1) : 1;
     paintCnc();
@@ -3904,7 +3982,7 @@ var PlotterMotor = (function(){
     commitMat(b.getAttribute('data-z')); });
   el('toolPick').addEventListener('change',function(){ var id=this.value;
     // solo cambia la fresa QUE MUESTRA el formulario (se aplica a la trayectoria al Calcular)
-    CNC.set({tool_sel:id}).then(function(r){ if(r&&r.ok){ state.cnc=r; paintCnc(); refreshInspector(); } else toast((r&&r.error)||'No se pudo guardar'); }); });
+    CNC.set({tool_sel:id}).then(function(r){ if(r&&r.ok){ state.cnc=r; paintCnc(); refreshInspector(); resetPasses(); } else toast((r&&r.error)||'No se pudo guardar'); }); });
   // --- Materiales (modal) ---
   var mEdit={list:[], cur:0};
   function paintMats(){ var L=el('matList'); L.innerHTML='';
@@ -4022,6 +4100,7 @@ var PlotterMotor = (function(){
     var auto=(t&&d>0)?Math.max(1,Math.ceil(d/t.pass_depth)):'';
     var cur=parseInt(el('passInfo').value,10);
     if(!cur || cur===passAuto){ el('passInfo').value=auto; passAuto=auto; } }
+  function resetPasses(){ el('passInfo').value=''; passAuto=null; paintPasses(); }
   // pasada efectiva: la de la fresa, o profundidad ÷ N si el usuario forzó N pasadas
   function effPassDepth(depth){ var t=cncTool(); if(!t) return 3;
     var n=parseInt(el('passInfo').value,10), auto=Math.max(1,Math.ceil(depth/t.pass_depth));
@@ -4065,6 +4144,11 @@ var PlotterMotor = (function(){
     el('tpName').value=t.name||'';
     if(t.toolId && el('toolPick').querySelector('option[value="'+t.toolId+'"]')) el('toolPick').value=t.toolId;
     var tt=cncTool(); el('matDia').value=tt?tt.dia:''; el('toolSum').textContent=fmtTool(tt);
+    // Pasadas de ESTA trayectoria: si se calculó con un N forzado (su fresa congelada trae
+    // otra pasada que la biblioteca) se muestra ese N; si no, automático.
+    el('passInfo').value=''; passAuto=null;
+    if(t.tool&&tt&&t.depth&&Math.abs((t.tool.pass_depth||0)-tt.pass_depth)>1e-6&&t.tool.pass_depth>0)
+      el('passInfo').value=Math.max(1,Math.round(t.depth/t.tool.pass_depth));
     paintOp(); paintPasses(); }
   // --- lista ---
   function opIconSvg(o){ var src=el('opSeg').querySelector('button[data-o="'+o+'"] svg'); var c=src?src.cloneNode(true):null; if(c) c.setAttribute('class','opic'); return c; }
@@ -4212,6 +4296,7 @@ var PlotterMotor = (function(){
                    op:s.op, side:s.side, direction:s.direction, tabs:s.tabs, ramp:s.ramp,
                    start:s.start, allowance:s.allowance, last_pass:s.last_pass, last_rev:s.last_rev, depth:s.depth, toolId:s.toolId, tool:snap});
       tpSel=-1; el('tpName').value='';   // como Aspire: Calcular guarda y CIERRA — formulario listo para la siguiente
+      resetPasses();   // ⚠️ un N escrito a mano NO se hereda a la siguiente trayectoria (enterraba la fresa)
       toast('Trayectoria creada · '+uids.length+' objeto(s)');
     }
     if(tpSel>=0&&tpaths[tpSel]) el('tpName').value=tpaths[tpSel].name;   // (recalcular: sigue seleccionada)
@@ -4229,7 +4314,7 @@ var PlotterMotor = (function(){
     name: state.name, label: t.name, op: t.op, side: t.side, direction: t.direction,
     tabs: t.tabs, ramp: t.ramp, start: t.start||0, allowance: t.allowance||0,
     last_pass: t.last_pass||0, last_rev: !!t.last_rev,
-    depth: t.depth, tool: tpToolOf(t), material: state.cnc.material }; }
+    depth: t.depth, tool: tpToolOf(t), material: state.cnc.material, work: state.work }; }
   function activeTps(){ return tpaths.filter(function(t){ return t.enabled && tpResolve(t).length; }); }
   var CNCB={ prev:function(d){ return api()? api().cnc_toolpath(d) : postJSON('/api/cnc_toolpath',d); },
              tap: function(d){ return api()? api().save_tap(d)     : postJSON('/api/tap',d); } };
@@ -4245,27 +4330,50 @@ var PlotterMotor = (function(){
     Promise.all(pls.map(function(pl){
       return CNCB.prev(pl).catch(function(e){ return {ok:false, error:String(e)}; });
     })).then(function(rs){
-      var groups=[], secs=0, skipped=0, bad=null, gearsSeen={};
+      var groups=[], secs=0, skipped=0, bad=null, gearsSeen={}, warns=[];
       rs.forEach(function(r,k){
         // `tpi` = a qué fila de la lista pertenece este dibujo. Sin él no se podría
         // pintar de azul la seleccionada ni saber cuál se pulsó en el lienzo.
         // ⚠️ No vale usar k: si una trayectoria falla, no se apila y los índices se corren.
-        if(r&&r.ok){ groups.push({tps:r.toolpaths||[], drills:r.drills||[], dia:r.dia||6, depth:(pls[k].start||0)+(pls[k].depth||0), tpi:tpaths.indexOf(list[k])}); secs+=r.secs||0; skipped+=r.skipped||0; if(r.gear) gearsSeen['S'+r.gear]=1; }
+        if(r&&r.ok){ groups.push({tps:r.toolpaths||[], drills:r.drills||[], dia:r.dia||6, depth:(pls[k].start||0)+(pls[k].depth||0), tpi:tpaths.indexOf(list[k])}); secs+=r.secs||0; skipped+=r.skipped||0; if(r.gear) gearsSeen['S'+r.gear]=1; (r.warnings||[]).forEach(function(w){ warns.push((pls[k].label?pls[k].label+': ':'')+w); }); }
         else bad=(pls[k].label?pls[k].label+': ':'')+((r&&r.error)||'error');
       });
+      paintTpWarn(warns);
       if(!groups.length){ el('tpPrevLbl').textContent='Ver trayectorias'; toast(bad||'No se pudieron calcular las trayectorias'); return; }
       cncPrev={groups:groups}; el('btnTpPrev').classList.add('on');
       el('tpPrevLbl').textContent='Esconder trayectorias'; draw();
       var n=0; groups.forEach(function(g){ n+=g.tps.length+g.drills.length; });
       var gk=Object.keys(gearsSeen);
-      toast('Trayectorias: '+n+' · ≈ '+Math.floor(secs/60)+' min '+(secs%60)+' s'+(gk.length?' · marcha '+gk.join('/'):'')+(skipped?' · '+skipped+' trazo(s) abierto(s) fuera':'')+(bad?' · ⚠ '+bad:''));
+      toast('Trayectorias: '+n+' · ≈ '+Math.floor(secs/60)+' min '+(secs%60)+' s'+(gk.length?' · marcha '+gk.join('/'):'')+(skipped?' · '+skipped+' trazo(s) abierto(s) fuera':'')+(warns.length?' · ⚠ '+warns.length+' aviso(s) abajo':'')+(bad?' · ⚠ '+bad:''));
     }); }
   el('btnSaveTap').addEventListener('click',function(){ saveTap(); });
   el('btnTpPrev').addEventListener('click',function(){
     if(cncPrev){ prevOn=false; killPrev(); draw(); return; }   // toggle: apagar (y recordar que se apagó)
     prevOn=true; computePreview(); });
   // --- export .tap (todas las activas en orden; deben compartir fresa) ---
+  // Avisos del backend (se sale de la mesa, muerde la cama, pasada mayor que la fresa, piezas
+  // sin puente, figuras omitidas). ⚠️ Van en una caja que SE QUEDA, no en un toast de 2.6 s:
+  // son justo los errores que rompen una fresa o arruinan una placa.
+  function hesc(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function warnList(ws){ return ws.map(function(w){ return '⚠ '+hesc(w); }).join('<br>'); }
+  function paintTpWarn(ws){ var b=el('tpWarn'); if(!b) return;
+    if(!ws||!ws.length){ b.style.display='none'; b.innerHTML=''; return; }
+    b.innerHTML='<b>Revisa antes de cortar</b><br>'+warnList(ws); b.style.display=''; }
+  // Se vuelven a pedir JUSTO antes de guardar: el material se toma en vivo, así que si el
+  // grosor cambió después de Calcular (o el proyecto es viejo) aquí es donde se nota.
+  function tpWarnings(list){
+    return Promise.all(list.map(function(t){ return CNCB.prev(tpPayloadOf(t)).catch(function(){ return null; }); }))
+      .then(function(rs){ var w=[]; rs.forEach(function(r,k){ if(r&&r.ok) (r.warnings||[]).forEach(function(x){ w.push(list[k].name+': '+x); }); }); return w; }); }
   function saveTap(){ if(!hasDoc()||!state.cnc) return;
+    var list0=activeTps();
+    if(!list0.length){ toast('No hay trayectorias que exportar — configura la operación y pulsa Calcular.'); return; }
+    tpWarnings(list0).then(function(ws){
+      paintTpWarn(ws);
+      if(!ws.length){ saveTapNow(); return; }
+      askConfirm('Revisa antes de guardar el G-code', warnList(ws)+'<br><br>¿Guardar el archivo de todos modos?',
+        function(ok){ if(ok) saveTapNow(); });
+    }); }
+  function saveTapNow(){ if(!hasDoc()||!state.cnc) return;
     var list=activeTps(), pl;
     if(!list.length){ toast('No hay trayectorias que exportar — configura la operación y pulsa Calcular.'); return; }
     { var ids={}; list.forEach(function(t){ ids[t.toolId||'?']=1; });

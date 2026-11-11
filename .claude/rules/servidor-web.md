@@ -54,6 +54,11 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   `motor-plotter` de `studio_ui.html` en la marca `MOTOR-PLOTTER` (un solo driver para todo).
   "hecho" = enviado entero; un cable arrancado es "error", nunca "hecho" ni "detenido". Pruebas:
   `node web/test_estacion.mjs` y la sección "K" de la auditoría.
+- **Latido de la estación** (`_ESTACION_VIVA`, nov-2026): la estación pide la fila por **POST** con
+  `{plotter: true|false}` y el editor consulta `GET /api/estacion/estado` (viva / plotter /
+  pendientes) para pintar el botón único "Enviar Directo / Enviar Remoto". En memoria, con llave
+  por FILA (`'taller'` o el invitado, que se limpia en `_limpiar_invitado`); caduca a los 20 s.
+  ⚠️ "viva" = la página está abierta, no que haya alguien: la estación sigue esperando "Cortar".
 - ⚠️ **Volver tras entrar (`?siguiente=`) pasa SIEMPRE por `_destino()`**: solo rutas propias por
   lista de lo PERMITIDO. Un `//otro` o `/\otro` el navegador lo lee como otro sitio: el enlace de
   entrada sería un trampolín a una página falsa que pida la contraseña. Auditoría, sección "R".

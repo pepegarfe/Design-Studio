@@ -166,6 +166,7 @@ def _limpiar_invitado(usuario):
         except OSError:
             pass
     nester.olvidar(usuario)
+    _ESTACION_VIVA.pop(usuario, None)
 
 
 def _limpiar_vencidos(todos=False):
@@ -568,6 +569,34 @@ def api_estacion_mandar():
 def api_estacion_fila():
     with estacion.en(_fila_de_estacion()):
         return _json(estacion.fila())
+
+
+# Latido de la estación: cada vez que la página de la estación pide la fila (cada 5 s) dice si
+# tiene el plotter conectado. Vive en MEMORIA (un reinicio lo borra y la estación lo repone en
+# segundos). La llave es la FILA, no la cuenta: 'taller' para todas, o el invitado para la suya
+# (⚠️ esa se limpia en _limpiar_invitado). "Viva" = la página está abierta, NO que haya alguien.
+_ESTACION_VIVA = {}
+ESTACION_CADUCA = 20.0   # s sin latido = ya no hay estación (pregunta cada 5)
+
+
+def _llave_estacion():
+    return _yo() if auth.es_invitado(_yo()) else 'taller'
+
+
+@app.post('/api/estacion/fila')
+def api_estacion_fila_latido():
+    _ESTACION_VIVA[_llave_estacion()] = (time.time(), bool((request.json or {}).get('plotter')))
+    return api_estacion_fila()
+
+
+@app.get('/api/estacion/estado')
+def api_estacion_estado():
+    """Para el botón de envío del editor: ¿hay estación abierta?, ¿con plotter?, ¿cuántos esperan?"""
+    t, plotter = _ESTACION_VIVA.get(_llave_estacion(), (0.0, False))
+    viva = time.time() - t < ESTACION_CADUCA
+    with estacion.en(_fila_de_estacion()):
+        pend = sum(1 for x in estacion.fila()['trabajos'] if x.get('estado') == 'pendiente')
+    return _json({'ok': True, 'viva': viva, 'plotter': viva and plotter, 'pendientes': pend})
 
 
 def _estacion(f, *campos):
