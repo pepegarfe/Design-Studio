@@ -279,8 +279,14 @@ teléfono (está hecha para computadora).
   (viene de fuera) → copiar `datos_web` ANTES de abrirlo; si Cloudflare queda con nube naranja
   delante de Railway, el ÚLTIMO X-Forwarded-For podría ser Cloudflare y no el visitante → medir.
   ✅ Commit `6af9da8` y push (subió también 16 commits viejos sin subir; revisados: sin datos
-  privados; la CI solo corre con tags `v*`). Siguiente: **Fase B**, crear el proyecto en Railway
-  (pedir permiso: cuesta).
+  privados; la CI solo corre con tags `v*`). ✅ **Fase B HECHA (11-nov)**: proyecto Railway `design-studio`
+  (id a09a33e2…), servicio `studio` conectado a GitHub `master` (⚠️ cada push a master DESPLIEGA
+  ahí), volumen `/data`, dirección provisional **https://studio-production-34eb0f8a.up.railway.app**
+  (región US West). Compila: 206/206 familias, `potrace: /usr/bin/potrace`, waitress. Abre en
+  "Servidor sin cuentas" (desde fuera nadie crea la del dueño: correcto). ⚠️ 1ª compilación FALLÓ:
+  la imagen `slim` trae el módulo tkinter pero NO `libtk8.6.so` → `libtk8.6` en el apt (`a785db5`,
+  mandado con `railway up`, sin push). Siguiente: **Fase C** (copiar datos + `secreto.key` al
+  volumen, medir la IP del visitante, probar todo).
 - ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
   derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
