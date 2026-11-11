@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-11T18:41:24.346Z
+  modified: 2026-11-11T19:09:58.207Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -271,7 +271,14 @@ teléfono (está hecha para computadora).
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
   a la estación compartida.
 - ⏳ Servidor y túnel corren A MANO desde la sesión (se caen si la Mac duerme); con Railway ya no
-  hace falta dejarlos permanentes.
+  hace falta dejarlos permanentes. **11-nov tarde: cayó con error 1033** (túnel sin conexión;
+  `cloudflared tunnel list` con CONNECTIONS vacío). 1033 = túnel caído; 502 = túnel vivo y
+  servidor caído. Para encenderlo: servidor con `/opt/homebrew/bin/python3 studio_server.py` y
+  `PYTHONPATH` apuntando a una carpeta con waitress, y túnel `cloudflared tunnel run design-studio`
+  (el modo automático de Claude NO deja abrir el túnel: lo corre Jose en su Terminal).
+  ⚠️ **waitress NO está instalado en ningún Python de la Mac**: solo vive en el scratchpad de una
+  sesión vieja (`/private/tmp/claude-501/…/44e6b81a…/scratchpad/waitress`), que macOS puede
+  borrar. Si desaparece: `pip install --target <carpeta> waitress`.
 - ⏳ Mañana 12-nov: confirmar que el briefing de Omniseller llegó a bandeja (primer envío tras la
   mudanza del DNS).
 
