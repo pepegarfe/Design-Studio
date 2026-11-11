@@ -297,8 +297,9 @@ teléfono (está hecha para computadora).
   Railway **13/13** (572 fuentes, texto, potrace, vtracer, HPGL idéntico, SVG/PDF/DXF, unión,
   acomodo, estación). Trampas: `railway volume files` exige `--volume` sin interactivo (y en zsh
   no meterlo en una variable: no se separa); `railway ssh -- python -c` destroza comillas →
-  mandar el guion en base64. ⏳ Falta: que Jose entre con SU cuenta en la dirección provisional
-  (yo no sé claves) y push de `3941fd5` (se desplegó con `railway up`). Luego **Fase D**:
+  mandar el guion en base64. ✅ Jose entró con su cuenta en la dirección provisional y vio los
+  trabajos de `angel` (11-nov); push hecho, despliegue desde GitHub `f51f36b` con
+  `DS_IP_CABECERA=X-Real-IP` comprobado dentro del contenedor. **Fase C cerrada.** Luego **Fase D**:
   congelar, recopiar datos frescos, CNAME `studio` → Railway (⚠️ nube GRIS, o volver a medir).
 - ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
   derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
