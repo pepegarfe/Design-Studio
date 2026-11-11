@@ -285,8 +285,21 @@ teléfono (está hecha para computadora).
   (región US West). Compila: 206/206 familias, `potrace: /usr/bin/potrace`, waitress. Abre en
   "Servidor sin cuentas" (desde fuera nadie crea la del dueño: correcto). ⚠️ 1ª compilación FALLÓ:
   la imagen `slim` trae el módulo tkinter pero NO `libtk8.6.so` → `libtk8.6` en el apt (`a785db5`,
-  mandado con `railway up`, sin push). Siguiente: **Fase C** (copiar datos + `secreto.key` al
-  volumen, medir la IP del visitante, probar todo).
+  mandado con `railway up`, sin push). ✅ **Fase C casi completa (11-nov)**: `datos_web` (cuentas,
+  `secreto.key`, `taller/`; sin `invitados/`) subido al volumen con `railway volume files
+  --volume studio-volume upload` y **comparado byte a byte de vuelta: 17 archivos idénticos**.
+  🚨 **IP del visitante MEDIDA y ROTA**: con `DS_PROXY=1` el bloqueo de 8 fallos NO funcionaba en
+  Railway (9/9 sin bloqueo fingiendo IP). Un servicio de eco temporal (borrado) mostró que el
+  último X-Forwarded-For es el borde de Railway (cambia cada pedido) y que `X-Real-IP` la
+  sobrescribe Railway → nuevo `DS_IP_CABECERA=X-Real-IP` (`3941fd5`, regla en
+  `servidor-web.md`). Auditoría **184/184 con los dos servidores**; en vivo: 9.º intento
+  bloqueado y otra IP real (salida del contenedor, `railway ssh`) libre. Humo como invitado en
+  Railway **13/13** (572 fuentes, texto, potrace, vtracer, HPGL idéntico, SVG/PDF/DXF, unión,
+  acomodo, estación). Trampas: `railway volume files` exige `--volume` sin interactivo (y en zsh
+  no meterlo en una variable: no se separa); `railway ssh -- python -c` destroza comillas →
+  mandar el guion en base64. ⏳ Falta: que Jose entre con SU cuenta en la dirección provisional
+  (yo no sé claves) y push de `3941fd5` (se desplegó con `railway up`). Luego **Fase D**:
+  congelar, recopiar datos frescos, CNAME `studio` → Railway (⚠️ nube GRIS, o volver a medir).
 - ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
   derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande

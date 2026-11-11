@@ -34,6 +34,15 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   valor de X-Forwarded-For (lo escribe el atacante: esquivaba el bloqueo de 8 fallos); por túnel,
   `CF-Connecting-IP` solo si llega desde la propia Mac; detrás de otro proxy, el ÚLTIMO valor.
   `es_esta_computadora()` exige que no venga NINGUNA de las dos. Auditoría, sección "Y".
+- ⚠️ **En RAILWAY el "último valor" FALLA** (MEDIDO con un servicio de eco, 11-nov-2026):
+  X-Forwarded-For llega como `<real>, <borde de Railway>` y ese borde **cambia en cada pedido**
+  → con `DS_PROXY=1` el bloqueo de 8 fallos no llegaba nunca (9/9 sin bloqueo en el servidor
+  real). Railway SOBRESCRIBE `X-Real-IP` con la real → el Dockerfile usa
+  **`DS_IP_CABECERA=X-Real-IP`**, no `DS_PROXY`. Comprobado en vivo: 9.º intento bloqueado aunque
+  cada uno finja otra IP, y otra IP real (la de salida del contenedor) NO queda bloqueada.
+  ⚠️ **Detrás de cualquier proxy nuevo (o Cloudflare con nube naranja delante de Railway) hay
+  que VOLVER A MEDIR** antes de confiar en una cabecera: un servicio de eco (imagen
+  `mendhak/http-https-echo`) enseña exactamente qué llega. No se deduce: se mide.
 - **Estación de corte** (`estacion.py` + `estacion.html` + `/api/estacion/*`): **UNA fila del
   taller para TODAS las cuentas** en `datos_web/taller/` (decisión de Jose, 11-nov-2026); cada
   trabajo lleva `de`. La prueba sin cuenta tiene su fila chica (`TOPES_INVITADO`: es pública) en
