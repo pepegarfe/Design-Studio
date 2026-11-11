@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-11T17:04:57.578Z
+  modified: 2026-11-11T17:15:16.824Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -236,6 +236,10 @@ teléfono (está hecha para computadora).
   Sin estos, el briefing cae a spam SIN error. `_domainconnect` (Squarespace) no hace falta.
   Lección: yo había dicho "sin correo" mirando solo la raíz; los certificados (certspotter) delatan
   sitios, NO correo — la lista real es la del panel.
+  ✅ **MUDADO (11-nov-2026)**: nameservers `peyton`/`zoe.ns.cloudflare.com` (antes de cambiarlos
+  comparé cada registro preguntando directo a Google y a Cloudflare: idénticos; sin DNSSEC). Tras
+  el cambio, portafolio/leads/money 200 y correo idéntico. ⏳ Confirmar que el briefing siguiente
+  llega a bandeja.
 - `cloudflared` instalado (brew, 2026.10.7). Ningún túnel encendido.
 
 ### Diseño original (antes de construir)
