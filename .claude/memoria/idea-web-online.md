@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-05T20:24:43.783Z
+  modified: 2026-11-11T17:04:57.578Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -225,9 +225,17 @@ teléfono (está hecha para computadora).
 - Decisiones de Jose: avisa y espera (no corta sola); servidor = su Mac + túnel; "Probar sin
   cuenta" se QUEDA; dominio `studio.builtbyjose.tech`.
 - ⚠️ `builtbyjose.tech` está registrado en **Squarespace** con DNS de Squarespace, y su raíz y
-  `www` son el **portafolio de Jose en Lovable** (185.158.133.1), sin correo (sin MX). Para el
-  túnel con nombre fijo hay que mudar el DNS a Cloudflare (gratis) copiando esos 2 registros en
-  "DNS only": lo hace Jose en los paneles; yo comparo los registros antes de cambiar nameservers.
+  `www` son el **portafolio de Jose en Lovable** (185.158.133.1). Para el túnel con nombre fijo hay
+  que mudar el DNS a Cloudflare (gratis): lo hace Jose en los paneles; yo comparo antes de cambiar
+  nameservers. ⚠️ **Del dominio cuelgan OTROS proyectos** (panel de Squarespace, 11-nov-2026), TODOS
+  a copiar en "DNS only" (gris): CNAME `leads`→gungry-scraper.netlify.app, CNAME
+  `money`→my-money-buddy.netlify.app, y el **correo del briefing de Omniseller** vía Resend
+  (`briefing@omniseller.builtbyjose.tech`, `~/omniseller/app/routers/briefing.py`): MX
+  `send.omniseller` 10 feedback-smtp.us-east-1.amazonses.com, TXT `send.omniseller`
+  `v=spf1 include:amazonses.com ~all`, TXT `resend._domainkey.omniseller` (DKIM; valor con `dig`).
+  Sin estos, el briefing cae a spam SIN error. `_domainconnect` (Squarespace) no hace falta.
+  Lección: yo había dicho "sin correo" mirando solo la raíz; los certificados (certspotter) delatan
+  sitios, NO correo — la lista real es la del panel.
 - `cloudflared` instalado (brew, 2026.10.7). Ningún túnel encendido.
 
 ### Diseño original (antes de construir)
