@@ -3492,8 +3492,8 @@ var PlotterMotor = (function(){
   window.addEventListener('load',function(){
     if(api()) return;
     fetch('/api/update_check').then(function(r){ return r.json(); }).then(function(r){
-      // La estación de corte es de la versión web y de cuentas reales (la prueba no tiene fila).
-      if(r && r.web && !r.invitado){ window.DS_ESTACION = true;
+      // La estación de corte es de la versión web (la prueba tiene una fila chica, solo de ese navegador).
+      if(r && r.web){ window.DS_ESTACION = true;
         if(state.machine!=='cnc') el('btnStation').style.display=''; }
       if(!r || !r.invitado) return;
       window.DS_INVITADO = true;

@@ -674,10 +674,30 @@ print(json.dumps(r))
         api('/api/estacion/quitar', YO, {'id': t['id']})
     ok(os.path.exists(os.path.join(DATOS_WEB, 'usuarios', 'jose', 'estacion.json')) and
        not os.path.exists(os.path.join(COPIA, 'estacion.json')), 'la fila vive en la carpeta de la cuenta, no en la común')
-    ok(api('/api/estacion/mandar', P3, cuadro)[1].get('ok') is False and api('/api/estacion/fila', P3)[1].get('ok') is False,
-       'la prueba sin cuenta no tiene estación')
-    st, h, _ = http_crudo('GET', '/estacion', cookie=P3)
-    ok(st in (302, 303), 'ni puede abrir la pantalla de la estación')
+    # La prueba sin cuenta SÍ tiene estación (pedido de Jose, 11-nov-2026), con fila chica y propia.
+    r3 = api('/api/estacion/mandar', P3, {**cuadro, 'nombre': 'de la prueba'})[1]
+    ok(r3.get('ok') and [t['nombre'] for t in api('/api/estacion/fila', P3)[1].get('trabajos', [])] == ['de la prueba'],
+       'la prueba sin cuenta tiene su estación', str(r3))
+    ok('de la prueba' not in json.dumps(api('/api/estacion/fila', YO)[1]) and
+       api('/api/estacion/tomar', YO, {'id': r3.get('id')})[1].get('ok') is False,
+       'su fila no se mezcla con la de las cuentas (ni al revés)')
+    # (desde otra dirección: esta ya gastó su tope de pruebas más arriba)
+    otra = galleta_de(formulario('/invitado', {}, {'CF-Connecting-IP': '203.0.113.50'})[1])
+    ok(otra and api('/api/estacion/fila', otra)[1].get('trabajos') == [], 'ni con la de otra prueba')
+    t3 = api('/api/estacion/tomar', P3, {'id': r3.get('id')})[1]
+    ok(t3.get('hpgl') == hpgl_envio, 'y corta el mismo HPGL que una cuenta')
+    api('/api/estacion/terminar', P3, {'id': r3.get('id'), 'resultado': 'hecho'})
+    llenos3 = [api('/api/estacion/mandar', P3, {**cuadro, 'nombre': f'p{i}'})[1].get('ok') for i in range(6)]
+    ok(llenos3 == [True] * 5 + [False], 'la prueba tiene un tope MÁS CHICO: 5 esperando (es pública)', str(llenos3))
+    st, h, c = http_crudo('GET', '/estacion', cookie=P3)
+    ok(st == 200 and b'Cuenta <b>prueba sin cuenta</b>' in c and b'invitado:' not in c,
+       'abre la pantalla de la estación (sin mostrar su nombre interno)')
+    carpeta_p3 = [n for n in os.listdir(os.path.join(DATOS_WEB, 'invitados'))
+                  if os.path.exists(os.path.join(DATOS_WEB, 'invitados', n, 'estacion.json'))]
+    http_crudo('GET', '/salir', cookie=P3)
+    ok(len(carpeta_p3) == 1 and not os.path.exists(os.path.join(DATOS_WEB, 'invitados', carpeta_p3[0])),
+       'al salir, su fila y sus trabajos se borran del disco')
+    http_crudo('GET', '/salir', cookie=otra)
     st, h, c = http_crudo('GET', '/estacion', cookie=YO)
     with open(os.path.join(COPIA, 'studio_ui.html'), encoding='utf-8') as f:
         motor_app = re.search(r'<script id="motor-plotter">[\s\S]*?</script>', f.read()).group(0)
@@ -685,6 +705,38 @@ print(json.dumps(r))
        and 'no-store' in (h.get('Cache-Control') or ''),
        'la pantalla de la estación lleva el MISMO motor del plotter que la app (con el driver de Android)')
     ok(http_crudo('GET', '/estacion')[0] in (302, 303), 'sin sesión, la estación manda a entrar')
+
+    # R. VOLVER A DONDE IBAS TRAS ENTRAR (?siguiente=) — sin volverse un trampolín a otro sitio
+    def a_donde(h):
+        u = urllib.parse.urlsplit(h.get('Location') or '')
+        return (u.netloc, u.path, u.query)
+    st, h, _ = http_crudo('GET', '/estacion')
+    ok(h.get('Location') == '/entrar?siguiente=/estacion', 'sin sesión, /estacion manda a entrar RECORDANDO a dónde ibas', h.get('Location'))
+    ok(http_crudo('GET', '/')[1].get('Location') == '/entrar' and http_crudo('GET', '/api/workarea')[0] == 401,
+       'la raíz manda a entrar a secas y la API sigue diciendo 401')
+    st, h, c = http_crudo('GET', '/entrar?siguiente=/estacion')
+    ok(c.count(b'name="siguiente" value="/estacion"') == 2, 'la pantalla de entrar lo lleva en los DOS botones (entrar y probar)')
+    st, h, _ = formulario('/entrar', {'usuario': 'jose', 'clave': CLAVE, 'siguiente': '/estacion'})
+    ok(st in (302, 303) and a_donde(h)[1:] == ('/estacion', ''), 'al entrar con tu cuenta, vuelves a la estación', h.get('Location'))
+    st, h, _ = formulario('/invitado', {'siguiente': '/estacion'}, {'CF-Connecting-IP': '203.0.113.51'})
+    ok(st in (302, 303) and a_donde(h)[1] == '/estacion', 'al probar sin cuenta, también', h.get('Location'))
+    http_crudo('GET', '/salir', cookie=galleta_de(h))
+    malos = ['https://malo.example/', '//malo.example/x', '/\\malo.example', '/\\/malo.example', 'javascript:alert(1)',
+             '/estacion?x=//malo.example', '/estacion/../cuentas?', ' /estacion', '/salir', '/entrar', '', None]
+    salidas = []
+    for m in malos:
+        campos = {'usuario': 'jose', 'clave': CLAVE}
+        if m is not None:
+            campos['siguiente'] = m
+        st, h, _ = formulario('/entrar', campos)
+        salidas.append(a_donde(h))
+    host = salidas[-1][0]
+    ok(all(s == (host, '/', '') for s in salidas), 'un "siguiente" a otro sitio (https://, //, \\, javascript:) o raro → a la raíz de ESTE sitio',
+       str([(m, s) for m, s in zip(malos, salidas) if s != (host, '/', '')])[:200])
+    st, h, c = http_crudo('GET', '/entrar?siguiente=%22%3E%3Cscript%3Ealert(1)%3C/script%3E')
+    ok(b'<script>alert' not in c and b'name="siguiente"' not in c, 'ni se cuela en la página como código')
+    st, h, _ = http_crudo('GET', '/entrar?siguiente=/estacion', cookie=YO)
+    ok(a_donde(h)[1] == '/estacion', 'con sesión abierta, /entrar?siguiente= te lleva directo')
 
     # Y. TÚNEL DE CLOUDFLARE — con las cabeceras MEDIDAS en un túnel real (5-nov-2026): todo
     # llega desde 127.0.0.1, CF-Connecting-IP = el visitante (Cloudflare da 403 si alguien la

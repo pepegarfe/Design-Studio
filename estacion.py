@@ -7,7 +7,8 @@ AVISA y espera a que alguien toque "Cortar": el plotter nunca arranca sin nadie 
 (decisión de Jose, 5-nov-2026: alguien tiene que poner el material).
 
 Cada cuenta tiene SU fila, en su carpeta (`core._config_path()`): la estación entra con una
-cuenta y solo ve los trabajos de esa cuenta. Los invitados no tienen fila (lo decide el servidor).
+cuenta y solo ve los trabajos de esa cuenta. Una prueba sin cuenta tiene una fila chica
+(TOPES_INVITADO) en su carpeta temporal: solo la ve ESE navegador (la prueba es su cookie).
 
 Estados: pendiente → cortando → hecho | error | cancelado. "hecho" quiere decir ENVIADO
 entero al plotter; el 721 sigue cortando lo que guardó en su memoria.
@@ -25,6 +26,9 @@ MAX_PENDIENTES = 30                 # una fila más larga es un error, no un tal
 MAX_HISTORIAL = 20                  # terminados que se recuerdan (los más recientes)
 MAX_BYTES = 20 * 1024 * 1024        # un trabajo (un diseño grande real: 1–5 MB de HPGL)
 MAX_BYTES_FILA = 100 * 1024 * 1024  # lo que puede ocupar la fila de una cuenta en el disco
+# "Probar sin cuenta" es PÚBLICO (hasta 20 pruebas a la vez): su fila es más chica, para que
+# nadie llene el disco abriendo pruebas. Vive en la carpeta temporal de la prueba y se borra con ella.
+TOPES_INVITADO = {'pendientes': 5, 'bytes': 5 * 1024 * 1024, 'fila': 20 * 1024 * 1024}
 ID_VALIDO = re.compile(r'^[0-9a-f]{12}$')   # el id es un nombre de archivo: nada de '..' ni '/'
 TERMINALES = ('hecho', 'error', 'cancelado')
 
@@ -135,20 +139,23 @@ def _buscar(d, i):
 
 
 @_en_fila
-def mandar(hpgl, nombre):
+def mandar(hpgl, nombre, invitado=False):
+    max_pend, max_bytes, max_fila = ((TOPES_INVITADO['pendientes'], TOPES_INVITADO['bytes'],
+                                      TOPES_INVITADO['fila']) if invitado
+                                     else (MAX_PENDIENTES, MAX_BYTES, MAX_BYTES_FILA))
     if not isinstance(hpgl, str) or not hpgl.strip():
         return {'ok': False, 'error': 'El diseño está vacío: no hay nada que cortar.'}
     datos = hpgl.encode('utf-8')
-    if len(datos) > MAX_BYTES:
+    if len(datos) > max_bytes:
         return {'ok': False, 'error': f'El diseño es demasiado grande para la estación '
-                                      f'(más de {MAX_BYTES // 1048576} MB).'}
+                                      f'(más de {max_bytes // 1048576} MB).'}
     d = _leer()
     pendientes = [t for t in d['trabajos'] if t['estado'] == 'pendiente']
-    if len(pendientes) >= MAX_PENDIENTES:
-        return {'ok': False, 'error': f'La estación ya tiene {MAX_PENDIENTES} trabajos esperando. '
+    if len(pendientes) >= max_pend:
+        return {'ok': False, 'error': f'La estación ya tiene {max_pend} trabajos esperando. '
                                       'Corta o descarta algunos primero.'}
     ocupado = sum(t.get('bytes', 0) for t in d['trabajos'])
-    if ocupado + len(datos) > MAX_BYTES_FILA:
+    if ocupado + len(datos) > max_fila:
         return {'ok': False, 'error': 'La fila de la estación está llena. Descarta trabajos viejos.'}
     m = _medidas(_trazos(hpgl))
     if not m:

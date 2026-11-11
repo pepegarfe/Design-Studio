@@ -74,14 +74,29 @@ def _es_https():
         (auth.DETRAS_DE_PROXY or tunel) and e.get('HTTP_X_FORWARDED_PROTO') == 'https')
 
 
-def _abrir_sesion(usuario):
+_DESTINO_VALIDO = re.compile(r'/[A-Za-z0-9_\-/]*')
+
+
+def _destino(valor):
+    """A dónde volver tras entrar (?siguiente=/estacion). ⚠️ SOLO una ruta de ESTE sitio: un
+    "https://otro" o "//otro" (el navegador lo lee como otro sitio) convertiría el enlace de
+    entrada en un trampolín a una página falsa que pida la contraseña. Nada de '\\', '.', ':' ni
+    '?': por eso una lista de lo permitido y no de lo prohibido."""
+    v = valor if isinstance(valor, str) else ''
+    if not _DESTINO_VALIDO.fullmatch(v) or v.startswith('//') or v in PUBLICAS:
+        return '/'
+    return v
+
+
+def _abrir_sesion(usuario, siguiente='/'):
     response.set_cookie(auth.COOKIE, auth.emitir_sesion(usuario), max_age=auth.DURACION, path='/',
                         httponly=True, samesite='lax', secure=_es_https())
-    redirect('/')
+    redirect(_destino(siguiente))
 
 
 def _pantalla(modo, mensaje='', usuario='', status=200):
-    return HTTPResponse(body=auth.pagina(modo, mensaje, usuario), status=status,
+    siguiente = _destino(request.params.getunicode('siguiente'))
+    return HTTPResponse(body=auth.pagina(modo, mensaje, usuario, siguiente), status=status,
                         headers={'Content-Type': 'text/html; charset=utf-8'})
 
 
@@ -94,7 +109,7 @@ def _modo_sin_sesion():
 @app.get('/entrar')
 def entrar_get():
     if auth.usuario_de(request.get_cookie(auth.COOKIE)):
-        redirect('/')
+        redirect(_destino(request.params.getunicode('siguiente')))
     return _pantalla(_modo_sin_sesion())
 
 
@@ -106,7 +121,7 @@ def entrar_post():
     err = auth.intentar_entrar(request.environ, usuario, request.forms.getunicode('clave') or '')
     if err:
         return _pantalla('entrar', err, usuario, 401)
-    _abrir_sesion(usuario)
+    _abrir_sesion(usuario, request.forms.getunicode('siguiente'))
 
 
 @app.post('/crear')
@@ -130,15 +145,16 @@ def invitado_post():
     if not auth.INVITADOS_ACTIVOS or not auth.hay_cuentas():
         return _pantalla(_modo_sin_sesion(), 'La prueba sin cuenta no está disponible.', status=403)
     # Con una sesión abierta no se reemplaza: otra página no puede sacarte de tu cuenta con un formulario.
+    siguiente = _destino(request.forms.getunicode('siguiente'))
     if auth.usuario_de(request.get_cookie(auth.COOKIE)):
-        redirect('/')
+        redirect(siguiente)
     _limpiar_vencidos()
     cookie, usuario, err = auth.abrir_invitado(request.environ)
     if err:
         return _pantalla('entrar', err, status=429)
     # Sin max_age: la cookie muere al cerrar el navegador (y a las 2 horas, por dentro).
     response.set_cookie(auth.COOKIE, cookie, path='/', httponly=True, samesite='lax', secure=_es_https())
-    redirect('/')
+    redirect(siguiente)
 
 
 def _limpiar_invitado(usuario):
@@ -505,10 +521,6 @@ def api_hpgl():
 
 
 # ── Estación de corte (estacion.py): un Android fijo en el taller corta lo que le manden ──
-_SIN_ESTACION = {'ok': False, 'error': 'La estación de corte es para cuentas: en la prueba sin '
-                                       'cuenta no hay fila de trabajos.'}
-
-
 def _motor_plotter():
     """El <script id="motor-plotter"> de studio_ui.html, tal cual: la estación corta con el
     MISMO motor (y el mismo driver FTDI de Android) que la app, sin una segunda copia."""
@@ -519,34 +531,30 @@ def _motor_plotter():
 
 @app.get('/estacion')
 def estacion_pagina():
-    if auth.es_invitado(_yo()):
-        redirect('/')
     with open(os.path.join(HERE, 'estacion.html'), encoding='utf-8') as f:
         pagina = f.read()
+    # Una prueba se llama "invitado:<vence>-<hex>": en pantalla solo "prueba sin cuenta".
+    quien = 'prueba sin cuenta' if auth.es_invitado(_yo()) else (_yo() or '')
     return _sin_cache(pagina.replace('<!--MOTOR-PLOTTER-->', _motor_plotter())
-                            .replace('{{USUARIO}}', html.escape(_yo() or '')))
+                            .replace('{{USUARIO}}', html.escape(quien)))
 
 
 @app.post('/api/estacion/mandar')
 def api_estacion_mandar():
-    if auth.es_invitado(_yo()):
-        return _json(_SIN_ESTACION)
     try:
         data = request.json or {}
         hpgl = build_hpgl(data)   # el MISMO que corta el escritorio
     except Exception as e:
         return _json({'ok': False, 'error': f'No se pudo generar el HPGL: {e}'})
-    return _json(estacion.mandar(hpgl, data.get('nombre')))
+    return _json(estacion.mandar(hpgl, data.get('nombre'), invitado=auth.es_invitado(_yo())))
 
 
 @app.get('/api/estacion/fila')
 def api_estacion_fila():
-    return _json(_SIN_ESTACION if auth.es_invitado(_yo()) else estacion.fila())
+    return _json(estacion.fila())
 
 
 def _estacion(f, *campos):
-    if auth.es_invitado(_yo()):
-        return _json(_SIN_ESTACION)
     d = request.json or {}
     return _json(f(*[d.get(c) for c in campos]))
 
@@ -682,7 +690,10 @@ def _guardia(wsgi):
                 if ruta.startswith('/api/'):
                     return corto('401 Unauthorized', 'application/json; charset=utf-8', json.dumps(
                         {'ok': False, 'login': True, 'error': 'Tu sesión terminó: vuelve a entrar.'}).encode('utf-8'))
-                return corto('302 Found', 'text/plain', b'', [('Location', '/entrar')])
+                # Que al entrar vuelva a donde iba (la estación del taller, sobre todo).
+                destino = '/entrar' + (f'?siguiente={ruta}' if ruta != '/' and _destino(ruta) == ruta
+                                       and environ.get('REQUEST_METHOD') == 'GET' else '')
+                return corto('302 Found', 'text/plain', b'', [('Location', destino)])
             environ['ds.usuario'] = usuario
             # Contraseña temporal: nada funciona hasta cambiarla.
             if ruta != '/clave' and auth.debe_cambiar_clave(usuario):

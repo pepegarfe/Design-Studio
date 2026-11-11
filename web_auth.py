@@ -382,10 +382,13 @@ def intentar_entrar(environ, usuario, clave):
 
 
 # ── la pantalla de entrada ────────────────────────────────────────────────────
-def pagina(modo, mensaje='', usuario=''):
-    """modo: 'entrar' | 'crear' | 'cerrado' (aún no hay cuentas y no estás en el servidor)."""
+def pagina(modo, mensaje='', usuario='', siguiente='/'):
+    """modo: 'entrar' | 'crear' | 'cerrado' (aún no hay cuentas y no estás en el servidor).
+    `siguiente`: a dónde volver tras entrar; el servidor ya lo validó (solo rutas propias)."""
     e = html.escape
     aviso = f'<p class="err">{e(mensaje)}</p>' if mensaje else ''
+    volver = (f'<input type="hidden" name="siguiente" value="{e(siguiente)}">'
+              if siguiente and siguiente != '/' else '')
     prueba = ''
     if modo == 'crear':
         titulo, sub = 'Crea tu cuenta', 'Es la primera vez que se abre este servidor. Esta cuenta será la del dueño.'
@@ -402,10 +405,11 @@ def pagina(modo, mensaje='', usuario=''):
         titulo, sub = 'Entrar', 'Design Studio'
         campos = ('<label>Usuario<input name="usuario" autocomplete="username" required autofocus value="' + e(usuario) + '"></label>'
                   '<label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label>'
-                  '<button>Entrar</button>')
+                  + volver + '<button>Entrar</button>')
         accion = '/entrar'
         if INVITADOS_ACTIVOS:
-            prueba = ('<form method="post" action="/invitado" class="prueba"><button class="sec">Probar sin cuenta</button>'
+            prueba = ('<form method="post" action="/invitado" class="prueba">' + volver +
+                      '<button class="sec">Probar sin cuenta</button>'
                       '<p>No hace falta contraseña. Lo que cambies no se guarda.</p></form>')
     form = f'<form method="post" action="{accion}">{campos}</form>' if campos else ''
     return _marco('Entrar', titulo, sub, aviso + form + prueba)

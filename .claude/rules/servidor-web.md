@@ -35,12 +35,16 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   `CF-Connecting-IP` solo si llega desde la propia Mac; detrás de otro proxy, el ÚLTIMO valor.
   `es_esta_computadora()` exige que no venga NINGUNA de las dos. Auditoría, sección "Y".
 - **Estación de corte** (`estacion.py` + `estacion.html` + `/api/estacion/*`): fila POR CUENTA en
-  su carpeta, solo para cuentas reales (invitados fuera). ⚠️ La estación **avisa y ESPERA** un
+  su carpeta. La prueba sin cuenta también la tiene (pedido de Jose, 11-nov-2026) con topes más
+  chicos (`TOPES_INVITADO`: es pública) y solo la ve ESE navegador. ⚠️ La estación **avisa y ESPERA** un
   toque de "Cortar" (decisión de Jose): nunca cortar al llegar el trabajo — alguien pone el
   material. ⚠️ `estacion.html` NO lleva el motor: el servidor le inserta el bloque
   `motor-plotter` de `studio_ui.html` en la marca `MOTOR-PLOTTER` (un solo driver para todo).
   "hecho" = enviado entero; un cable arrancado es "error", nunca "hecho" ni "detenido". Pruebas:
   `node web/test_estacion.mjs` y la sección "K" de la auditoría.
+- ⚠️ **Volver tras entrar (`?siguiente=`) pasa SIEMPRE por `_destino()`**: solo rutas propias por
+  lista de lo PERMITIDO. Un `//otro` o `/\otro` el navegador lo lee como otro sitio: el enlace de
+  entrada sería un trampolín a una página falsa que pida la contraseña. Auditoría, sección "R".
 - **`NOMBRE_VALIDO` no admite punto inicial**: el nombre es una carpeta, y `..` caería sobre los datos de todos.
 - **Prueba sin cuenta**: el usuario `invitado:<vence>-<hex>` no está en `usuarios.json`, su carpeta la
   da `carpeta_de()` y lo que guarde en memoria se limpia en `_limpiar_invitado()`: ⚠️ una estructura

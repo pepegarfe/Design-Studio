@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 44e6b81a-bc3a-4b91-b006-6f53d30048f9
-  modified: 2026-11-11T17:15:16.824Z
+  modified: 2026-11-11T17:38:38.610Z
 ---
 
 # Design Studio "online" — EN MARCHA desde el 2-nov-2026
@@ -240,7 +240,13 @@ teléfono (está hecha para computadora).
   comparé cada registro preguntando directo a Google y a Cloudflare: idénticos; sin DNSSEC). Tras
   el cambio, portafolio/leads/money 200 y correo idéntico. ⏳ Confirmar que el briefing siguiente
   llega a bandeja.
-- `cloudflared` instalado (brew, 2026.10.7). Ningún túnel encendido.
+- `cloudflared` instalado (brew, 2026.10.7). **Túnel con nombre `design-studio`** (id d37c7f4e…,
+  config en `~/.cloudflared/config.yml` → http://localhost:8765) y CNAME `studio` creados el
+  11-nov; https funcionando (Let's Encrypt, a los ~2 min de activar la zona). ⏳ Aún corre a
+  mano: falta decidir con Jose dejarlo permanente (launchd + que la Mac no se duerma).
+- 11-nov, a pedido de Jose: tras entrar se vuelve a la página pedida (`?siguiente=`, validado) y la
+  **prueba sin cuenta también tiene estación** (fila chica, solo de ese navegador). Auditoría 182/182
+  con los dos servidores; control: quitar la validación del regreso → 2 fallas.
 
 ### Diseño original (antes de construir)
 - Jose preguntó si el TELÉFONO podía ser el servidor → NO recomendado (Termux, librerías compiladas
