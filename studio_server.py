@@ -64,12 +64,20 @@ def _json(obj, status=200):
 
 
 # ── Entrar / salir (web_auth.py) ──────────────────────────────────────────────
+# DS_HTTPS=1 (Railway): el sitio SOLO se sirve por https, así que la cookie de sesión lleva
+# siempre la marca Secure y se manda HSTS. ⚠️ MEDIDO 11-nov-2026: sin esto la cookie salía SIN
+# Secure, porque en Railway no se confía en X-Forwarded-Proto (no es DS_PROXY ni túnel).
+# No ponerlo en la Mac: entrando por la IP de la red local (http://192.168.x) el navegador
+# descartaría la cookie Secure y nadie podría iniciar sesión.
+SOLO_HTTPS = os.environ.get('DS_HTTPS') == '1'
+
+
 def _es_https():
     e = request.environ
     # Por el túnel de Cloudflare (llega desde esta Mac con CF-Connecting-IP) el https lo pone
     # Cloudflare: aquí llega en http, y X-Forwarded-Proto dice cómo entró el visitante.
     tunel = e.get('REMOTE_ADDR') in auth._LOCAL and e.get('HTTP_CF_CONNECTING_IP')
-    return e.get('wsgi.url_scheme') == 'https' or (
+    return SOLO_HTTPS or e.get('wsgi.url_scheme') == 'https' or (
         (auth.DETRAS_DE_PROXY or tunel) and e.get('HTTP_X_FORWARDED_PROTO') == 'https')
 
 
@@ -789,7 +797,8 @@ def _guardia(wsgi):
     tiene que acordarse de pedirla, y por lo tanto ninguna puede olvidarlo."""
     def con_guardia(environ, start_response):
         def responder(status, headers, exc_info=None):
-            return start_response(status, list(headers) + SEGURIDAD, exc_info)
+            return start_response(status, list(headers) + SEGURIDAD + (
+                [('Strict-Transport-Security', 'max-age=15552000')] if SOLO_HTTPS else []), exc_info)
 
         def corto(status, tipo, cuerpo, extra=()):
             responder(status, [('Content-Type', tipo), ('Content-Length', str(len(cuerpo)))] + list(extra))

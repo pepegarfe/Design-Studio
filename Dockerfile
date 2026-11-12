@@ -39,6 +39,7 @@ import img_trace, studio_server; print('potrace:', img_trace._potrace_bin()); pr
 ENV DS_FUENTES=/app/fuentes \
     DS_DATOS=/data \
     DS_IP_CABECERA=X-Real-IP \
+    DS_HTTPS=1 \
     PYTHONUNBUFFERED=1
 
 # Railway dice el puerto en $PORT; el servidor lo lee de DS_PORT (8765 si no hay ninguno).

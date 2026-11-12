@@ -163,9 +163,11 @@ def alta(usuario):
     return (None, err) if err else (clave, None)
 
 
-def restablecer_clave(usuario):
-    """Contraseña temporal nueva para quien la olvidó; cierra todas sus sesiones. (clave, error)"""
-    if es_dueno(usuario):
+def restablecer_clave(usuario, rescate=False):
+    """Contraseña temporal nueva para quien la olvidó; cierra todas sus sesiones. (clave, error)
+    `rescate=True` (solo web/rescatar_dueno.py, desde la terminal del servidor) deja hacerlo con
+    la cuenta del dueño: desde la web nadie puede, y sin esto olvidarla era un callejón."""
+    if es_dueno(usuario) and not rescate:
         return None, 'La cuenta del dueño cambia su contraseña desde "Cambiar contraseña".'
     clave = _clave_temporal()
     sal = secrets.token_bytes(16)

@@ -59,6 +59,12 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   pendientes) para pintar el botón único "Enviar Directo / Enviar Remoto". En memoria, con llave
   por FILA (`'taller'` o el invitado, que se limpia en `_limpiar_invitado`); caduca a los 20 s.
   ⚠️ "viva" = la página está abierta, no que haya alguien: la estación sigue esperando "Cortar".
+- ⚠️ **`DS_HTTPS=1` en el Dockerfile** (nov-2026): fuerza la marca `Secure` de la cookie de sesión
+  y manda HSTS. MEDIDO en vivo: sin él la cookie salía SIN `Secure`, porque en Railway `_es_https()`
+  no confía en `X-Forwarded-Proto` (no es `DS_PROXY` ni túnel). No ponerlo en la Mac: entrando por
+  la IP de la red local (http) el navegador descartaría la cookie y nadie podría iniciar sesión.
+- **El dueño olvidó su contraseña → `python web/rescatar_dueno.py` EN el servidor** (`railway ssh`).
+  Desde la web nadie puede restablecer al dueño (`restablecer_clave` lo rechaza sin `rescate=True`).
 - ⚠️ **Volver tras entrar (`?siguiente=`) pasa SIEMPRE por `_destino()`**: solo rutas propias por
   lista de lo PERMITIDO. Un `//otro` o `/\otro` el navegador lo lee como otro sitio: el enlace de
   entrada sería un trampolín a una página falsa que pida la contraseña. Auditoría, sección "R".

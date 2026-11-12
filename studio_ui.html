@@ -1196,7 +1196,7 @@ var PlotterMotor = (function(){
     tmeta: JSON.parse(JSON.stringify(textMeta)), locked: Array.from(lockedUids)
   };}
   function restore(s){ doc.paths=s.paths; doc.off=s.off; doc.sx=s.sx; doc.sy=s.sy; doc.rot=s.rot; doc.oc=s.oc; doc.grp=s.grp||[]; doc.uid=s.uid||doc.paths.map(function(){return ++uidSeq;}); textMeta=s.tmeta||{}; lockedUids=new Set(s.locked||[]); sel.idx=-1; sel.set=new Set(); killPrev(); paintTps(); }
-  function pushUndo(){ redoStack.length=0; undoStack.push(snapshot()); if(undoStack.length>UNDO_MAX) undoStack.shift(); updateUndoBtns(); killPrev(); dirtySince=true; }
+  function pushUndo(){ redoStack.length=0; undoStack.push(snapshot()); if(undoStack.length>UNDO_MAX) undoStack.shift(); updateUndoBtns(); killPrev(); dirtySince=true; sinGuardar=true; }
   function undo(){ if(!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); refreshUI(); toast('Deshecho'); }
   function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); refreshUI(); toast('Rehecho'); }
   function updateUndoBtns(){ el('btnUndo').disabled=!undoStack.length; el('btnRedo').disabled=!redoStack.length; }
@@ -3240,7 +3240,7 @@ var PlotterMotor = (function(){
 
   // ===== Abrir diseño (dual: pywebview o servidor) =====
   function api(){ return (window.pywebview && window.pywebview.api) || null; }
-  function loadDoc(res){
+  function loadDoc(res){ sinGuardar=false;
     // Orientación: el BACKEND ya entrega todo con Y hacia ARRIBA (voltea solo lo que viene
     // Y-abajo: SVG y calcos; AI/DXF ya llegan bien). Aquí NO se voltea nada — un volteo ciego
     // de todos los formatos fue el bug que puso los .ai/.dxf de cabeza (arreglado 22-jul-2026).
@@ -3262,7 +3262,7 @@ var PlotterMotor = (function(){
     toast('Diseño cargado: '+state.name+' ('+doc.paths.length+' trazados)');
   }
   // ===== Proyecto (.dstudio): guarda TODO tu arreglo para reabrirlo idéntico =====
-  function loadProject(proj){
+  function loadProject(proj){ sinGuardar=false;
     var objs=(proj.objects||[]);
     doc.paths=objs.map(function(o){return {pts:o.pts};});
     doc.off=objs.map(function(o){return (o.off&&[o.off[0],o.off[1]])||[0,0];});
@@ -3294,9 +3294,17 @@ var PlotterMotor = (function(){
     objects: doc.paths.map(function(p,i){ return {pts:p.pts, off:doc.off[i], sx:doc.sx[i], sy:doc.sy[i], rot:doc.rot[i], grp:doc.grp[i], uid:doc.uid[i]}; }) }; }
   function saveProject(){ if(!hasDoc()) return; var data=projectData();
     if(api()){ api().save_project(data).then(function(r){ if(r&&r.ok){ toast('Proyecto guardado: '+r.path); autosaveClear(); } else if(r&&r.error&&!r.cancelled) toast(r.error); }).catch(function(e){toast('Error: '+e);}); }
-    else { var blob=new Blob([JSON.stringify(data)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(state.name||'proyecto').replace(/\.[^.]+$/,'')+'.dstudio'; a.click(); toast('Proyecto guardado'); autosaveClear(); } }
+    else { var blob=new Blob([JSON.stringify(data)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(state.name||'proyecto').replace(/\.[^.]+$/,'')+'.dstudio'; a.click(); toast('Proyecto guardado'); autosaveClear(); sinGuardar=false; } }
 
+  // Abrir REEMPLAZA lo que hay en la mesa: con cambios sin guardar, se pregunta antes.
   function openDesign(){
+    if(hasDoc()&&sinGuardar){
+      askConfirm('Tienes cambios sin guardar',
+        'Abrir otro diseño <b>reemplaza</b> lo que hay en la mesa'+(state.name?' (<b>'+hesc(state.name)+'</b>)':'')+'.<br><br>Si lo quieres conservar, cancela y pulsa <b>Guardar</b> primero. Para sumarlo sin quitar nada, usa <b>Importar</b>.',
+        function(ok){ if(ok) openDesignYa(); }, {yes:'Abrir de todos modos'});
+      return; }
+    openDesignYa(); }
+  function openDesignYa(){
     if(api()){ api().open_design().then(function(res){ if(!res||!res.ok){ if(res&&res.error) toast(res.error); return;} if(res.kind==='image') openTrace(res); else if(res.kind==='project') loadProject(res.project); else loadDoc(res); }).catch(function(e){toast('Error: '+e);}); }
     else { el('fileInput').click(); }
   }
@@ -3471,7 +3479,11 @@ var PlotterMotor = (function(){
   // ===== Autoguardado y recuperación =====
   // Cada minuto, si hubo cambios, se respalda el proyecto completo (autosave.dstudio
   // junto a la config). Al abrir, si quedó un respaldo, se ofrece recuperarlo.
-  var dirtySince=false, autosaveChecked=false;
+  // dirtySince = falta AUTOGUARDAR (se apaga cada minuto) · sinGuardar = el usuario no ha
+  // guardado su proyecto (solo se apaga al Guardar o al abrir otro). Son cosas distintas.
+  var dirtySince=false, autosaveChecked=false, sinGuardar=false;
+  window.addEventListener('beforeunload',function(e){
+    if(sinGuardar&&hasDoc()){ e.preventDefault(); e.returnValue=''; } });
   function autosaveTick(){
     if(!dirtySince||!hasDoc()) return;
     var data=projectData();
@@ -3493,8 +3505,12 @@ var PlotterMotor = (function(){
       if(!r.exists||!r.project) return;
       askConfirm('Recuperar trabajo',
         'Encontré trabajo sin guardar de la sesión pasada'+(r.time?(' (de las '+r.time+')'):'')+
-        (r.project.name?(':<br><b>'+r.project.name+'</b>'):'')+'<br>¿Lo recupero?',
-        function(ok){ if(ok){ loadProject(r.project); toast('Trabajo recuperado'); } autosaveClear(); });
+        (r.project.name?(':<br><b>'+hesc(r.project.name)+'</b>'):'')+'<br><br><b>Recuperar</b> lo trae a la mesa. <b>Descartar</b> lo borra para siempre.',
+        // ⚠️ El respaldo SOLO se borra con "Descartar". Recuperarlo no lo borra (sigue siendo la
+        // única copia hasta que guardes), y este cuadro no se puede cerrar sin elegir.
+        function(ok){ if(ok===true){ loadProject(r.project); sinGuardar=true; toast('Trabajo recuperado — guárdalo para no depender del respaldo'); }
+                      else if(ok===false) autosaveClear(); },
+        {yes:'Recuperar', no:'Descartar', obligatorio:true});
     };
     if(api()) api().autosave_load().then(got).catch(function(){});
     else fetch('/api/autosave_load').then(function(r){ return r.json(); }).then(got).catch(function(){});
@@ -3655,7 +3671,7 @@ var PlotterMotor = (function(){
       if(prog.active) return {ok:false, error:'Ya hay un envío en curso'};
       var lineas = M.lineasHpgl(hpgl);
       st.detener = false; st.pausado = false;
-      prog = {active:true, sent:0, total:lineas.length, done:false, error:null, cancelled:false};
+      prog = {active:true, sent:0, total:lineas.length, done:false, error:null, cancelled:false, caido:false};
       // Que la pantalla no se apague mientras corta: en el teléfono, una pestaña en segundo
       // plano va frenada y el corte saldría a tirones. Si no se puede, se corta igual.
       var candado = null;
@@ -3663,6 +3679,8 @@ var PlotterMotor = (function(){
       M.enviar(escribir, lineas, st, {progreso:function(n){ prog.sent = n; }})
         .then(function(r){ if(!r.completo) prog.cancelled = true; },
               function(e){ prog.error = String(e && e.message || e); })
+        // Cable arrancado a medio corte: NO es "cancelado" ni un error de escritura en inglés.
+        .then(function(){ if(prog.caido){ prog.cancelled = false; prog.error = null; } })
         .then(function(){ prog.active = false; prog.done = true;
                           try { candado && candado.release(); } catch(e) {} });
       return {ok:true, total:lineas.length};
@@ -3672,6 +3690,7 @@ var PlotterMotor = (function(){
       return promesa.then(function(r){ return (r && r.ok) ? correr(r.hpgl) : {ok:false, error:(r && r.error) || 'No se pudo generar el HPGL'}; }); }
     if(SER) SER.addEventListener('disconnect', function(e){
       if(e.target !== port) return;
+      if(prog.active) prog.caido = true;
       port = null; connId = null; writer = null; st.detener = true;
       setConnUI(false); toast('Se desconectó el cable del plotter'); });
     // Chrome avisa cuando se enchufa un cable al que ya diste permiso: se conecta solo.
@@ -3805,7 +3824,7 @@ var PlotterMotor = (function(){
   var sendPoll=null;
   function watchSend(label){ el('sendbar').style.display='block'; el('sendLabel').textContent=label||'Enviando al plotter…'; el('sendFill').style.width='0%'; el('sendPct').textContent='0 %'; el('sendLines').textContent='';
     clearInterval(sendPoll); sendPoll=setInterval(function(){ P.progress().then(function(p){ if(!p) return; var pct=p.total?Math.round(p.sent/p.total*100):0; el('sendFill').style.width=pct+'%'; el('sendPct').textContent=pct+' %'; el('sendLines').textContent=p.sent+' / '+p.total;
-      if(p.done||!p.active){ clearInterval(sendPoll); setTimeout(function(){ el('sendbar').style.display='none'; },800); if(p.error) toast('Error de envío: '+p.error); else if(p.cancelled) toast('Envío cancelado'); else toast('Corte enviado ✓'); } }).catch(function(){}); },200); }
+      if(p.done||!p.active){ clearInterval(sendPoll); setTimeout(function(){ el('sendbar').style.display='none'; },800); if(p.caido) askConfirm('El corte quedó A MEDIAS','Se <b>desconectó el cable</b> del plotter durante el envío: llegaron <b>'+p.sent+' de '+p.total+'</b> líneas.<br><br>Revisa el cable, vuelve a conectar y envía de nuevo (el material ya cortado quedó incompleto).',function(){},{yes:'Entendido',solo:true}); else if(p.error) toast('Error de envío: '+p.error); else if(p.cancelled) toast('Envío cancelado'); else toast('Corte enviado ✓'); } }).catch(function(){}); },200); }
   function sendToPlotter(){ if(!hasDoc()) return;
     if(!connected){
       // en el navegador: pedir el cable en el mismo clic y, ya conectado, seguir con el corte
@@ -4285,12 +4304,22 @@ var PlotterMotor = (function(){
   paintTabMode(); paintOp();
   // confirmación en-app (los confirm() del navegador no son fiables en pywebview)
   var cfCb=null;
-  function askConfirm(title,msg,cb){ el('cfTitle').textContent=title; el('cfMsg').innerHTML=msg; cfCb=cb; el('confirmModal').style.display='flex'; }
-  function cfDone(ok){ el('confirmModal').style.display='none'; var cb=cfCb; cfCb=null; if(cb) cb(ok); }
+  // cb(true) = botón principal · cb(false) = el otro botón · cb(null) = cerró con la X o
+  // haciendo clic fuera. ⚠️ Quien llama con algo IRREVERSIBLE en el "no" debe distinguir false
+  // de null: cerrar el cuadro NO es contestar (así se borraba el respaldo del autoguardado).
+  // opts: {yes, no} textos de los botones · solo:true = un solo botón · obligatorio:true =
+  // sin X y sin cierre por fuera (hay que elegir).
+  var cfOpts={};
+  function askConfirm(title,msg,cb,opts){ cfOpts=opts||{}; el('cfTitle').textContent=title; el('cfMsg').innerHTML=msg; cfCb=cb;
+    el('cfYes').textContent=cfOpts.yes||'Sí, continuar'; el('cfNo').textContent=cfOpts.no||'Cancelar';
+    el('cfNo').style.display=cfOpts.solo?'none':''; el('cfClose').style.display=cfOpts.obligatorio?'none':'';
+    el('confirmModal').style.display='flex'; }
+  function cfDone(ok){ if(ok===null&&cfOpts.obligatorio) return;
+    el('confirmModal').style.display='none'; var cb=cfCb; cfCb=null; if(cb) cb(ok); }
   el('cfYes').addEventListener('click',function(){ cfDone(true); });
   el('cfNo').addEventListener('click',function(){ cfDone(false); });
-  el('cfClose').addEventListener('click',function(){ cfDone(false); });
-  el('confirmModal').addEventListener('click',function(e){ if(e.target===el('confirmModal')) cfDone(false); });
+  el('cfClose').addEventListener('click',function(){ cfDone(null); });
+  el('confirmModal').addEventListener('click',function(e){ if(e.target===el('confirmModal')) cfDone(null); });
 
   // --- CALCULAR: crea (o recalcula) la trayectoria y auto-previsualiza ---
   function calcTp(){
