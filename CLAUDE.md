@@ -197,6 +197,19 @@ NO se deducen del código:
   desplegable de figuras, que sale por su derecha.
 - Probado con toques SIMULADOS en Chrome de computadora (11-nov-2026), **no en un aparato real**.
 
+### Reglas visuales de la interfaz web (`studio_ui.html`, 12-nov-2026)
+
+- **El magenta relleno es para UNA cosa por pantalla: el siguiente paso.** La opción elegida de un
+  interruptor (`.seg button.on`) y las casillas son **neutras**; solo `.mach` (en qué máquina
+  estás), las pestañas y los botones `.acc`/`.cta` llevan acento. Con todo en magenta nada destacaba.
+- **Dos encuadres automáticos** (`fitMode`): `'design'` al abrir un archivo (encuadra lo dibujado)
+  y `'sheet'` con `fitSheet()` (botón de ajustar, cambio de máquina o de área). ⚠️ No llames
+  `fitView()` a secas para "volver a la hoja": respeta el modo vigente, y el `ResizeObserver` lo
+  llama en cada cambio de tamaño.
+- **Los avisos (`.toast`) salen ARRIBA del lienzo**: abajo tapaban los botones de zoom.
+- **Un interruptor lleva icono Y nombre** (decisión de Jose, 12-nov): el nombre solo en el texto
+  emergente no existe con el dedo, y "Nº | mm" no lo entendía nadie.
+
 ## Aspecto visual — sistema de diseño (tokens)
 
 Desde jul-2026 la UI tiene **un sistema de diseño centralizado** al inicio del archivo. **No

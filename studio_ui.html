@@ -107,6 +107,7 @@
   .wapill{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:0 4px 14px -6px #0006;z-index:3;}
   .wapill button{width:26px;height:26px;border:0;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;display:grid;place-content:center;}
   .wapill button:hover{background:var(--hover);color:var(--ink);}
+  .wapill button.on{background:var(--accent-soft);color:var(--accent);}
   .wapill button svg{width:15px;height:15px;}
   .zoompill span{font-family:var(--mono);font-size:12px;color:var(--ink);padding:0 8px;min-width:48px;text-align:center;cursor:pointer;}
   .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:2;pointer-events:none;}
@@ -199,12 +200,16 @@
   .seg button{flex:1;height:26px;border:0;background:transparent;color:var(--muted);border-radius:5px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
   .seg button:hover{color:var(--ink);}
   .seg button:disabled{opacity:.5;cursor:default;}
-  .seg button.on{background:var(--accent-soft);color:var(--accent);}
+  /* Opción elegida = NEUTRA (ficha clara con borde). El magenta se reserva para el siguiente paso
+     y para decir en qué máquina estás (.mach): con todo en magenta, nada destacaba. */
+  .seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--line-2),0 1px 2px #0002;}
+  .seg button{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;}
   .seg button svg{width:18px;height:18px;vertical-align:middle;display:inline-block;}
   /* Selector de máquina (barra superior) */
   .mach{margin:0;padding:2px;}
   .mach button{display:inline-flex;align-items:center;gap:6px;padding:0 11px;height:26px;font-size:12.5px;}
   .mach button svg{width:14px;height:14px;}
+  .mach button.on{background:var(--accent-soft);color:var(--accent);box-shadow:none;}
   /* CNC: selector de fresa + resumen */
   .selfield{width:100%;height:32px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;outline:none;}
   .selfield:focus{border-color:var(--accent);}
@@ -279,14 +284,14 @@
   .send .btn:disabled{opacity:.4;cursor:default;box-shadow:none;}
   .send .btn svg{width:16px;height:16px;}
 
-  .status{grid-area:status;display:flex;align-items:center;gap:16px;padding:0 14px;background:var(--rail);border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .status{grid-area:status;display:flex;align-items:center;gap:16px;padding:0 14px;background:var(--rail);border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--ink);}
   .status .s{display:flex;align-items:center;gap:6px;}
-  .status .r{margin-left:auto;color:var(--faint);}
+  .status .r{margin-left:auto;color:var(--muted);white-space:nowrap;}
   /* Botón de icono para la barra inferior (cotizar): junto al tiempo estimado, que es
      justo el dato del que sale el precio de máquina. */
-  .statbtn{display:inline-grid;place-content:center;width:22px;height:22px;margin-left:10px;
-           vertical-align:middle;background:none;border:1px solid transparent;border-radius:5px;
-           color:var(--muted);cursor:pointer;}
+  .statbtn{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;margin-left:10px;font:inherit;font-family:var(--font);font-size:12px;font-weight:600;
+           vertical-align:middle;background:none;border:1px solid var(--line-2);border-radius:5px;
+           color:var(--ink);cursor:pointer;}
   .statbtn:hover:not(:disabled){border-color:var(--line);color:var(--accent);}
   .statbtn:disabled{opacity:.3;cursor:default;}
   .statbtn svg{width:14px;height:14px;display:block;}
@@ -301,8 +306,8 @@
   #simView canvas{display:block;}
   #simFoot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);}
   #simStat{font-family:var(--mono);font-size:11px;color:var(--muted);}
-  .toast{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);color:var(--ink);font-size:13px;padding:10px 16px;border-radius:9px;box-shadow:0 8px 24px -8px #0009;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+  .toast{position:fixed;left:50%;top:84px;transform:translateX(-50%) translateY(-4px);background:var(--panel);border:1px solid var(--line-2);color:var(--ink);font-size:13px;padding:10px 16px;border-radius:9px;box-shadow:0 8px 24px -8px #0009;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;}
+  .toast.show{opacity:1;transform:translateX(-50%);}
   .conn{cursor:pointer;font-family:var(--mono);}
   .conn.ok{background:color-mix(in srgb,var(--good) 12%,transparent);border-color:color-mix(in srgb,var(--good) 32%,transparent);color:var(--good);}
   .conn.ok .dot{background:var(--good);}
@@ -321,7 +326,7 @@
   .pbtn:disabled{opacity:.45;cursor:default;}
   .rng{width:100%;accent-color:var(--accent);margin:2px 0 6px;cursor:pointer;height:4px;}
   .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;}
-  .chk input{accent-color:var(--accent);cursor:pointer;width:15px;height:15px;}
+  .chk input{accent-color:var(--ink);cursor:pointer;width:15px;height:15px;}
   .jogpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,38px);gap:6px;width:156px;margin:2px auto 10px;justify-content:center;}
   .jogpad button{border-radius:8px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);cursor:pointer;font-size:13px;}
   .jogpad button:hover{border-color:var(--accent);}
@@ -357,6 +362,7 @@
     #btnInsp{display:inline-flex;}
     .top{overflow-x:auto;scrollbar-width:none;}
     .sendgrp{position:sticky;right:0;}
+    .statbtn .lbl{display:none;} .status{font-size:11px;gap:10px;}
   }
   /* Foco de teclado visible (Tab). Los campos ya lo marcan con su borde. */
   button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -408,8 +414,6 @@
     <div class="tool" id="toolScis" title="Tijeras (C) — corta un trazado por donde des clic (cerrado se abre; abierto queda en dos)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.2 7.6 20 16M8.2 16.4 20 8M12 12h.01"/></svg></div>
     <div class="tool" id="toolNest" title="Acomodar en la hoja (nesting): acomoda las piezas solo para desperdiciar menos material"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2" opacity=".45"/><rect x="6" y="6" width="5" height="8" rx="1"/><rect x="13.5" y="6" width="4.5" height="5" rx="1"/><rect x="6" y="16" width="7" height="2.5" rx="1"/><rect x="13.5" y="13.5" width="4.5" height="5" rx="1"/></svg></div>
     <div class="tool" id="toolRef" title="Imagen de referencia — foto de fondo, tenue y bloqueada, para dibujar encima (clic de nuevo la quita)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" stroke-dasharray="3 2.2"/><circle cx="9" cy="10" r="1.5"/><path d="m21 17-5-5-9 7"/></svg></div>
-    <div class="sep"></div>
-    <div class="tool" id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></div>
     <div class="grow"></div>
     <div class="tool" id="toolCuenta" title="Tu cuenta: cerrar sesión, cambiar contraseña, estación de corte" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
     <div class="tool" id="tgl" title="Cambiar tema claro/oscuro"></div>
@@ -437,7 +441,7 @@
       <label><input type="checkbox" id="shpStar"> Estrella</label>
       <span>Interior</span><input id="shpInner" value="50" disabled><span>%</span>
     </div>
-    <div class="pillbar"><div class="wapill"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
+    <div class="pillbar"><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
   </main>
 
   <aside class="inspect">
@@ -479,10 +483,10 @@
         </div>
       </div>
 
-      <div class="grp-t sec">Alinear<span class="opname" id="alignToLbl"></span></div>
+      <div class="grp-t sec">Alinear<span class="opname" id="alignToLbl" style="display:none"></span></div>
       <div class="seg" id="alignTo" style="margin-top:0;margin-bottom:9px">
-        <button class="on" data-to="selection" title="Alinear respecto a la selección"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="5" rx="1.2" fill="currentColor"/><rect x="8" y="14" width="8" height="5" rx="1.2" fill="currentColor"/></svg></button>
-        <button data-to="workarea" title="Alinear respecto al área de trabajo"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="14" width="7" height="3.5" rx="1" fill="currentColor"/></svg></button>
+        <button class="on" data-to="selection" title="Alinear respecto a la selección"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="5" rx="1.2" fill="currentColor"/><rect x="8" y="14" width="8" height="5" rx="1.2" fill="currentColor"/></svg>A la selección</button>
+        <button data-to="workarea" title="Alinear respecto al área de trabajo"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="14" width="7" height="3.5" rx="1" fill="currentColor"/></svg>A la hoja</button>
       </div>
       <div class="alignrow">
         <button class="abtn" id="alL" disabled title="Alinear a la izquierda"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="2" height="18"/><rect x="7" y="6" width="12" height="4" rx="1"/><rect x="7" y="14" width="8" height="4" rx="1"/></svg></button>
@@ -546,11 +550,11 @@
     </div>
 
     <div class="pane" id="paneCncCut" style="display:none">
-      <div class="grp-t sec">Operación<span class="opname" id="opName">Perfil</span></div>
+      <div class="grp-t sec">Operación<span class="opname" id="opName" style="display:none">Perfil</span></div>
       <div class="seg" id="opSeg" style="margin-top:0">
-        <button class="on" data-o="profile" title="Perfil — cortar siguiendo el contorno (con compensación de la fresa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="2.6 2.2" opacity=".65"/></svg></button>
-        <button data-o="pocket" title="Cajeado — vaciar el interior de las formas cerradas con anillos concéntricos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.2" opacity=".65"/><rect x="10.5" y="10.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".8"/></svg></button>
-        <button data-o="drill" title="Taladro — barreno en el centro de cada contorno cerrado (círculos = puntos de taladro)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></button>
+        <button class="on" data-o="profile" title="Perfil — cortar siguiendo el contorno (con compensación de la fresa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="2.6 2.2" opacity=".65"/></svg>Perfil</button>
+        <button data-o="pocket" title="Cajeado — vaciar el interior de las formas cerradas con anillos concéntricos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.2" opacity=".65"/><rect x="10.5" y="10.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".8"/></svg>Cajeado</button>
+        <button data-o="drill" title="Taladro — barreno en el centro de cada contorno cerrado (círculos = puntos de taladro)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>Taladro</button>
       </div>
       <div id="profileOpts">
         <div class="seg" id="sideSeg">
@@ -562,10 +566,10 @@
         <div id="tabFields">
           <div style="display:grid;grid-template-columns:auto 1fr;gap:8px;margin-top:8px;align-items:center">
             <div class="seg" id="tabMode" style="margin-top:0">
-              <button class="on" data-tm="n" title="Cantidad fija de puentes por pieza">Nº</button>
-              <button data-tm="dist" title="Un puente cada tantos mm de contorno — las piezas grandes reciben más solas">mm</button>
+              <button class="on" data-tm="n" title="Cantidad fija de puentes por pieza">Cantidad</button>
+              <button data-tm="dist" title="Un puente cada tantos mm de contorno — las piezas grandes reciben más solas">Cada X mm</button>
             </div>
-            <div class="field" title="Cantidad de puentes (o cada cuántos mm, según el modo)"><label id="tabVLbl">Puentes</label><input id="tabN" value="3"><span class="u" id="tabVU"></span></div>
+            <div class="field" title="Cantidad de puentes (o cada cuántos mm, según el modo)"><label id="tabVLbl">N.º</label><input id="tabN" value="3"><span class="u" id="tabVU"></span></div>
           </div>
           <div class="grid2" style="margin-top:8px">
             <div class="field" title="Ancho de cada puente"><label>An.</label><input id="tabW" value="8"><span class="u">mm</span></div>
@@ -600,10 +604,10 @@
           </div>
           <div id="rampByRow" style="display:grid;grid-template-columns:auto 1fr;gap:8px;margin-top:8px;align-items:center">
             <div class="seg" id="rampBy" style="margin-top:0">
-              <button class="on" data-rb="angle" title="Definir la rampa por ángulo de descenso">Áng.</button>
-              <button data-rb="dist" title="Definir la rampa por distancia horizontal">mm</button>
+              <button class="on" data-rb="angle" title="Definir la rampa por ángulo de descenso">Ángulo</button>
+              <button data-rb="dist" title="Definir la rampa por distancia horizontal">Distancia</button>
             </div>
-            <div class="field" title="Ángulo de descenso (típico 5–15°) o distancia horizontal de la rampa"><label id="rampVLbl">Ángulo</label><input id="rampV" value="10"><span class="u" id="rampVU">°</span></div>
+            <div class="field" title="Ángulo de descenso (típico 5–15°) o distancia horizontal de la rampa"><label id="rampVLbl">Baja a</label><input id="rampV" value="10"><span class="u" id="rampVU">°</span></div>
           </div>
         </div>
       </div>
@@ -614,7 +618,7 @@
       <div class="muted-note" id="tpEmpty">Selecciona objetos (o nada = todo), configura arriba y pulsa <b>Calcular</b>. Arrastra las filas para cambiar el orden de corte.</div>
       <div id="tpWarn" style="display:none;margin:8px 0 2px;padding:8px 10px;border:1px solid var(--bad);border-radius:8px;color:var(--ink);font-size:12.5px;line-height:1.45;user-select:text"></div>
       <div class="rowbtns">
-        <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver trayectorias</span></button>
+        <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver recorrido</span></button>
         <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
       </div>
       <button class="pbtn acc" id="btnSaveTap" style="width:100%;margin-top:10px;height:36px;font-weight:700" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 20h16"/></svg>Guardar G-code (.tap)</button>
@@ -625,7 +629,7 @@
   <footer class="status">
     <span class="s" id="fileName" title="Archivo abierto">sin diseño</span>
     <span class="s" id="stSel"></span>
-    <span class="r"><span id="metaSize">—</span><span style="opacity:.45;margin:0 8px">·</span><span id="metaTime">—</span><button class="statbtn" id="btnQuote" disabled title="Cotizar este trabajo: material + tiempo de máquina + margen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg></button></span>
+    <span class="r"><span id="metaSize">—</span><span style="opacity:.45;margin:0 8px">·</span><span id="metaTime">—</span><button class="statbtn" id="btnQuote" disabled title="Cotizar este trabajo: material + tiempo de máquina + margen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg><span class="lbl">Cotizar</span></button></span>
   </footer>
 </div>
 <input type="file" id="fileInput" accept=".svg,.dxf,.ai,.dstudio,.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff" style="display:none">
@@ -671,7 +675,7 @@
 </div>
 <div class="modal" id="waModal" style="display:none">
   <div class="sheet" style="width:322px">
-    <div class="sheet-h"><h3>Configuración</h3><button id="waClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="sheet-h"><h3>Área de trabajo</h3><button id="waClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <div class="grp">
       <div class="grp-t" id="waMachLbl">Área de trabajo · Plotter</div>
       <div class="mrow"><div class="field" style="flex:1"><label>Ancho</label><input id="waW" value="3000"><span class="u">mm</span></div>
@@ -1263,7 +1267,7 @@ var PlotterMotor = (function(){
   var cncPrev=null;   // trayectorias CNC previsualizadas (se invalidan al cambiar la geometría)
   var prevOn=false;   // intención del usuario: vista previa encendida (aunque momentáneamente no haya nada que pintar)
   function killPrev(){ if(cncPrev){ cncPrev=null; el('btnTpPrev').classList.remove('on'); }
-    if(el('tpPrevLbl')) el('tpPrevLbl').textContent='Ver trayectorias'; }
+    if(el('tpPrevLbl')) el('tpPrevLbl').textContent='Ver recorrido'; }
   // Velocidad/presión/sobrecorte/esquinas del plotter: se guardan en la cuenta al cambiarlos
   // (antes cada sesión volvía a 320/140 y vivían escondidos en "Tamaño del área de trabajo").
   function ponerCorte(c){ if(!c) return; var m={cutSpeed:c.speed,cutPressure:c.pressure,cutOvercut:c.overcut,cutCorner:c.corner};
@@ -1406,7 +1410,22 @@ var PlotterMotor = (function(){
   var lastXform=null;                           // última transformación (para repetirla con ⇧⌘D)
   function sheetSpanW(){ var n=state.sheets||1; return state.work[0]*n+50*(n-1); }
   function fitScale(W,H){ return Math.min((W-108)/sheetSpanW(), (H-108)/state.work[1]); }
-  function fitView(){ var r=cv.getBoundingClientRect(); if(r.width<10||r.height<10) return; var s=fitScale(r.width,r.height); view.scale=s; view.ox=(r.width-sheetSpanW()*s)/2; view.oy=(r.height+state.work[1]*s)/2; view.ready=true; draw(); }
+  // Dos encuadres automáticos: 'sheet' (la hoja entera) y 'design' (lo dibujado, con margen).
+  // Al ABRIR un archivo se usa 'design': con una hoja de 4 m, una pieza de 40 cm quedaba como
+  // una mota en la esquina. El botón "Ajustar a la hoja" regresa a 'sheet'. El modo se recuerda
+  // para que un cambio de tamaño de ventana no devuelva la vista a la hoja.
+  var fitMode='sheet';
+  function fitSheet(){ fitMode='sheet'; userZoomed=false; view.ready=false; fitView(); }
+  function fitView(){ var r=cv.getBoundingClientRect(); if(r.width<10||r.height<10) return;
+    if(fitMode==='design' && hasDoc()){
+      var all=[]; for(var q=0;q<doc.paths.length;q++) all.push(q);
+      var b=bboxOf(all), bw=Math.max(1,b[2]-b[0]), bh=Math.max(1,b[3]-b[1]);
+      var mx=Math.min(90,r.width*0.12), my=Math.min(90,r.height*0.12);
+      var sd=Math.min((r.width-2*mx)/bw,(r.height-2*my)/bh, 8);          // tope: 8 px por mm
+      if(sd>fitScale(r.width,r.height)*1.15){                              // solo si de verdad acerca
+        view.scale=sd; view.ox=r.width/2-((b[0]+b[2])/2)*sd; view.oy=r.height/2+((b[1]+b[3])/2)*sd;
+        view.ready=true; draw(); return; } }
+    var s=fitScale(r.width,r.height); view.scale=s; view.ox=(r.width-sheetSpanW()*s)/2; view.oy=(r.height+state.work[1]*s)/2; view.ready=true; draw(); }
   function tp(x,y){ return [view.ox+x*view.scale, view.oy-y*view.scale]; }
   function sp(sx,sy){ return [(sx-view.ox)/view.scale, (view.oy-sy)/view.scale]; } // pantalla -> mm
   function zoomAt(f,sx,sy){ if(!view.ready) return; userZoomed=true; var m=sp(sx,sy); view.scale=Math.max(0.003,Math.min(80,view.scale*f)); view.ox=sx-m[0]*view.scale; view.oy=sy+m[1]*view.scale; draw(); }
@@ -3288,7 +3307,7 @@ var PlotterMotor = (function(){
     } else {
       items.push({label:'Pegar', keys:'⌘V', dis:!clip.length, fn:doPaste});
       items.push({label:'Deseleccionar', dis:(mode()==='all'), fn:function(){ sel.idx=-1; sel.set=new Set(); refreshUI(); }});
-      items.push({label:'Ajustar vista', fn:function(){ userZoomed=false; view.ready=false; fitView(); }});
+      items.push({label:'Ajustar a la hoja', fn:fitSheet});
       if(lockedUids.size) items.push({label:'Desbloquear todo ('+lockedUids.size+')', fn:unlockAll});
       if(state.machine==='cnc' && (state.sheets||1)>1 && hasDoc()){
         var spanM=state.work[0]+50;
@@ -3309,7 +3328,7 @@ var PlotterMotor = (function(){
   });
   document.addEventListener('mousedown',function(e){ if(!e.target.closest || !e.target.closest('#ctxMenu')) ctxHide(); });
   cv.addEventListener('wheel',ctxHide);
-  el('toolFit').addEventListener('click',function(){ userZoomed=false; view.ready=false; fitView(); });
+  el('toolFit').addEventListener('click',fitSheet);
   function setFillView(on,guardar){
     fillView=!!on;
     el('toolFill').classList.toggle('on',fillView);
@@ -3326,7 +3345,7 @@ var PlotterMotor = (function(){
   // ===== Zoom UI =====
   el('zIn').addEventListener('click',function(){var r=cv.getBoundingClientRect();zoomAt(1.25,r.width/2,r.height/2);});
   el('zOut').addEventListener('click',function(){var r=cv.getBoundingClientRect();zoomAt(0.8,r.width/2,r.height/2);});
-  el('zoomTxt').addEventListener('click',function(){ userZoomed=false; view.ready=false; fitView(); });
+  el('zoomTxt').addEventListener('click',fitSheet);
   el('btnUndo').addEventListener('click',undo); el('btnRedo').addEventListener('click',redo);
   // (Enviar al plotter se cablea en el bloque Fase 3, abajo)
 
@@ -3350,7 +3369,7 @@ var PlotterMotor = (function(){
     sel.idx=-1; sel.set=new Set(); undoStack.length=0; redoStack.length=0; killPrev();
     normalize();
     el('empty').style.display='none';
-    userZoomed=false; view.ready=false; fitView(); refreshInspector(); buildLayers(); updateUndoBtns();
+    fitMode='design'; userZoomed=false; view.ready=false; fitView(); refreshInspector(); buildLayers(); updateUndoBtns();
     toast('Diseño cargado: '+state.name+' ('+doc.paths.length+' trazados)');
   }
   // ===== Proyecto (.dstudio): guarda TODO tu arreglo para reabrirlo idéntico =====
@@ -3378,7 +3397,7 @@ var PlotterMotor = (function(){
     sel.idx=-1; sel.set=new Set(); undoStack.length=0; redoStack.length=0; killPrev();
     // OJO: no se normaliza — las posiciones guardadas se respetan tal cual.
     el('empty').style.display='none';
-    userZoomed=false; view.ready=false; fitView(); refreshInspector(); buildLayers(); updateUndoBtns();
+    fitMode='design'; userZoomed=false; view.ready=false; fitView(); refreshInspector(); buildLayers(); updateUndoBtns();
     toast('Proyecto abierto: '+state.name+' ('+doc.paths.length+' objetos)');
   }
   function projectData(){ return { format:'design-studio-project', version:3, name:state.name||'proyecto', work:state.work, cut:cutParams(),
@@ -4068,7 +4087,7 @@ var PlotterMotor = (function(){
   el('waSave').addEventListener('click',function(){
     var w=parseFloat(el('waW').value), h=parseFloat(el('waH').value);
     if(!(w>=10&&h>=10)){ toast('Mínimo 10 × 10 mm'); return; }
-    var done=function(r){ if(r&&r.ok){ state.work=r.work; el('waModal').style.display='none'; userZoomed=false; view.ready=false; fitView(); toast('Área guardada: '+Math.round(r.work[0])+' × '+Math.round(r.work[1])+' mm'); } else toast((r&&r.error)||'No se pudo guardar'); };
+    var done=function(r){ if(r&&r.ok){ state.work=r.work; el('waModal').style.display='none'; fitSheet(); toast('Área guardada: '+Math.round(r.work[0])+' × '+Math.round(r.work[1])+' mm'); } else toast((r&&r.error)||'No se pudo guardar'); };
     if(state.machine==='cnc'){ var shN=Math.max(1,Math.min(8,parseInt(el('waSheets').value,10)||1));
       CNC.set({work:[w,h], sheets:shN}).then(function(r){ if(r&&r.ok){ state.cnc=r; state.sheets=shN; } done(r); }).catch(function(e){toast('Error: '+e);}); }
     else { var save = api()? api().set_workarea(w,h) : postJSON('/api/set_workarea',{w:w,h:h});
@@ -4125,7 +4144,7 @@ var PlotterMotor = (function(){
     state.work = cncMode ? ((state.cnc&&state.cnc.work)||[1220,2440]) : state.plotterWork;
     state.sheets = cncMode ? ((state.cnc&&state.cnc.sheets)||1) : 1;
     paintCnc();
-    userZoomed=false; view.ready=false; fitView(); refreshInspector();
+    fitSheet(); refreshInspector();
     if(persist) CNC.set({machine:m}).then(function(r){ if(r&&r.ok) state.cnc=r; }).catch(function(){});
   }
   el('machSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
@@ -4276,7 +4295,7 @@ var PlotterMotor = (function(){
   // Modo de puentes: N.º fijo por pieza, o "uno cada X mm" (cada modo recuerda su valor)
   var tabModeV='n', tabVals={n:'3', dist:'250'};
   function paintTabMode(){ setSeg('tabMode','data-tm',tabModeV);
-    el('tabVLbl').textContent = tabModeV==='n'?'Puentes':'Cada';
+    el('tabVLbl').textContent = tabModeV==='n'?'N.º':'Cada';
     el('tabVU').textContent = tabModeV==='n'?'':'mm'; }
   var depthAuto=null;   // si el campo trae el valor auto, sigue al grosor del material
   function paintDepth(){ if(!state.cnc) return; var th=state.cnc.material.thickness;
@@ -4321,7 +4340,7 @@ var PlotterMotor = (function(){
     else { rampTypeV='smooth'; rampByV='angle'; }
     el('rampType').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-rt')===rampTypeV);});
     el('rampBy').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-rb')===rampByV);});
-    el('rampVLbl').textContent=rampByV==='angle'?'Ángulo':'Dist.';
+    el('rampVLbl').textContent=rampByV==='angle'?'Baja a':'Largo';
     el('rampVU').textContent=rampByV==='angle'?'°':'mm';
     el('startDepth').value=t.start||0;
     el('allowOff').value=t.allowance||0;
@@ -4440,7 +4459,7 @@ var PlotterMotor = (function(){
     var m=b.getAttribute('data-rb'); if(m===rampByV) return;
     rampVals[rampByV]=el('rampV').value; rampByV=m; el('rampV').value=rampVals[m];
     el('rampBy').querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-rb')===rampByV);});
-    el('rampVLbl').textContent=m==='angle'?'Ángulo':'Dist.';
+    el('rampVLbl').textContent=m==='angle'?'Baja a':'Largo';
     el('rampVU').textContent=m==='angle'?'°':'mm'; });
   el('cutDepth').addEventListener('input',paintPasses);
   paintTabMode(); paintOp();
@@ -4538,9 +4557,9 @@ var PlotterMotor = (function(){
         else bad=(pls[k].label?pls[k].label+': ':'')+((r&&r.error)||'error');
       });
       paintTpWarn(warns);
-      if(!groups.length){ el('tpPrevLbl').textContent='Ver trayectorias'; toast(bad||'No se pudieron calcular las trayectorias'); return; }
+      if(!groups.length){ el('tpPrevLbl').textContent='Ver recorrido'; toast(bad||'No se pudieron calcular las trayectorias'); return; }
       cncPrev={groups:groups}; el('btnTpPrev').classList.add('on');
-      el('tpPrevLbl').textContent='Esconder trayectorias'; draw();
+      el('tpPrevLbl').textContent='Ocultar'; draw();
       var n=0; groups.forEach(function(g){ n+=g.tps.length+g.drills.length; });
       var gk=Object.keys(gearsSeen);
       toast('Trayectorias: '+n+' · ≈ '+Math.floor(secs/60)+' min '+(secs%60)+' s'+(gk.length?' · marcha '+gk.join('/'):'')+(skipped?' · '+skipped+' trazo(s) abierto(s) fuera':'')+(warns.length?' · ⚠ '+warns.length+' aviso(s) abajo':'')+(bad?' · ⚠ '+bad:''));
