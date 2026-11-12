@@ -179,6 +179,24 @@ NO se deducen del código:
 
 ---
 
+### Táctil y pantallas chicas (`studio_ui.html`, nov-2026)
+
+- **El lienzo sigue hablando "ratón"; el dedo se TRADUCE** (bloque "Táctil", junto al `wheel` del
+  lienzo): un dedo = botón izquierdo, dos dedos = pellizco y desplazar, pulsación larga = clic
+  derecho, doble toque = doble clic. ⚠️ **No reescribas los manejadores `mouse*` para "soportar
+  touch"**: agrega el gesto al traductor. ⚠️ El `preventDefault()` de `touchstart` y el
+  `touch-action:none` de `#cv` van juntos: sin ellos el navegador manda ADEMÁS sus eventos de
+  ratón de compatibilidad y todo llega doble.
+- **`TOQ`** multiplica las zonas de acierto (manijas, nodos, trazos): 1 con ratón, 2.6 con el dedo.
+  Una tolerancia nueva en píxeles va `*TOQ`, o con el dedo será imposible de atinar.
+- **≤ 820 px el panel de propiedades es un cajón** (`.app.insp`, botón `#btnInsp`) y la barra
+  superior se desplaza con el botón de envío pegado a la derecha (`position:sticky`).
+- **`three.bundle.js` se carga al abrir la Vista 3D**, no con la página. Código que use `THREE`
+  fuera de `openSim()` y lo que cuelga de ella fallará con `THREE is not defined`.
+- ⚠️ **El riel NO lleva `overflow`** salvo en pantallas muy bajas: con scroll recorta el menú
+  desplegable de figuras, que sale por su derecha.
+- Probado con toques SIMULADOS en Chrome de computadora (11-nov-2026), **no en un aparato real**.
+
 ## Aspecto visual — sistema de diseño (tokens)
 
 Desde jul-2026 la UI tiene **un sistema de diseño centralizado** al inicio del archivo. **No

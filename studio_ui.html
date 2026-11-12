@@ -35,7 +35,7 @@
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;overflow:hidden;}
   body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased;user-select:none;}
-  .app{display:grid;height:100vh;grid-template-columns:52px 1fr 312px;grid-template-rows:52px 1fr 30px;
+  .app{display:grid;height:100vh;height:100dvh;grid-template-columns:52px 1fr 312px;grid-template-rows:52px 1fr 30px;
     grid-template-areas:"top top top" "rail canvas inspect" "status status status";}
 
   .top{grid-area:top;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);}
@@ -316,8 +316,8 @@
   .conn.ok{background:color-mix(in srgb,var(--good) 12%,transparent);border-color:color-mix(in srgb,var(--good) 32%,transparent);color:var(--good);}
   .conn.ok .dot{background:var(--good);}
   .modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;z-index:40;}
-  .sheet{background:var(--panel);border:1px solid var(--line-2);border-radius:14px;width:340px;max-width:92vw;box-shadow:0 24px 64px -12px #000b;overflow:hidden;}
-  .sheet.canspill{overflow:visible;}   /* el desplegable de fuentes rebasa el modal sin decapitarse */
+  .sheet{background:var(--panel);border:1px solid var(--line-2);border-radius:14px;width:340px;max-width:92vw;box-shadow:0 24px 64px -12px #000b;overflow:hidden auto;max-height:92vh;max-height:92dvh;}
+  .sheet.canspill{overflow:visible;max-height:none;}   /* el desplegable de fuentes rebasa el modal sin decapitarse */
   .sheet-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line);}
   .sheet-h h3{margin:0;font-size:15px;font-weight:700;}
   .sheet-h button{background:transparent;border:0;color:var(--muted);cursor:pointer;font-size:15px;}
@@ -345,6 +345,28 @@
   @media (max-width:1180px){ .brand small{display:none;} .top{gap:8px;} }
   @media (max-width:1060px){ .top .tbtn{font-size:0;gap:0;padding:0 9px;} .top .tbtn svg{width:17px;height:17px;} }
   @media (max-width:760px){ .brand{font-size:0;gap:0;} .top{gap:4px;padding:0 8px;} .top .tbtn{padding:0 6px;} }
+  /* ===== Táctil y pantallas chicas ===== */
+  #cv{touch-action:none;}                       /* los gestos del lienzo los maneja la app, no el navegador */
+  .sheet.simsheet{overflow:hidden;}
+  #btnInsp{display:none;}
+  /* Solo en pantallas MUY bajas (teléfono acostado): con scroll, el riel recorta el menú
+     desplegable de figuras, así que no se activa en alturas normales. */
+  @media (max-height:520px){ .rail{overflow-y:auto;scrollbar-width:none;} }
+  @media (pointer:coarse){                      /* dedo: blancos más grandes */
+    .tool{width:44px;height:44px;} .tool svg{width:21px;height:21px;}
+    .icobtn{min-width:40px;height:40px;} .top .tbtn{height:40px;}
+    .zoom button,.pillbar button{min-width:38px;min-height:38px;}
+    .tpbtn{min-width:34px;min-height:34px;} .pbtn,.gbtn{min-height:40px;}
+    .sheet-h button{min-width:40px;min-height:40px;}
+  }
+  @media (max-width:820px){                     /* tableta vertical y teléfono: el panel es un cajón */
+    .app{grid-template-columns:52px 1fr;grid-template-areas:"top top" "rail canvas" "status status";}
+    .inspect{position:fixed;right:0;top:52px;bottom:30px;width:min(312px,88vw);z-index:35;transform:translateX(100%);transition:transform .18s;box-shadow:-12px 0 32px -12px #0008;}
+    .app.insp .inspect{transform:none;}
+    #btnInsp{display:inline-flex;}
+    .top{overflow-x:auto;scrollbar-width:none;}
+    .sendgrp{position:sticky;right:0;}
+  }
   /* Foco de teclado visible (Tab). Los campos ya lo marcan con su borde. */
   button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 </style>
@@ -368,6 +390,7 @@
     <button class="tbtn" id="btnImport" title="Importar otro diseño (SVG/DXF/AI o .dstudio) SUMÁNDOLO a la mesa — no quita lo que ya está"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6m-3-3h6"/></svg>Importar</button>
     <button class="tbtn" id="btnSaveProject" disabled title="Guardar tu proyecto (.dstudio) para reabrirlo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Guardar</button>
     <button class="tbtn" id="btnExport" disabled title="Exportar como… — imagen (PNG/JPG), PDF o vector (SVG/DXF) para mandar al cliente o a otro programa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span>Exportar…</span></button>
+    <button class="icobtn" id="btnInsp" title="Mostrar u ocultar el panel de propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
     <div class="sendgrp" id="sendGrp">
       <button class="cta" id="btnSendTop" disabled><span class="sdot" id="sendDot"></span><span id="sendLbl">Enviar Directo</span></button>
       <button class="cta" id="btnSendMenu" title="Elegir a dónde se envía el corte · ajustes del plotter"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -952,7 +975,6 @@
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="three.bundle.js"></script>
 <script id="motor-plotter">
 // Motor del envío al plotter DESDE EL NAVEGADOR (Web Serial). Va aparte y sin tocar la página
 // para que web/test_plotter_web.mjs lo pruebe tal cual contra un plotter simulado.
@@ -1353,6 +1375,7 @@ var PlotterMotor = (function(){
 
   // ===== Vista / zoom / pan =====
   var view={scale:0.1, ox:0, oy:0, ready:false}, userZoomed=false;
+  var TOQ=1;                                    // ×tolerancia de acierto: 1 con ratón, 2.6 con el DEDO (ver "Táctil")
   var RUL=22;                                   // grosor de las reglas (px) — ANTES de draw(): se usa al pintar
   var guides={v:[],h:[]}, guideDrag=null;       // guías arrastradas desde las reglas (mm)
   var snapGuides=null;                          // líneas del imán mientras arrastras
@@ -1855,7 +1878,7 @@ var PlotterMotor = (function(){
   function cncLock(){ if(cncStep()){ toast('Estás en el paso CNC — cambia a Diseño para editar las figuras'); return true; } return false; }
   var pan=null, moving=null, marquee=null, spaceDown=false, draft=null;   // draft = forma en curso (herramientas de dibujo)
   function hitPath(sx,sy){ // índice del trazado bajo el cursor (o -1). Recorre de arriba (último) a abajo.
-    var thr=6; for(var i=doc.paths.length-1;i>=0;i--){ if(isLocked(i)) continue; var e=effPts(i); for(var k=0;k<e.length-1;k++){ var a=tp(e[k][0],e[k][1]), b=tp(e[k+1][0],e[k+1][1]); if(distSeg(sx,sy,a[0],a[1],b[0],b[1])<=thr) return i; } if(e.length===1){var a2=tp(e[0][0],e[0][1]); if(Math.hypot(sx-a2[0],sy-a2[1])<=thr) return i;} } return -1; }
+    var thr=6*TOQ; for(var i=doc.paths.length-1;i>=0;i--){ if(isLocked(i)) continue; var e=effPts(i); for(var k=0;k<e.length-1;k++){ var a=tp(e[k][0],e[k][1]), b=tp(e[k+1][0],e[k+1][1]); if(distSeg(sx,sy,a[0],a[1],b[0],b[1])<=thr) return i; } if(e.length===1){var a2=tp(e[0][0],e[0][1]); if(Math.hypot(sx-a2[0],sy-a2[1])<=thr) return i;} } return -1; }
   // ¿Hay una TRAYECTORIA CNC bajo el cursor? Devuelve su fila en la lista (o -1).
   // Se recorre de arriba hacia abajo (la última dibujada es la que se ve encima).
   function hitToolpath(sx,sy){
@@ -1912,7 +1935,7 @@ var PlotterMotor = (function(){
         for(var wk=0;wk<nedit.nodes.length;wk++){
           var lc=liveCorner(wk); if(!lc) continue;
           var wp=tp(lc.P[0]+lc.bis[0]*(14/view.scale), lc.P[1]+lc.bis[1]*(14/view.scale));
-          if(Math.hypot(sx-wp[0],sy-wp[1])<=8){
+          if(Math.hypot(sx-wp[0],sy-wp[1])<=8*TOQ){
             var ks=(nedit.sel.size>1&&nedit.sel.has(wk))?Array.from(nedit.sel):[wk];
             var infos=[]; ks.forEach(function(kx){ var f=liveCorner(kx); if(f) infos.push(f); });
             if(!infos.length) break;
@@ -1946,7 +1969,7 @@ var PlotterMotor = (function(){
       var mp=sp(sx,sy);
       if(pen && pen.nodes.length>1){   // ¿clic en el primer ancla? → cerrar
         var f0=tp(pen.nodes[0].p[0],pen.nodes[0].p[1]);
-        if(Math.hypot(sx-f0[0],sy-f0[1])<=8){ penFinish(true); return; }
+        if(Math.hypot(sx-f0[0],sy-f0[1])<=8*TOQ){ penFinish(true); return; }
       }
       if(!pen) pen={nodes:[], mouse:null, drag:false};
       pen.nodes.push({p:[mp[0],mp[1]], hin:[mp[0],mp[1]], hout:[mp[0],mp[1]], sm:false});
@@ -1963,7 +1986,7 @@ var PlotterMotor = (function(){
         var esqs=[[br[0],br[1]],[br[2],br[1]],[br[0],br[3]],[br[2],br[3]]];   // bl br tl tr
         for(var ci=0;ci<4;ci++){
           var cs=tp(esqs[ci][0],esqs[ci][1]);
-          if(Math.abs(sx-cs[0])<=7 && Math.abs(sy-cs[1])<=7){
+          if(Math.abs(sx-cs[0])<=7*TOQ && Math.abs(sy-cs[1])<=7*TOQ){
             if(cncStep()){ cncLock(); return; }
             pushUndo();
             var anc=esqs[3-ci];                    // la esquina OPUESTA queda clavada
@@ -1975,7 +1998,7 @@ var PlotterMotor = (function(){
           }
         }
         var rh=tp((br[0]+br[2])/2, br[3]);
-        if(Math.hypot(sx-rh[0], sy-(rh[1]-ROTH))<=8){
+        if(Math.hypot(sx-rh[0], sy-(rh[1]-ROTH))<=8*TOQ){
           if(cncStep()){ cncLock(); return; }
           pushUndo();
           var mmr=sp(sx,sy), pvx=(br[0]+br[2])/2, pvy=(br[1]+br[3])/2;
@@ -2194,6 +2217,57 @@ var PlotterMotor = (function(){
       marquee=null; refreshUI(); }
   });
   cv.addEventListener('wheel',function(e){e.preventDefault();var r=cv.getBoundingClientRect(); zoomAt(e.deltaY<0?1.1:0.9, e.clientX-r.left, e.clientY-r.top);},{passive:false});
+  // ===== Táctil (nov-2026) =====
+  // El lienzo solo entendía al ratón. En vez de reescribir sus 300 líneas de arrastre, el dedo
+  // se TRADUCE a los mismos eventos de ratón, así todo lo que ya funciona (mover, escalar,
+  // rotar, marco, figuras, pluma, nodos, guías) funciona igual con el dedo:
+  //   un dedo            = botón izquierdo (mousedown / mousemove / mouseup)
+  //   dos dedos          = acercar/alejar (pellizco) y desplazar la vista
+  //   pulsación larga    = clic derecho (menú contextual)
+  //   doble toque        = doble clic (entrar a un grupo, agregar un nodo)
+  // ⚠️ `preventDefault()` en touchstart es lo que evita que el navegador mande ADEMÁS sus
+  // eventos de ratón de compatibilidad (llegarían dobles). `TOQ` agranda las zonas de acierto
+  // de manijas, nodos y trazos mientras se usa el dedo, y vuelve a 1 con un clic de ratón real.
+  (function(){
+    var st=null, pin=null, ultimo={t:0,x:0,y:0};
+    function raton(tipo,x,y,donde){ (donde||window).dispatchEvent(new MouseEvent(tipo,{clientX:x,clientY:y,button:0,buttons:tipo==='mouseup'?0:1,bubbles:true,cancelable:true,view:window})); }
+    function dos(e){ var a=e.touches[0], b=e.touches[1];
+      return {d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY), cx:(a.clientX+b.clientX)/2, cy:(a.clientY+b.clientY)/2}; }
+    cv.addEventListener('touchstart',function(e){ e.preventDefault(); TOQ=2.6;
+      if(e.touches.length===1){ var t=e.touches[0];
+        st={x0:t.clientX,y0:t.clientY,x:t.clientX,y:t.clientY,movido:false,largo:false};
+        raton('mousedown',st.x,st.y,cv);
+        st.reloj=setTimeout(function(){ if(!st||st.movido) return; st.largo=true;
+          raton('mouseup',st.x,st.y);
+          cv.dispatchEvent(new MouseEvent('contextmenu',{clientX:st.x,clientY:st.y,button:2,bubbles:true,cancelable:true,view:window}));
+          try{ if(navigator.vibrate) navigator.vibrate(12); }catch(x){} },550);
+      } else if(e.touches.length===2){
+        // llegó el segundo dedo: lo que el primero estuviera arrastrando se deshace y se suelta
+        if(st){ clearTimeout(st.reloj); if(!st.largo){ raton('mousemove',st.x0,st.y0); raton('mouseup',st.x0,st.y0); } st=null; }
+        pin=dos(e);
+      } },{passive:false});
+    cv.addEventListener('touchmove',function(e){ e.preventDefault();
+      if(pin&&e.touches.length>=2){ var n=dos(e), r=cv.getBoundingClientRect();
+        view.ox+=n.cx-pin.cx; view.oy+=n.cy-pin.cy; userZoomed=true;
+        if(pin.d>0&&n.d>0) zoomAt(n.d/pin.d, n.cx-r.left, n.cy-r.top); else draw();
+        pin=n; return; }
+      if(st&&!st.largo&&e.touches.length===1){ var t=e.touches[0]; st.x=t.clientX; st.y=t.clientY;
+        if(!st.movido&&Math.hypot(st.x-st.x0,st.y-st.y0)>8){ st.movido=true; clearTimeout(st.reloj); }
+        if(st.movido) raton('mousemove',st.x,st.y); } },{passive:false});
+    function fin(e){ e.preventDefault();
+      if(pin){ if(e.touches.length<2) pin=null; return; }      // el dedo que queda no empieza un arrastre
+      if(!st) return; clearTimeout(st.reloj); var s0=st; st=null;
+      if(s0.largo) return;
+      raton('mouseup',s0.x,s0.y);
+      if(s0.movido) return;
+      var ahora=Date.now();
+      if(ahora-ultimo.t<320&&Math.hypot(s0.x-ultimo.x,s0.y-ultimo.y)<28){ ultimo.t=0;
+        cv.dispatchEvent(new MouseEvent('dblclick',{clientX:s0.x,clientY:s0.y,bubbles:true,cancelable:true,view:window})); }
+      else ultimo={t:ahora,x:s0.x,y:s0.y}; }
+    cv.addEventListener('touchend',fin,{passive:false});
+    cv.addEventListener('touchcancel',fin,{passive:false});
+    cv.addEventListener('mousedown',function(e){ if(e.isTrusted) TOQ=1; },true);
+  })();
   cv.style.cursor='default';
 
   // ===== Teclado =====
@@ -2929,7 +3003,7 @@ var PlotterMotor = (function(){
   }
   function nodeHitAnchor(sx,sy){
     for(var k=0;k<nedit.nodes.length;k++){ var s=tp(nedit.nodes[k].p[0],nedit.nodes[k].p[1]);
-      if(Math.abs(sx-s[0])<=6&&Math.abs(sy-s[1])<=6) return k; }
+      if(Math.abs(sx-s[0])<=6*TOQ&&Math.abs(sy-s[1])<=6*TOQ) return k; }
     return -1;
   }
   function nodeHitHandle(sx,sy){
@@ -2937,7 +3011,7 @@ var PlotterMotor = (function(){
     nedit.sel.forEach(function(k){ var nd=nedit.nodes[k];
       ['hin','hout'].forEach(function(w){ if(hzero(nd,w)) return;
         var s=tp(nd[w][0],nd[w][1]);
-        if(Math.hypot(sx-s[0],sy-s[1])<=6) out={k:k,w:w}; }); });
+        if(Math.hypot(sx-s[0],sy-s[1])<=6*TOQ) out={k:k,w:w}; }); });
     return out;
   }
   function nodeDeleteSel(){
@@ -3618,6 +3692,10 @@ var PlotterMotor = (function(){
     document.querySelectorAll('.field').forEach(function(f,i){ var l=f.querySelector('label'), inp=f.querySelector('input,select');
       if(!l||!inp||l.contains(inp)) return; if(!inp.id) inp.id='campo'+i; l.setAttribute('for',inp.id);
       if(!inp.getAttribute('aria-label')) inp.setAttribute('aria-label',(f.title||l.textContent).split(' — ')[0].trim()); }); });
+
+  // Cajón de propiedades en pantallas angostas (≤820 px): se abre con su botón y se cierra al tocar el lienzo.
+  el('btnInsp').addEventListener('click',function(){ document.querySelector('.app').classList.toggle('insp'); });
+  cv.addEventListener('mousedown',function(){ document.querySelector('.app').classList.remove('insp'); },true);
 
   // ===== Menú de cuenta (riel, abajo): antes "Cerrar sesión" vivía escondido tras el n.º de versión =====
   function armarCuenta(r){ var b=el('toolCuenta'), m=el('cuentaMenu'); b.style.display='';
@@ -5006,7 +5084,7 @@ var PlotterMotor = (function(){
     // (OrbitControls de three r128 no trae `zoomToCursor`; por eso se hace a mano y
     // su zoom propio va desactivado — si lo reactivas, se aplicaría dos veces.)
     var r=S3.res; if(!r) return;
-    var f=ev.deltaY<0 ? 1/1.1 : 1.1;          // <1 acerca (mismo paso que el lienzo 2D)
+    var f=ev.factor || (ev.deltaY<0 ? 1/1.1 : 1.1);   // <1 acerca (mismo paso que el lienzo 2D); `factor` = pellizco
     var p=simAnchor(ev), cam=S3.camera, tgt=S3.controls.target;
     var span=Math.hypot(r.sheetW||r.w, r.sheetH||r.h)+r.thick;
     var np=p.clone().add(cam.position.clone().sub(p).multiplyScalar(f));
@@ -5197,6 +5275,15 @@ var PlotterMotor = (function(){
     S3.controls.mouseButtons={LEFT:THREE.MOUSE.ROTATE, MIDDLE:THREE.MOUSE.PAN, RIGHT:THREE.MOUSE.PAN};
     S3.renderer.domElement.addEventListener('wheel',function(ev){
       ev.preventDefault(); simZoomAt(ev); },{passive:false});
+    // Pellizco con dos dedos: el zoom de OrbitControls va apagado (ver arriba), así que con
+    // el dedo no había forma de acercarse. Se usa el MISMO zoom hacia el punto que la rueda.
+    (function(dom){ var d0=0;
+      function dist(t){ return Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY); }
+      dom.addEventListener('touchstart',function(ev){ if(ev.touches.length===2) d0=dist(ev.touches); },{passive:true});
+      dom.addEventListener('touchmove',function(ev){ if(ev.touches.length!==2||!d0) return; var d=dist(ev.touches);
+        if(d>0&&Math.abs(d-d0)>2){ simZoomAt({factor:d0/d, clientX:(ev.touches[0].clientX+ev.touches[1].clientX)/2, clientY:(ev.touches[0].clientY+ev.touches[1].clientY)/2}); d0=d; } },{passive:true});
+      dom.addEventListener('touchend',function(ev){ if(ev.touches.length<2) d0=0; },{passive:true});
+    })(S3.renderer.domElement);
     var hemi=new THREE.HemisphereLight(0xffffff,0x8a8f99,0.8); hemi.position.set(0,0,1); S3.scene.add(hemi);
     var d1=new THREE.DirectionalLight(0xffffff,0.6); d1.position.set(-0.6,-1,1.4); S3.scene.add(d1);
     var d2=new THREE.DirectionalLight(0xffffff,0.25); d2.position.set(1,0.6,0.8); S3.scene.add(d2);
@@ -5389,7 +5476,16 @@ var PlotterMotor = (function(){
         if(r&&r.ok) toast('Imagen guardada: '+r.path);
         else if(r&&r.error&&!r.cancelled) toast(r.error); }).catch(function(e){toast('Error: '+e);}); }
     else { var a=document.createElement('a'); a.href=url; a.download=nm; a.click(); } });
-  el('btnSim3d').addEventListener('click',openSim);
+  // El motor 3D (630 KB) se baja SOLO al abrir la vista 3D: antes iba en cada carga de la
+  // página, aunque solo lo usa el CNC — casi 1 MB antes de poder tocar nada con datos móviles.
+  var cargando3d=false;
+  el('btnSim3d').addEventListener('click',function(){
+    if(window.THREE){ openSim(); return; }
+    if(cargando3d) return; cargando3d=true; toast('Cargando la vista 3D…');
+    var sc=document.createElement('script'); sc.src='three.bundle.js';
+    sc.onload=function(){ cargando3d=false; openSim(); };
+    sc.onerror=function(){ cargando3d=false; toast('No se pudo cargar la vista 3D: sin conexión con el servidor.','err'); };
+    document.head.appendChild(sc); });
   el('simClose').addEventListener('click',closeSim);
   el('simModal').addEventListener('click',function(e){ if(e.target===el('simModal')) closeSim(); });
 
