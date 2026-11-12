@@ -260,7 +260,9 @@ NO se deducen del código:
   la lógica y los de Revisar los pulsan. Al abrir un corte para editarlo, su recorrido se enciende
   solo (hace falta para poner puentes a mano). **El botón dice lo que hace**: en Cortes "Revisar",
   en Revisar "Guardar G-code" — no "Revisar y guardar" para un paso que solo revisa.
-- **Revisar es el único camino para guardar** (`abrirRev()` → `guardarRev()`). Vuelve a pedir los
+- **Revisar es el único camino para guardar** (`abrirRev()` → `guardarRev()` → `bajarRev()`). Antes
+  de bajar el archivo se ofrece **cambiarle el nombre** (uno por fresa si son varios; `nombreTap()`
+  lo limpia de lo que un sistema de archivos no acepta, y vacío = el propuesto). Vuelve a pedir los
   avisos al entrar y **`revDatos` se anula al empezar cada revisión**: nunca se guarda con el
   resumen de una anterior. Hace dos cosas que antes no existían: **un archivo por fresa**
   (`gruposPorFresa()`; el RichAuto no cambia de herramienta solo) y el **aviso de orden**

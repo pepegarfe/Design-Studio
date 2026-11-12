@@ -5036,7 +5036,7 @@ var PlotterMotor = (function(){
       ctx.fillStyle='#fff'; ctx.font='700 10px '+(getComputedStyle(document.body).fontFamily||'sans-serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
   { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
-      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar recorrido':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
+      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido';   // corto: con el icono, "Ocultar recorrido" se partía en dos renglones if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
     el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
@@ -5148,8 +5148,21 @@ var PlotterMotor = (function(){
     if(b.getAttribute('data-ord')){ ordenarCortes(); abrirRev(); return; }
     var i=parseInt(b.getAttribute('data-fix'),10); if(!(i>=0)||!tpaths[i]) return;
     tpSel=i; loadEditor(tpaths[i]); paintTps(); abrirForm(); });
+  // Antes de guardar se ofrece cambiar el NOMBRE del archivo (uno por fresa si son varios). El
+  // nombre se limpia de lo que un sistema de archivos no acepta; vacío = el que se proponía.
+  function nombreTap(v,defecto){ v=String(v||'').replace(/\.tap$/i,'').replace(/[\\\/:*?"<>|\x00-\x1f]+/g,' ').replace(/\s+/g,' ').trim().slice(0,80);
+    return (v||String(defecto).replace(/\.tap$/i,''))+'.tap'; }
   function guardarRev(){ if(!state.cnc) return;
     if(!revDatos||!revDatos.grupos.length){ toast('Todavía estoy revisando los cortes… un momento'); return; }
+    var G=revDatos.grupos, varios=G.length>1;
+    var h='<div style="color:var(--muted);font-size:12.5px;margin-bottom:2px">'+(varios?'Se guardan '+G.length+' archivos, uno por fresa. Puedes cambiarles el nombre:':'Puedes cambiarle el nombre antes de guardarlo:')+'</div>';
+    G.forEach(function(g,k){ h+='<div class="field" style="margin-top:8px"><label>'+(varios?('Archivo '+(k+1)):'Nombre')+'</label><input id="tapNom'+k+'" value="'+hesc(g.archivo.replace(/\.tap$/i,'')).replace(/"/g,'&quot;')+'" style="text-align:left" autocomplete="off" spellcheck="false"><span class="u">.tap</span></div>'; });
+    askConfirm('Guardar G-code', h, function(ok){ if(!ok) return;
+      G.forEach(function(g,k){ var i=el('tapNom'+k); g.archivo=nombreTap(i?i.value:'', g.archivo); });
+      bajarRev(); }, {yes:(varios?'Guardar los '+G.length+' archivos':'Guardar'), ancho:420});
+    var i0=el('tapNom0'); if(i0){ i0.focus(); i0.select(); } }
+  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^tapNom/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
+  function bajarRev(){ if(!revDatos||!state.cnc) return;
     var gs=revDatos.grupos.slice(), hechos=0, lineas=0; el('revSave').disabled=true;
     (function sig(){ var g=gs.shift();
       if(!g){ el('revSave').disabled=false; toast('G-code guardado: '+hechos+(hechos===1?' archivo':' archivos')+' · '+lineas+' líneas'); return; }
