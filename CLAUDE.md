@@ -92,6 +92,19 @@ NO se deducen del código:
   Una cadena es un trayecto **ABIERTO**: entra con `_open_pass` (no `_ring_pass`, que da la
   vuelta con `s % perim`) y **entre pasadas de profundidad DEBE subir y volver al inicio por
   el aire** — sin eso cortaría en línea recta del extremo lejano al principio.
+- ⚠️ **CNC, cajeado (12-nov-2026):** tres cosas sobre los anillos de siempre.
+  (1) **Pasada de acabado en la pared** (`make_pocket(last_pass=…)`, mismo campo que la "última
+  pasada separada" del perfil): el vaciado deja esa cáscara y al final va un anillo a la medida,
+  en UNA pasada a profundidad completa (sale como `(anillo, True)`, igual que en perfiles). Sin
+  ella la pared se corta en cada nivel y quedan las líneas de las pasadas.
+  (2) **El primer anillo de cada cadena va a `_SLOT_FEED` (60 %) del avance**: ahí la fresa abre
+  camino a todo su ancho. La cadena sale como `(puntos, False, mm_a_ranura)` y lo lee `_rslot()`;
+  ⚠️ `_rot_to_nearest` debe conservar TODOS los elementos de la tupla, no solo los dos primeros.
+  Con el acabado apagado el RECORRIDO es idéntico al de antes; solo cambia esa F (≈2 % del largo).
+  (3) **Paso lateral > 50 % = islas sin cortar** entre anillos: se avisa (`_cnc_warnings`), no se
+  corrige. En la UI un cajeado NUEVO nace con rampa y acabado encendidos (`nuevaTp`).
+  Descartado a propósito: rayado en zigzag (peor pared, mismo recorrido) y desbaste
+  adaptativo/trocoidal (miles de movimientos cortos: justo lo que hace tartamudear al RichAuto).
 - ⚠️ **CNC: `_passes()` reparte la profundidad POR IGUAL**, y `pass_depth` es el **máximo**
   de una pasada, no su altura fija. **No volver a "pasadas llenas + lo que sobre"**: 6 mm con
   pasada de 5 daba `[5, 6]` — una segunda pasada de **1 mm** que a todo el ancho de la fresa
