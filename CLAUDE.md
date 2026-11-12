@@ -210,6 +210,30 @@ NO se deducen del código:
 - **Un interruptor lleva icono Y nombre** (decisión de Jose, 12-nov): el nombre solo en el texto
   emergente no existe con el dedo, y "Nº | mm" no lo entendía nadie.
 
+### Diseño → Corte: la forma de la pantalla (maqueta aprobada por Jose, 12-nov-2026)
+
+- **Las dos máquinas tienen los mismos dos pasos**, `Diseño | Corte` (`#modeSeg`). ⚠️ La variable
+  se sigue llamando **`sideMode` y vale `'design'` o `'cnc'`**: `'cnc'` significa "paso Corte" en
+  CUALQUIER máquina (nombre histórico). `cncStep()` sigue siendo "CNC **y** paso Corte".
+- **La acción que termina el trabajo va SIEMPRE arriba a la derecha**: `#sendGrp` ("Enviar") en
+  plotter, `#btnTapTop` ("Guardar G-code") en CNC. El `#btnSaveTap` del panel sigue en el HTML,
+  **oculto**: no lo borres sin mover su lógica.
+- **Ya no existe la ventana "Plotter"** (`#plotterModal`): cuchilla, conexión, mover el cabezal y
+  "Dónde se corta" viven en `#panePlot`, el paso Corte del plotter. `openPlotter()` ahora **lleva
+  a ese paso** (y abre el cajón en pantallas chicas); no abre nada encima del diseño.
+- **Corte de la CNC: la lista de trayectorias va ARRIBA y el formulario abajo**, con lo que casi
+  nunca cambia dentro de `<details id="masOpc">` ("Más opciones"). Los campos conservan sus `id`:
+  solo cambiaron de sitio. `#masRes` avisa qué hay activo ahí dentro aunque esté plegado — **si
+  metes otra opción en "Más opciones", agrégala a `pintarCorte()`**, o quedará activa sin verse.
+  Prueba que no cambió el corte: el `.tap` de la interfaz nueva salió **idéntico byte a byte** al
+  de la anterior con las mismas opciones (puentes, rampa, última pasada, cajeado).
+- **Menú "Archivo"** (`#btnFile`): Abrir, Importar, Guardar y Exportar. Los cuatro botones de antes
+  siguen en el HTML con `hidden` y el menú los **pulsa** (`.click()`), así su lógica y su estado
+  activo/inactivo no se duplican. Atajos: Cmd/Ctrl+S guarda, Cmd/Ctrl+O abre.
+- **Fila "Organizar"** (Propiedades) y **botón "Imagen"** del riel (calcar / referencia): llaman a
+  las MISMAS funciones que el menú de clic derecho. Una acción nueva de ese menú merece su botón:
+  con el dedo, el clic derecho es una pulsación larga que nadie adivina.
+
 ## Aspecto visual — sistema de diseño (tokens)
 
 Desde jul-2026 la UI tiene **un sistema de diseño centralizado** al inicio del archivo. **No

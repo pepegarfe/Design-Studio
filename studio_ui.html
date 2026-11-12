@@ -53,6 +53,7 @@
   .tbtn:hover{background:var(--hover);color:var(--ink);}
   .tbtn:disabled{opacity:.4;cursor:default;}
   .tbtn svg{width:15px;height:15px;}
+  .tbtn[hidden]{display:none;}
   .conn{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 30%,transparent);color:var(--bad);font-size:12.5px;font-weight:600;font-family:var(--mono);}
   .conn .dot{width:7px;height:7px;border-radius:50%;background:var(--bad);}
   .cta{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:8px;background:linear-gradient(180deg,var(--accent-btn),var(--accent-btn-dim));border:0;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 12px -3px var(--accent-dim);}
@@ -332,6 +333,14 @@
   .jogpad button:hover{border-color:var(--accent);}
   .jogpad [data-dir="up"]{grid-area:1/2;} .jogpad [data-dir="left"]{grid-area:2/1;} .jogpad #penToggle{grid-area:2/2;} .jogpad [data-dir="right"]{grid-area:2/3;} .jogpad [data-dir="down"]{grid-area:3/2;}
   .lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;} .lnk:hover{text-decoration:underline;}
+  #panePlot{padding:0;} #panePlot .grp-t{margin-bottom:10px;}
+  #panePlot select{height:32px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;flex:1;}
+  .cutsum{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;font-size:12.5px;color:var(--ink);}
+  .cutsum span{min-width:0;}
+  details.mas{margin-top:10px;border-top:1px solid var(--line);padding-top:9px;}
+  details.mas summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted);user-select:none;}
+  details.mas summary:hover{color:var(--ink);}
+  details.mas summary span{font-weight:500;color:var(--faint);margin-left:8px;font-size:11.5px;}
   .cstat{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;} .cstat.ok{color:var(--good);}
   .sendbar{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;width:340px;box-shadow:0 14px 34px -8px #000b;z-index:41;display:none;}
   .sendbar .pb{height:6px;border-radius:3px;background:var(--input);margin:9px 0;overflow:hidden;} .sendbar .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s;}
@@ -361,8 +370,12 @@
     .app.insp .inspect{transform:none;}
     #btnInsp{display:inline-flex;}
     .top{overflow-x:auto;scrollbar-width:none;}
-    .sendgrp{position:sticky;right:0;}
+    .sendgrp,#btnTapTop{position:sticky;right:0;flex:none;}
     .statbtn .lbl{display:none;} .status{font-size:11px;gap:10px;}
+  }
+  @media (max-width:520px){
+    #sendLbl{font-size:0;} #sendLbl::after{content:'Enviar';font-size:13px;}
+    #btnTapTop span{font-size:0;} #btnTapTop span::after{content:'G-code';font-size:13px;}
   }
   /* Foco de teclado visible (Tab). Los campos ya lo marcan con su borde. */
   button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -380,18 +393,22 @@
       <button class="on" data-m="plotter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>Plotter</button>
       <button data-m="cnc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v7"/><path d="m9 10 3 4 3-4z" fill="currentColor" stroke="none"/><rect x="4" y="17" width="16" height="3" rx="1"/><path d="M7 17v-2M17 17v-2"/></svg>CNC</button>
     </div>
-    <span class="spacer"></span>
+    <button class="tbtn" id="btnFile" title="Archivo: abrir, importar, guardar y exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>Archivo<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-left:-2px"><path d="m6 9 6 6 6-6"/></svg></button>
     <button class="icobtn" id="btnUndo" title="Deshacer (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
     <button class="icobtn" id="btnRedo" title="Rehacer (Ctrl+Shift+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
-    <button class="tbtn" id="btnOpen" title="Abrir un diseño (SVG/DXF/AI) o un proyecto (.dstudio)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir</button>
-    <button class="tbtn" id="btnImport" title="Importar otro diseño (SVG/DXF/AI o .dstudio) SUMÁNDOLO a la mesa — no quita lo que ya está"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6m-3-3h6"/></svg>Importar</button>
-    <button class="tbtn" id="btnSaveProject" disabled title="Guardar tu proyecto (.dstudio) para reabrirlo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Guardar</button>
-    <button class="tbtn" id="btnExport" disabled title="Exportar como… — imagen (PNG/JPG), PDF o vector (SVG/DXF) para mandar al cliente o a otro programa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span>Exportar…</span></button>
+    <span class="spacer"></span>
+    <!-- Los cuatro botones de archivo siguen existiendo (ocultos): el menú "Archivo" los pulsa, así
+         su lógica y su estado activo/inactivo no se duplican. -->
+    <button class="tbtn" hidden id="btnOpen" title="Abrir un diseño (SVG/DXF/AI) o un proyecto (.dstudio)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir</button>
+    <button class="tbtn" hidden id="btnImport" title="Importar otro diseño (SVG/DXF/AI o .dstudio) SUMÁNDOLO a la mesa — no quita lo que ya está"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6m-3-3h6"/></svg>Importar</button>
+    <button class="tbtn" hidden id="btnSaveProject" disabled title="Guardar tu proyecto (.dstudio) para reabrirlo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Guardar</button>
+    <button class="tbtn" hidden id="btnExport" disabled title="Exportar como… — imagen (PNG/JPG), PDF o vector (SVG/DXF) para mandar al cliente o a otro programa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg><span>Exportar…</span></button>
     <button class="icobtn" id="btnInsp" title="Mostrar u ocultar el panel de propiedades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
     <div class="sendgrp" id="sendGrp">
       <button class="cta" id="btnSendTop" disabled><span class="sdot" id="sendDot"></span><span id="sendLbl">Enviar Directo</span></button>
       <button class="cta" id="btnSendMenu" title="Elegir a dónde se envía el corte · ajustes del plotter"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
+    <button class="cta" id="btnTapTop" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span>Guardar G-code</span></button>
   </header>
 
   <nav class="rail">
@@ -413,7 +430,7 @@
     <div class="tool" id="toolText" title="Texto (T) — escribir con las fuentes del sistema"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg></div>
     <div class="tool" id="toolScis" title="Tijeras (C) — corta un trazado por donde des clic (cerrado se abre; abierto queda en dos)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.2 7.6 20 16M8.2 16.4 20 8M12 12h.01"/></svg></div>
     <div class="tool" id="toolNest" title="Acomodar en la hoja (nesting): acomoda las piezas solo para desperdiciar menos material"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2" opacity=".45"/><rect x="6" y="6" width="5" height="8" rx="1"/><rect x="13.5" y="6" width="4.5" height="5" rx="1"/><rect x="6" y="16" width="7" height="2.5" rx="1"/><rect x="13.5" y="13.5" width="4.5" height="5" rx="1"/></svg></div>
-    <div class="tool" id="toolRef" title="Imagen de referencia — foto de fondo, tenue y bloqueada, para dibujar encima (clic de nuevo la quita)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" stroke-dasharray="3 2.2"/><circle cx="9" cy="10" r="1.5"/><path d="m21 17-5-5-9 7"/></svg></div>
+    <div class="tool" id="toolRef" title="Imagen — calcar una foto o un logo en trazos de corte, o ponerla de fondo como referencia para dibujar encima"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" stroke-dasharray="3 2.2"/><circle cx="9" cy="10" r="1.5"/><path d="m21 17-5-5-9 7"/></svg></div>
     <div class="grow"></div>
     <div class="tool" id="toolCuenta" title="Tu cuenta: cerrar sesión, cambiar contraseña, estación de corte" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
     <div class="tool" id="tgl" title="Cambiar tema claro/oscuro"></div>
@@ -445,15 +462,16 @@
   </main>
 
   <aside class="inspect">
-    <div class="modebar" id="modeBar" style="display:none">
+    <div class="modebar" id="modeBar">
       <div class="seg" id="modeSeg" style="margin:10px 14px 0">
         <button class="on" data-sm="design" title="Paso 1 — preparar el diseño (propiedades y capas)">Diseño</button>
-        <button data-sm="cnc" title="Paso 2 — generar las trayectorias (configuración y corte)">CNC</button>
+        <button data-sm="cnc" title="Paso 2 — preparar el corte: en plotter, cuchilla y envío; en CNC, material, fresa y trayectorias">Corte</button>
       </div>
     </div>
-    <div class="tabs">
+    <div class="tabs" id="tabsBar">
       <button class="tab on" id="tabTransform"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20" stroke-linecap="round"/></svg>Propiedades</button>
       <button class="tab" id="tabLayers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg>Capas<span class="tabcount" id="layersCount"></span></button>
+      <button class="tab" id="tabPlot" style="display:none">Corte</button>
       <button class="tab" id="tabCncCfg" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h8M16 7h4M4 12h2M10 12h10M4 17h8M16 17h4"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="14" cy="17" r="2"/></svg>Configuración</button>
       <button class="tab" id="tabCncCut" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v7"/><path d="m9 10 3 4 3-4z" fill="currentColor" stroke="none"/><rect x="4" y="17" width="16" height="3" rx="1"/><path d="M7 17v-2M17 17v-2"/></svg>Corte</button>
     </div>
@@ -502,6 +520,23 @@
         <button class="abtn" id="disV" disabled title="Distribuir vertical"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="3" width="16" height="2"/><rect x="4" y="19" width="16" height="2"/><rect x="7" y="11" width="10" height="2"/></svg></button>
       </div>
 
+      <div class="grp-t sec">Organizar</div>
+      <div class="alignrow">
+        <button class="abtn" id="orgGroup" disabled title="Agrupar (Cmd+G): las figuras elegidas se mueven juntas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 3"/><rect x="7" y="7" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/></svg></button>
+        <button class="abtn" id="orgUngroup" disabled title="Desagrupar (Cmd+Shift+G): cada figura vuelve a moverse sola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/><path d="M14 6h4M6 14v4"/></svg></button>
+        <span class="asep"></span>
+        <button class="abtn" id="orgFlipH" disabled title="Voltear horizontal (espejo izquierda-derecha)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2 3"/><path d="M9 7 4 17h5zM15 7l5 10h-5z"/></svg></button>
+        <button class="abtn" id="orgFlipV" disabled title="Voltear vertical (espejo arriba-abajo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18" stroke-dasharray="2 3"/><path d="M7 9 17 4v5zM7 15l10 5v-5z"/></svg></button>
+        <button class="abtn" id="orgRot" disabled title="Rotar 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg></button>
+      </div>
+      <div class="alignrow">
+        <button class="abtn" id="orgFront" disabled title="Traer al frente: queda encima de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" fill="currentColor" fill-opacity=".3"/></svg></button>
+        <button class="abtn" id="orgBack" disabled title="Enviar atrás: queda debajo de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="1.5"/><path d="M15 9h3.5A1.5 1.5 0 0 1 20 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 9 18.5V15" fill="currentColor" fill-opacity=".3"/></svg></button>
+        <span class="asep"></span>
+        <button class="abtn" id="orgCenter" disabled title="Centrar en la hoja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><rect x="9" y="9" width="6" height="6" fill="currentColor" fill-opacity=".3"/></svg></button>
+        <button class="abtn" id="orgCopies" disabled title="Copias… en rejilla o en círculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg></button>
+        <button class="abtn" id="orgLock" disabled title="Bloquear: no se mueve ni se selecciona por accidente (se desbloquea con clic derecho en el lienzo o desde Capas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+      </div>
       <div class="grp-t sec">Combinar</div>
       <div class="alignrow">
         <button class="abtn" id="boolU" disabled title="Unir (soldar): las figuras seleccionadas se funden en una sola"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 9.5A1.5 1.5 0 0 1 5.5 8H10V5.5A1.5 1.5 0 0 1 11.5 4h7A1.5 1.5 0 0 1 20 5.5v7a1.5 1.5 0 0 1-1.5 1.5H14v4.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 18.5z"/></svg></button>
@@ -529,6 +564,52 @@
       <div class="muted-note" id="layerEmpty">Aún no hay trazados.</div>
     </div>
 
+    <!-- Paso CORTE del plotter (12-nov-2026): lo que antes era la ventana "Plotter", ahora en el
+         panel — no tapa el diseño y queda en el mismo sitio que el Corte de la CNC. -->
+    <div class="pane" id="panePlot" style="display:none">
+    <div class="grp" id="plotterCutGrp">
+      <div class="grp-t">Cuchilla</div>
+      <div class="mrow"><div class="field" style="flex:1" title="Velocidad del cabezal al cortar"><label>Velocidad</label><input id="cutSpeed" value="320"><span class="u">mm/s</span></div>
+        <div class="field" style="flex:1" title="Fuerza de la cuchilla sobre el material"><label>Presión</label><input id="cutPressure" value="140"><span class="u">g</span></div></div>
+      <div class="mrow"><div class="field" style="flex:1" title="Sobrecorte: cuánto sigue la cuchilla después de cerrar una figura, para que la esquina quede bien cortada"><label>Sobrecorte</label><input id="cutOvercut" value="1.0"><span class="u">mm</span></div>
+        <div class="field" style="flex:1" title="Ángulo a partir del cual la cuchilla levanta y gira en una esquina (0 = no lo hace)"><label>Esquinas</label><input id="cutCorner" value="0"><span class="u">°</span></div></div>
+      <div class="cstat" id="cutNote">Se usan en cada corte y se recuerdan para la próxima vez.</div>
+    </div>
+    <div class="grp" id="destGrp" style="display:none">
+      <div class="grp-t">Dónde se corta</div>
+      <div class="seg" id="destSeg" style="margin-top:0">
+        <button data-dest="directo" title="Cortar en el plotter conectado a ESTE equipo">Aquí, directo</button>
+        <button data-dest="remoto" title="Mandar el corte a la fila de la estación del taller">En la estación</button>
+      </div>
+      <div class="cstat" id="destStat" style="margin-top:8px"></div>
+      <div class="mrow" style="margin:6px 0 0"><button class="lnk" id="destFila">Ver la fila de la estación</button></div>
+    </div>
+    <div class="grp">
+      <div class="grp-t">Plotter</div>
+      <!-- Solo en el navegador (Web Serial): un botón y lo técnico escondido. El escritorio no lo ve. -->
+      <div id="wsConn" style="display:none">
+        <div class="mrow"><button class="pbtn" id="btnWsConnect" style="flex:1">Conectar plotter</button></div>
+        <div class="cstat" id="wsHint">La primera vez Chrome te pregunta qué cable usar. Después se conecta solo al abrir la página o al enchufar el plotter.</div>
+        <div class="mrow" style="margin-top:6px"><button class="lnk" id="wsAll">Mostrar todos los cables</button><span style="color:var(--muted)">·</span><button class="lnk" id="wsAdvT">Opciones avanzadas</button></div>
+      </div>
+      <div id="connAdv">
+      <div class="mrow"><select id="portSel"><option value="">— sin puertos —</option></select><button class="pbtn" id="portRefresh" title="Actualizar puertos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.34 6.34"/><path d="M20 5v6h-6"/></svg></button></div>
+      <div class="mrow"><select id="baudSel" style="flex:1"><option>9600</option><option>19200</option><option>38400</option><option>115200</option><option>4800</option><option>2400</option><option>1200</option></select><button class="pbtn" id="btnConnect">Conectar</button></div>
+      </div>
+      <div class="cstat" id="connStat">Desconectado</div>
+    </div>
+    <div class="grp">
+      <div class="grp-t">Mover el cabezal y probar</div>
+      <div class="mrow" style="justify-content:center;font-size:12px;color:var(--muted)">Paso&nbsp;<select id="jogStep" style="flex:0 0 66px"><option>1</option><option selected>10</option><option>50</option><option>0.5</option><option>100</option></select>&nbsp;mm</div>
+      <div class="jogpad">
+        <button class="jog-a" data-dir="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg></button>
+        <button data-dir="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></button><button id="penToggle" title="Pluma arriba/abajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6-10.5 10.5H4V15z"/></svg></button><button data-dir="right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
+        <button class="jog-c" data-dir="down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg></button>
+      </div>
+      <div class="mrow"><button class="pbtn" id="btnOrigin" style="flex:1">Fijar origen</button><button class="pbtn" id="btnHome" style="flex:1">Ir a (0,0)</button></div>
+      <div class="mrow"><button class="pbtn" id="btnTestCut" style="flex:1">Test de corte · 10 × 10 mm</button></div>
+    </div>
+    </div>
     <div class="pane" id="paneCncCfg" style="display:none">
       <div class="grp-t sec">Material</div>
       <div class="grid2">
@@ -550,7 +631,19 @@
     </div>
 
     <div class="pane" id="paneCncCut" style="display:none">
-      <div class="grp-t sec">Operación<span class="opname" id="opName" style="display:none">Perfil</span></div>
+      <!-- Orden (12-nov-2026): primero el resumen y la LISTA de trayectorias (la base, como en Aspire),
+           luego el formulario de UNA trayectoria con lo de cada corte a la vista y lo que casi nunca
+           cambia en "Más opciones". Antes eran ~25 controles antes del botón Calcular. -->
+      <div class="cutsum"><span id="cutSum">—</span><button class="lnk" id="cutSumGo">Cambiar…</button></div>
+      <div class="grp-t sec" style="margin-top:14px">Trayectorias<span class="opname" id="tpCount"></span></div>
+      <div class="tplist" id="tpList"></div>
+      <div class="muted-note" id="tpEmpty">Selecciona objetos (o nada = todo), configura abajo y pulsa <b>Calcular</b>. Arrastra las filas para cambiar el orden de corte.</div>
+      <div id="tpWarn" style="display:none;margin:8px 0 2px;padding:8px 10px;border:1px solid var(--bad);border-radius:8px;color:var(--ink);font-size:12.5px;line-height:1.45;user-select:text"></div>
+      <div class="rowbtns">
+        <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver recorrido</span></button>
+        <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
+      </div>
+      <div class="grp-t sec"><span id="formTit">Nueva trayectoria</span><span class="opname" id="opName" style="display:none">Perfil</span></div>
       <div class="seg" id="opSeg" style="margin-top:0">
         <button class="on" data-o="profile" title="Perfil — cortar siguiendo el contorno (con compensación de la fresa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="2.6 2.2" opacity=".65"/></svg>Perfil</button>
         <button data-o="pocket" title="Cajeado — vaciar el interior de las formas cerradas con anillos concéntricos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.2" opacity=".65"/><rect x="10.5" y="10.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".8"/></svg>Cajeado</button>
@@ -576,19 +669,16 @@
             <div class="field" title="Alto del puente medido desde el fondo del corte (la fresa sube y baja en rampa)"><label>Al.</label><input id="tabH" value="3"><span class="u">mm</span></div>
           </div>
         </div>
-        <label class="chk" style="margin-top:10px" title="El desbaste corta dejando una cáscara y una PASADA FINAL a profundidad completa la quita a medida exacta — borde limpio, sin marcas. Al activarla se encienden solas la entrada en rampa (obligada: esa pasada va a fondo de una vez) e Invertir dir.; puedes apagarlas."><input type="checkbox" id="lastOn"> Última pasada separada</label>
-        <div id="lastFields" style="display:none;margin-top:8px" class="grid2">
-          <div class="field" title="Cáscara que deja el desbaste y quita la pasada final (0.2–0.5 mm típico)"><label>Deja</label><input id="lastAllow" value="0.5"><span class="u">mm</span></div>
-          <label class="chk" style="height:32px;margin:0" title="La pasada final recorre el contorno en dirección CONTRARIA — corta las fibras paradas y minimiza marcas de la fresa"><input type="checkbox" id="lastRev"> Invertir dir.</label>
-        </div>
       </div>
       <div class="muted-note" id="opNote" style="display:none;margin-top:9px"></div>
       <div class="grid2" style="margin-top:9px">
-        <div class="field" title="Empezar a cortar desde esta profundidad (0 = superficie). Útil si otra trayectoria ya rebajó la zona."><label>P. inicial</label><input id="startDepth" value="0"><span class="u">mm</span></div>
         <div class="field" title="Profundidad de corte DESDE la inicial (se llena sola con el grosor del material)"><label>Prof.</label><input id="cutDepth"><span class="u">mm</span></div>
-      </div>
-      <div class="grid2" style="margin-top:8px">
         <div class="field" title="Se calcula sola (profundidad ÷ pasada de la fresa). Edítala para forzar N pasadas parejas — p.ej. 18mm en 3 pasadas = 6mm cada una"><label>Pasadas</label><input id="passInfo"></div>
+      </div>
+      <details class="mas" id="masOpc">
+        <summary>Más opciones<span id="masRes"></span></summary>
+      <div class="grid2" style="margin-top:8px">
+        <div class="field" title="Empezar a cortar desde esta profundidad (0 = superficie). Útil si otra trayectoria ya rebajó la zona."><label>P. inicial</label><input id="startDepth" value="0"><span class="u">mm</span></div>
         <div class="field" id="allowWrap" title="Holgura: positiva DEJA material (para pasada de acabado), negativa sobrecorta"><label>Holgura</label><input id="allowOff" value="0"><span class="u">mm</span></div>
       </div>
       <div class="seg" id="dirSeg" style="margin-top:8px" title="Sentido del corte respecto al giro de la fresa">
@@ -611,19 +701,18 @@
           </div>
         </div>
       </div>
-      <div class="field" style="margin-top:9px" title="Nombre de la trayectoria (aparece en la lista y como marca dentro del archivo)"><label>Nombre</label><input id="tpName" style="text-align:left" placeholder="(automático)"></div>
-      <button class="pbtn acc" id="btnCalc" style="width:100%;margin-top:10px;height:36px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.09V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 6 19.4l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Calcular trayectoria</button>
-      <div class="grp-t sec">Trayectorias<span class="opname" id="tpCount"></span></div>
-      <div class="tplist" id="tpList"></div>
-      <div class="muted-note" id="tpEmpty">Selecciona objetos (o nada = todo), configura arriba y pulsa <b>Calcular</b>. Arrastra las filas para cambiar el orden de corte.</div>
-      <div id="tpWarn" style="display:none;margin:8px 0 2px;padding:8px 10px;border:1px solid var(--bad);border-radius:8px;color:var(--ink);font-size:12.5px;line-height:1.45;user-select:text"></div>
-      <div class="rowbtns">
-        <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver recorrido</span></button>
-        <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
+      <div id="lastWrap">
+        <label class="chk" style="margin-top:10px" title="El desbaste corta dejando una cáscara y una PASADA FINAL a profundidad completa la quita a medida exacta — borde limpio, sin marcas. Al activarla se encienden solas la entrada en rampa (obligada: esa pasada va a fondo de una vez) e Invertir dir.; puedes apagarlas."><input type="checkbox" id="lastOn"> Última pasada separada</label>
+        <div id="lastFields" style="display:none;margin-top:8px" class="grid2">
+          <div class="field" title="Cáscara que deja el desbaste y quita la pasada final (0.2–0.5 mm típico)"><label>Deja</label><input id="lastAllow" value="0.5"><span class="u">mm</span></div>
+          <label class="chk" style="height:32px;margin:0" title="La pasada final recorre el contorno en dirección CONTRARIA — corta las fibras paradas y minimiza marcas de la fresa"><input type="checkbox" id="lastRev"> Invertir dir.</label>
+        </div>
       </div>
-      <button class="pbtn acc" id="btnSaveTap" style="width:100%;margin-top:10px;height:36px;font-weight:700" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 20h16"/></svg>Guardar G-code (.tap)</button>
+      <div class="field" style="margin-top:9px" title="Nombre de la trayectoria (aparece en la lista y como marca dentro del archivo)"><label>Nombre</label><input id="tpName" style="text-align:left" placeholder="(automático)"></div>
+      </details>
+      <button class="pbtn acc" id="btnCalc" style="width:100%;margin-top:10px;height:36px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.09V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 6 19.4l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Calcular trayectoria</button>
+      <button class="pbtn acc" id="btnSaveTap" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 20h16"/></svg>Guardar G-code (.tap)</button>
     </div>
-
   </aside>
 
   <footer class="status">
@@ -635,44 +724,6 @@
 <input type="file" id="fileInput" accept=".svg,.dxf,.ai,.dstudio,.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff" style="display:none">
 <input type="file" id="refInput" accept=".png,.jpg,.jpeg,.bmp,.gif,.webp" style="display:none">
 <input type="file" id="importInput" accept=".svg,.dxf,.ai,.dstudio" style="display:none">
-<div class="modal" id="plotterModal" style="display:none">
-  <div class="sheet">
-    <div class="sheet-h"><h3>Plotter</h3><button id="plotterClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-    <div class="grp" id="plotterCutGrp">
-      <div class="grp-t">Corte</div>
-      <div class="mrow"><div class="field" style="flex:1" title="Velocidad del cabezal al cortar"><label>Velocidad</label><input id="cutSpeed" value="320"><span class="u">mm/s</span></div>
-        <div class="field" style="flex:1" title="Fuerza de la cuchilla sobre el material"><label>Presión</label><input id="cutPressure" value="140"><span class="u">g</span></div></div>
-      <div class="mrow"><div class="field" style="flex:1" title="Sobrecorte: cuánto sigue la cuchilla después de cerrar una figura, para que la esquina quede bien cortada"><label>Sobrecorte</label><input id="cutOvercut" value="1.0"><span class="u">mm</span></div>
-        <div class="field" style="flex:1" title="Ángulo a partir del cual la cuchilla levanta y gira en una esquina (0 = no lo hace)"><label>Esquinas</label><input id="cutCorner" value="0"><span class="u">°</span></div></div>
-      <div class="cstat" id="cutNote">Se usan en cada corte y se recuerdan para la próxima vez.</div>
-    </div>
-    <div class="grp">
-      <div class="grp-t">Conexión</div>
-      <!-- Solo en el navegador (Web Serial): un botón y lo técnico escondido. El escritorio no lo ve. -->
-      <div id="wsConn" style="display:none">
-        <div class="mrow"><button class="pbtn acc" id="btnWsConnect" style="flex:1">Conectar plotter</button></div>
-        <div class="cstat" id="wsHint">La primera vez Chrome te pregunta qué cable usar. Después se conecta solo al abrir la página o al enchufar el plotter.</div>
-        <div class="mrow" style="margin-top:6px"><button class="lnk" id="wsAll">Mostrar todos los cables</button><span style="color:var(--muted)">·</span><button class="lnk" id="wsAdvT">Opciones avanzadas</button></div>
-      </div>
-      <div id="connAdv">
-      <div class="mrow"><select id="portSel"><option value="">— sin puertos —</option></select><button class="pbtn" id="portRefresh" title="Actualizar puertos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.34 6.34"/><path d="M20 5v6h-6"/></svg></button></div>
-      <div class="mrow"><select id="baudSel" style="flex:1"><option>9600</option><option>19200</option><option>38400</option><option>115200</option><option>4800</option><option>2400</option><option>1200</option></select><button class="pbtn acc" id="btnConnect">Conectar</button></div>
-      </div>
-      <div class="cstat" id="connStat">Desconectado</div>
-    </div>
-    <div class="grp">
-      <div class="grp-t">Control manual</div>
-      <div class="mrow" style="justify-content:center;font-size:12px;color:var(--muted)">Paso&nbsp;<select id="jogStep" style="flex:0 0 66px"><option>1</option><option selected>10</option><option>50</option><option>0.5</option><option>100</option></select>&nbsp;mm</div>
-      <div class="jogpad">
-        <button class="jog-a" data-dir="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 6-6 6 6"/></svg></button>
-        <button data-dir="left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></button><button id="penToggle" title="Pluma arriba/abajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6-10.5 10.5H4V15z"/></svg></button><button data-dir="right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg></button>
-        <button class="jog-c" data-dir="down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg></button>
-      </div>
-      <div class="mrow"><button class="pbtn" id="btnOrigin" style="flex:1">Fijar origen</button><button class="pbtn" id="btnHome" style="flex:1">Ir a (0,0)</button></div>
-      <div class="mrow"><button class="pbtn" id="btnTestCut" style="flex:1">Test de corte · 10 × 10 mm</button></div>
-    </div>
-  </div>
-</div>
 <div class="modal" id="waModal" style="display:none">
   <div class="sheet" style="width:322px">
     <div class="sheet-h"><h3>Área de trabajo</h3><button id="waClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
@@ -1184,19 +1235,23 @@ var PlotterMotor = (function(){
     toastT=setTimeout(function(){t.classList.remove('show');},err?12000:2600);}
 
   // ===== Tabs del panel: Propiedades / Capas / CNC (esta última solo en modo CNC) =====
-  var TABS={transform:'paneTransform', layers:'paneLayers', cnccfg:'paneCncCfg', cnccut:'paneCncCut'};
-  var TABBTN={transform:'tabTransform', layers:'tabLayers', cnccfg:'tabCncCfg', cnccut:'tabCncCut'};
+  var TABS={transform:'paneTransform', layers:'paneLayers', cnccfg:'paneCncCfg', cnccut:'paneCncCut', plot:'panePlot'};
+  var TABBTN={transform:'tabTransform', layers:'tabLayers', cnccfg:'tabCncCfg', cnccut:'tabCncCut', plot:'tabPlot'};
   function showTab(t){ Object.keys(TABS).forEach(function(k){
     el(TABBTN[k]).classList.toggle('on',k===t);
     el(TABS[k]).style.display=k===t?'block':'none'; }); }
   // Toggle primario estilo Aspire: paso 1 Diseño (Propiedades/Capas) · paso 2 CNC (Configuración/Corte)
   var sideMode='design';
+  // sideMode: 'design' = paso Diseño · 'cnc' = paso CORTE (el nombre es histórico: hoy vale para
+  // las dos máquinas). En plotter el paso Corte es un solo panel (panePlot); en CNC, dos pestañas.
   function setSideMode(m){ sideMode=m;
     el('modeSeg').querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sm')===m); });
-    var dsg=(m==='design');
+    var dsg=(m==='design'), cnc=(state.machine==='cnc');
     el('tabTransform').style.display=dsg?'':'none'; el('tabLayers').style.display=dsg?'':'none';
-    el('tabCncCfg').style.display=dsg?'none':''; el('tabCncCut').style.display=dsg?'none':'';
-    showTab(dsg?'transform':'cnccfg'); }   // el paso CNC entra por Configuración (como el Job Setup de Aspire)
+    el('tabCncCfg').style.display=(!dsg&&cnc)?'':'none'; el('tabCncCut').style.display=(!dsg&&cnc)?'':'none';
+    el('tabsBar').style.display=(!dsg&&!cnc)?'none':'';
+    showTab(dsg?'transform':(cnc?'cnccut':'plot'));   // el Corte de la CNC entra por la lista; el resumen lleva a Configuración
+    if(!dsg&&!cnc) refrescarPlotter(); }
   el('modeSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     var m=b.getAttribute('data-sm'); if(m!==sideMode) setSideMode(m); });
   el('unitSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; setUnits(b.getAttribute('data-u'),true); });
@@ -1728,7 +1783,7 @@ var PlotterMotor = (function(){
     sideSegRefresh();
     var has=hasDoc();
     ['fx','fy','fw','fh','fr','fs'].forEach(function(id){el(id).disabled=!has;});
-    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar'].forEach(function(id){el(id).disabled=!has;});
+    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgFront','orgBack','orgCenter','orgCopies','orgLock'].forEach(function(id){el(id).disabled=!has;});
     el('alignTo').querySelectorAll('button').forEach(function(b){b.disabled=!has;});   // segmentado: apagar sus botones
     if(has){ var actIdx=activeIdx(); var nUnits=activeUnits().length; el('disH').disabled = nUnits<3; el('disV').disabled = nUnits<3;
       ['boolU','boolD','boolI','boolX','boolDiv'].forEach(function(id){ el(id).disabled = nUnits<2; });   // combinar pide 2+ figuras
@@ -2879,6 +2934,18 @@ var PlotterMotor = (function(){
   }
   el('btnNest').addEventListener('click',doNest);
 
+  // Fila "Organizar": lo mismo que ofrece el clic derecho, a la vista (con el dedo, el clic
+  // derecho es una pulsación larga que nadie adivina). Llama a las MISMAS funciones.
+  el('orgGroup').addEventListener('click',doGroup);
+  el('orgUngroup').addEventListener('click',doUngroup);
+  el('orgFlipH').addEventListener('click',function(){ op(function(){ mirrorActive('h'); }); });
+  el('orgFlipV').addEventListener('click',function(){ op(function(){ mirrorActive('v'); }); });
+  el('orgRot').addEventListener('click',function(){ rotate90(1); });
+  el('orgFront').addEventListener('click',function(){ reorderActive(true); });
+  el('orgBack').addEventListener('click',function(){ reorderActive(false); });
+  el('orgCenter').addEventListener('click',function(){ op(centerActive); });
+  el('orgCopies').addEventListener('click',function(){ el('gridModal').style.display='flex'; });
+  el('orgLock').addEventListener('click',lockActive);
   el('boolU').addEventListener('click',function(){ doBoolean('union'); });
   el('boolD').addEventListener('click',function(){ doBoolean('difference'); });
   el('boolI').addEventListener('click',function(){ doBoolean('intersection'); });
@@ -3130,12 +3197,19 @@ var PlotterMotor = (function(){
     if(!e.target.closest) return;
     if(!e.target.closest('#nestOpts') && !e.target.closest('#toolNest')){
       el('nestOpts').style.display='none'; el('toolNest').classList.remove('on'); } });
-  el('toolRef').addEventListener('click',function(){
-    if(refImg){ refImg=null; el('toolRef').classList.remove('on'); draw(); toast('Imagen de referencia quitada'); return; }
+  // Botón "Imagen" del riel: las dos cosas que se hacen con una foto. Antes solo ofrecía la
+  // referencia, y "Calcar" no tenía botón (solo salía en la pantalla vacía).
+  function refQuitar(){ refImg=null; el('toolRef').classList.remove('on'); draw(); toast('Imagen de referencia quitada'); }
+  function refPedir(){
     if(api()) api().ref_image().then(function(r){ if(r&&r.ok) refApply(r.data); else if(r&&r.error) toast(r.error); })
       .catch(function(e){ toast('Error: '+e); });
-    else el('refInput').click();
-  });
+    else el('refInput').click(); }
+  el('toolRef').addEventListener('mousedown',function(ev){ ev.stopPropagation(); });
+  el('toolRef').addEventListener('click',function(ev){ ev.stopPropagation();
+    var r=el('toolRef').getBoundingClientRect();
+    ctxShow([ {label:'Calcar una imagen…  (la convierte en trazos de corte)', fn:function(){ el('imgInput').click(); }},
+              refImg ? {label:'Quitar la imagen de referencia', fn:refQuitar}
+                     : {label:'Imagen de referencia…  (foto de fondo para dibujar encima)', fn:refPedir} ], r.right+8, r.top); });
   el('refInput').addEventListener('change',function(){
     var f=this.files&&this.files[0]; this.value='';
     if(!f) return;
@@ -3426,6 +3500,29 @@ var PlotterMotor = (function(){
     var fd=new FormData(); fd.append('file',f); toast('Leyendo '+f.name+'…');
     fetch('/api/parse',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(res){ if(!res||!res.ok){toast(res&&res.error?res.error:'No se pudo leer');return;} loadDoc(res); }).catch(function(e){toast('Error: '+e);}); this.value=''; });
   el('btnOpen').addEventListener('click',openDesign);
+  // ===== Menú "Archivo" (12-nov-2026): un botón en vez de cuatro. Con cuatro, en el teléfono el
+  // botón de enviar los tapaba, y "Abrir" (reemplaza) contra "Importar" (suma) solo se
+  // explicaba en el texto emergente. Cada opción PULSA el botón oculto de siempre. =====
+  var MAC=/Mac|iPhone|iPad/.test(navigator.platform||''), MOD=MAC?'⌘':'Ctrl+';
+  function abrirArchivo(){ var r=el('btnFile').getBoundingClientRect();
+    function it(lbl,id,keys){ return {label:lbl, keys:keys, dis:el(id).disabled, fn:function(){ el(id).click(); }}; }
+    ctxShow([ it('Abrir…  (reemplaza la mesa)','btnOpen',MOD+'O'),
+              it('Importar…  (suma a la mesa)','btnImport'),
+              {sep:true},
+              it('Guardar proyecto','btnSaveProject',MOD+'S'),
+              it('Exportar como…','btnExport') ], r.left, r.bottom+6); }
+  el('btnFile').addEventListener('click',function(ev){ ev.stopPropagation(); abrirArchivo(); });
+  el('btnFile').addEventListener('mousedown',function(ev){ ev.stopPropagation(); });
+  // Atajos de archivo: valen también escribiendo en un campo (si no, el navegador abre SU
+  // "Guardar página"). No actúan con una ventana abierta encima.
+  window.addEventListener('keydown',function(e){
+    if(!(e.metaKey||e.ctrlKey)||e.altKey||e.shiftKey) return;
+    var k=(e.key||'').toLowerCase(), id=k==='s'?'btnSaveProject':k==='o'?'btnOpen':null;
+    if(!id) return;
+    e.preventDefault();
+    var tapado=Array.prototype.some.call(document.querySelectorAll('.modal'),function(m){ return m.style.display==='flex'||m.style.display==='block'; });
+    if(tapado||el(id).disabled) return;
+    el(id).click(); });
   el('btnOpenEmpty').addEventListener('click',openDesign);
   // Las otras tres formas de empezar sin tener un archivo (antes la pantalla vacía solo decía "Abrir").
   el('startDraw').addEventListener('click',function(){ setTool('rect'); toast('Arrastra sobre la mesa para dibujar un rectángulo. Para otras figuras, usa el botón de figuras del riel izquierdo.'); });
@@ -3933,7 +4030,11 @@ var PlotterMotor = (function(){
     if(mem && rutas.indexOf(mem)>=0) sel.value=mem;
   }).then(function(){ if(connected) setConnUI(true);   // repintar ya con los nombres legibles
   }).catch(function(){}); }
-  function openPlotter(){ el('plotterModal').style.display='flex'; aplicarModoConexion();
+  function plotVisible(){ return state.machine==='plotter' && sideMode==='cnc'; }
+  function openPlotter(){ if(state.machine!=='plotter') return;
+    if(!plotVisible()) setSideMode('cnc'); else refrescarPlotter();
+    document.querySelector('.app').classList.add('insp'); }   // en pantallas chicas el panel es un cajón
+  function refrescarPlotter(){ aplicarModoConexion(); pintarEnvio();
     // el estado ANTES de llenar la lista: así el puerto de la última vez sale ya elegido
     P.status().then(function(s){ if(s&&s.ok){ setConnUI(!!s.connected,s.port);
         lastPort=s.last_port||null;
@@ -3954,7 +4055,7 @@ var PlotterMotor = (function(){
     return ws().rapido(todos, parseInt(el('baudSel').value,10)||9600).then(function(s){
       if(s && s.ok!==false && s.connected){ setConnUI(true,s.port); lastPort=s.port; toast('Plotter conectado ✓'); return true; }
       setConnUI(false); if(s && s.error) toast(s.error);
-      if(s && s.code==='NotFoundError' && el('plotterModal').style.display==='none') openPlotter();
+      if(s && s.code==='NotFoundError' && !plotVisible()) openPlotter();
       return false; }).catch(function(e){ setConnUI(false); toast('Error: '+e); return false; }); }
   el('btnWsConnect').addEventListener('click',function(){
     if(connected){ P.disconnect().then(function(){ setConnUI(false); toast('Desconectado'); }); return; }
@@ -3967,8 +4068,6 @@ var PlotterMotor = (function(){
     if(!wsMode()) return;
     aplicarModoConexion(); if(!connected) setConnUI(false);
     ws().auto(); },800); });
-  el('plotterClose').addEventListener('click',function(){ el('plotterModal').style.display='none'; });
-  el('plotterModal').addEventListener('click',function(e){ if(e.target===el('plotterModal')) el('plotterModal').style.display='none'; });
   el('portRefresh').addEventListener('click',refreshPorts);
   el('btnConnect').addEventListener('click',function(){
     if(connected){ P.disconnect().then(function(){ setConnUI(false); toast('Desconectado'); }); return; }
@@ -3982,7 +4081,7 @@ var PlotterMotor = (function(){
   el('penToggle').addEventListener('click',function(){ var nd=!penDown; P.pen(nd).then(function(r){ if(r&&r.ok){ penDown=nd; el('penToggle').innerHTML=penDown?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 6 6 6-6"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 4 6 6-10.5 10.5H4V15z"/></svg>'; } else toast((r&&r.error)||'Plotter no conectado'); }); });
   el('btnOrigin').addEventListener('click',function(){ P.command('origin').then(function(r){ toast(r&&r.ok?'Origen fijado':(r.error||'Plotter no conectado')); }); });
   el('btnHome').addEventListener('click',function(){ P.command('home').then(function(r){ toast(r&&r.ok?'Yendo a (0,0)':(r.error||'Plotter no conectado')); }); });
-  el('btnTestCut').addEventListener('click',function(){ P.testcut().then(function(r){ if(r&&r.ok){ el('plotterModal').style.display='none'; watchSend('Test de corte 10×10 mm'); } else toast((r&&r.error)||'Plotter no conectado'); }); });
+  el('btnTestCut').addEventListener('click',function(){ P.testcut().then(function(r){ if(r&&r.ok){ watchSend('Test de corte 10×10 mm'); } else toast((r&&r.error)||'Plotter no conectado'); }); });
   var sendPoll=null;
   function watchSend(label){ el('sendbar').style.display='block'; el('sendLabel').textContent=label||'Enviando al plotter…'; el('sendFill').style.width='0%'; el('sendPct').textContent='0 %'; el('sendLines').textContent='';
     clearInterval(sendPoll); sendPoll=setInterval(function(){ P.progress().then(function(p){ if(!p) return; var pct=p.total?Math.round(p.sent/p.total*100):0; el('sendFill').style.width=pct+'%'; el('sendPct').textContent=pct+' %'; el('sendLines').textContent=p.sent+' / '+p.total;
@@ -4028,6 +4127,10 @@ var PlotterMotor = (function(){
     var d=destino(), e=(d==='remoto')?estadoRemoto():estadoDirecto();
     el('sendDot').className='sdot'+(e[0]?' '+e[0]:'');
     el('sendLbl').textContent=(d==='remoto')?'Enviar Remoto':'Enviar Directo';
+    el('destGrp').style.display=puedeRemoto()?'':'none';
+    el('destSeg').querySelectorAll('button').forEach(function(b){ var k=b.getAttribute('data-dest');
+      b.classList.toggle('on',k===d); b.disabled=(k==='directo'&&!puedeDirecto()); });
+    el('destStat').textContent=e[1];
     el('btnSendTop').title=((d==='remoto')?'Mandar el corte a la fila de la estación del taller — ':'Cortar en el plotter de este equipo — ')+e[1]; }
   function sondearRemoto(){ if(!puedeRemoto()||state.machine==='cnc'||document.hidden) return;
     fetch('/api/estacion/estado').then(function(r){ return r.json(); }).then(function(r){
@@ -4040,7 +4143,7 @@ var PlotterMotor = (function(){
     if(puedeDirecto()){ var ed=estadoDirecto(); h+=item('directo',ed[0],'Enviar Directo',ed[1],d==='directo'); }
     else h+='<div class="mi" style="cursor:default;opacity:.6"><span class="sdot"></span><span><b>Enviar Directo</b><small>este navegador no puede usar el cable: abre Design Studio en Chrome o Edge</small></span></div>';
     if(puedeRemoto()){ var er=estadoRemoto(); h+=item('remoto',er[0],'Enviar Remoto',er[1],d==='remoto'); }
-    h+='<div class="sep"></div>'+item('ajustes',null,'Ajustes del plotter…','velocidad y presión, conexión, mover el cabezal',false);
+    h+='<div class="sep"></div>'+item('ajustes',null,'Ajustes de corte…','abre el paso Corte: cuchilla, conexión, mover el cabezal',false);
     if(puedeRemoto()) h+=item('fila',null,'Ver la fila de la estación','se abre en otra pestaña',false);
     m.innerHTML=h; m.style.display='block';
     var r=el('sendGrp').getBoundingClientRect(); m.style.top=(r.bottom+6)+'px';
@@ -4051,9 +4154,12 @@ var PlotterMotor = (function(){
   document.addEventListener('click',function(ev){ if(!el('sendMenu').contains(ev.target)) cerrarMenuEnvio(); });
   el('sendMenu').addEventListener('click',function(ev){ var t=ev.target.closest('.mi'); if(!t) return; var a=t.getAttribute('data-a'); if(!a) return;
     cerrarMenuEnvio();
-    if(a==='directo'||a==='remoto'){ destPref=a; try{ localStorage.setItem('ds_destino',a); }catch(e){} pintarEnvio(); }
+    if(a==='directo'||a==='remoto') fijarDestino(a);
     else if(a==='ajustes') openPlotter();
     else if(a==='fila') window.open('/estacion','_blank'); });
+  function fijarDestino(a){ destPref=a; try{ localStorage.setItem('ds_destino',a); }catch(e){} pintarEnvio(); if(a==='remoto') sondearRemoto(); }
+  el('destSeg').addEventListener('click',function(ev){ var b=ev.target.closest('button'); if(!b||b.disabled) return; fijarDestino(b.getAttribute('data-dest')); });
+  el('destFila').addEventListener('click',function(){ window.open('/estacion','_blank'); });
   el('btnSendTop').addEventListener('click',function(){ if(!hasDoc()) return;
     if(destino()==='remoto') siCabe(mandarAEstacion); else sendToPlotter(); });
   // Estación de corte: el servidor arma el HPGL (el mismo de "Enviar") y lo deja en la fila;
@@ -4134,7 +4240,7 @@ var PlotterMotor = (function(){
     state.machine=m;
     el('machSeg').querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-m')===m); });
     var cncMode=(m==='cnc');
-    el('modeBar').style.display=cncMode?'block':'none';   // el toggle Diseño|CNC solo existe con la CNC activa
+    el('btnTapTop').style.display=cncMode?'':'none';
     // ⚠️ SIEMPRE 'design', también al elegir la CNC: cambiar de máquina NO debe saltarte al
     // paso de trayectorias. Primero se acomoda el diseño; al paso CNC se pasa a mano con el
     // toggle de arriba. (Antes hacía `cncMode?'cnc':'design'` y te sacaba del diseño de golpe.)
@@ -4283,6 +4389,7 @@ var PlotterMotor = (function(){
   function paintOp(){ var o=curOp();
     el('opName').textContent = OPLBL[o]||'';
     el('profileOpts').style.display = o==='profile'?'block':'none';
+    el('lastWrap').style.display = o==='profile'?'block':'none';
     el('rampWrap').style.display = o==='drill'?'none':'block';
     el('dirSeg').style.display = o==='drill'?'none':'flex';
     el('allowWrap').style.visibility = o==='drill'?'hidden':'visible';
@@ -4377,7 +4484,7 @@ var PlotterMotor = (function(){
   // formulario vuelve a "trayectoria nueva" (el botón pasa de Recalcular a Calcular),
   // que es exactamente lo que ya hacía volver a pulsar su fila.
   function deselectTp(){ if(tpSel<0) return; tpSel=-1; el('tpName').value=''; paintTps(); }
-  function paintTps(){ var L=el('tpList'); if(!L) return; L.innerHTML='';
+  function paintTps(){ var L=el('tpList'); if(!L) return; L.innerHTML=''; setTimeout(pintarCorte,0);
     el('tpEmpty').style.display=tpaths.length?'none':'block';
     el('tpCount').textContent=tpaths.length?String(tpaths.length):'';
     el('btnCalc').lastChild.textContent = (tpSel>=0)?' Recalcular trayectoria':' Calcular trayectoria';
@@ -4565,6 +4672,30 @@ var PlotterMotor = (function(){
       toast('Trayectorias: '+n+' · ≈ '+Math.floor(secs/60)+' min '+(secs%60)+' s'+(gk.length?' · marcha '+gk.join('/'):'')+(skipped?' · '+skipped+' trazo(s) abierto(s) fuera':'')+(warns.length?' · ⚠ '+warns.length+' aviso(s) abajo':'')+(bad?' · ⚠ '+bad:''));
     }); }
   el('btnSaveTap').addEventListener('click',function(){ saveTap(); });
+  // --- Resumen de material y fresa, título del formulario y aviso de qué hay activo en "Más opciones" ---
+  function selTxt(id){ var o=el(id).options[el(id).selectedIndex]; return o?o.textContent:''; }
+  function pintarCorte(){
+    el('cutSum').textContent=(selTxt('matType')||'Material')+' '+(el('matThick').value||'?')+' mm · '+(selTxt('toolPick')||'sin fresa');
+    el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):'Nueva trayectoria';
+    var a=[]; if(parseFloat(el('startDepth').value)) a.push('empieza en '+el('startDepth').value+' mm');
+    if(parseFloat(el('allowOff').value)) a.push('holgura');
+    var dc=el('dirSeg').querySelector('button.on'); if(dc&&dc.getAttribute('data-d')==='conv') a.push('contra');
+    if(el('rampOn').checked && el('rampWrap').style.display!=='none') a.push('rampa');
+    if(el('lastOn').checked && el('lastWrap').style.display!=='none') a.push('última pasada');
+    el('masRes').textContent=a.length?('· '+a.join(', ')):''; }
+  ['change','input','click'].forEach(function(ev){ el('paneCncCut').addEventListener(ev,function(){ setTimeout(pintarCorte,60); }); });
+  el('tabCncCut').addEventListener('click',function(){ setTimeout(pintarCorte,0); });
+  el('modeSeg').addEventListener('click',function(){ setTimeout(pintarCorte,0); });
+  el('cutSumGo').addEventListener('click',function(){ showTab('cnccfg'); });
+  try{ if(localStorage.getItem('ds_masopc')==='1') el('masOpc').open=true; }catch(e){}
+  el('masOpc').addEventListener('toggle',function(){ try{ localStorage.setItem('ds_masopc',el('masOpc').open?'1':'0'); }catch(e){} });
+  // El botón final de la CNC vive ARRIBA A LA DERECHA, donde el plotter tiene "Enviar": la acción
+  // que termina el trabajo siempre está en el mismo sitio. Sin trayectorias, lleva a hacerlas.
+  el('btnTapTop').addEventListener('click',function(){
+    if(!tpaths.length){ if(!hasDoc()){ toast('Abre o dibuja un diseño primero'); return; }
+      setSideMode('cnc'); showTab('cnccut'); document.querySelector('.app').classList.add('insp');
+      toast('Primero calcula una trayectoria: elige la operación y pulsa “Calcular trayectoria”'); return; }
+    saveTap(); });
   el('btnTpPrev').addEventListener('click',function(){
     if(cncPrev){ prevOn=false; killPrev(); draw(); return; }   // toggle: apagar (y recordar que se apagó)
     prevOn=true; computePreview(); });
