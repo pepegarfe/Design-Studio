@@ -221,12 +221,37 @@ NO se deducen del código:
 - **Ya no existe la ventana "Plotter"** (`#plotterModal`): cuchilla, conexión, mover el cabezal y
   "Dónde se corta" viven en `#panePlot`, el paso Corte del plotter. `openPlotter()` ahora **lleva
   a ese paso** (y abre el cajón en pantallas chicas); no abre nada encima del diseño.
-- **Corte de la CNC: la lista de trayectorias va ARRIBA y el formulario abajo**, con lo que casi
-  nunca cambia dentro de `<details id="masOpc">` ("Más opciones"). Los campos conservan sus `id`:
-  solo cambiaron de sitio. `#masRes` avisa qué hay activo ahí dentro aunque esté plegado — **si
-  metes otra opción en "Más opciones", agrégala a `pintarCorte()`**, o quedará activa sin verse.
-  Prueba que no cambió el corte: el `.tap` de la interfaz nueva salió **idéntico byte a byte** al
-  de la anterior con las mismas opciones (puentes, rampa, última pasada, cajeado).
+- **Corte de la CNC, flujo como Aspire: o estás en la LISTA (`#cutList`) o dentro de UNA
+  trayectoria (`#cutForm`), nunca en las dos** (`formOpen`, `abrirForm()`/`cerrarForm()`). La
+  operación se elige al agregar (`nuevaTp('profile'|'pocket'|'drill')`; `#opSeg` sigue en el HTML,
+  oculto, porque `curOp()` lo lee). Calcular y Cancelar vuelven a la lista. Los campos conservan
+  sus `id`. Lo que casi nunca cambia va en `<details id="masOpc">`; `#masRes` avisa qué hay activo
+  ahí aunque esté plegado — **si metes otra opción ahí, agrégala a `pintarCorte()`**.
+- **La fresa se elige dentro del formulario** (`#tpTool`), que es un **espejo** de `#toolPick`
+  (Configuración): al cambiarlo PULSA aquel. No dupliques la lógica de `tool_sel`/`resetPasses`.
+- **Tiempo por trayectoria** (`t._secs`) y total (`#tpTotal`): salen de la ÚLTIMA vista previa; si
+  no se ha pedido "Ver recorrido" tras cambiar el diseño, son de antes (por eso llevan "≈").
+- **Plantillas de trayectoria**: la receta del formulario con nombre, en la cuenta
+  (`cnc_set({'templates': …})`, `_limpiar_plantillas`). ⚠️ Los puentes "A mano" **no viajan** en
+  la plantilla (sus puntos son de una pieza concreta): se guarda como "Cantidad".
+- ⚠️ **CNC: puentes "A mano"** (`tabs.mode == 'manual'`, `tabs.pts` = puntos `[x, y]` en mm sobre
+  el recorrido). `_ring_zones()` es el ÚNICO sitio que decide las zonas de puente de un contorno:
+  lo usan el corte (`_contour_body`), los avisos (`tab_report`) y las marcas del lienzo
+  (`tab_points` → `tabs_xy`). **No calcules zonas por otro lado**, o lo que se dibuja dejará de
+  ser lo que se corta. Un punto vale para todo contorno a menos de medio diámetro (así el
+  desbaste y el anillo de "última pasada" comparten puente). **El centro se acota para que la
+  zona NUNCA cruce el empalme del anillo**: `_ring_pass` solo inserta los bordes de zona dentro
+  de la vuelta, y un puente partido por el empalme podría no levantarse en un tramo recto largo.
+  Punto que ya no cae sobre el corte (se movió la pieza) = se ignora **y se avisa**. En la UI:
+  `tabPts` (del formulario, se aplican al Calcular), `tabEdit()`, `tabClick()`; en ese modo el
+  clic en el lienzo se consume siempre (un clic fallado no debe cerrar el formulario).
+  Pruebas: `caso_puentes_a_mano` en `auditar_gcode.py`. El G-code con puentes automáticos salió
+  idéntico al de antes en 80 combinaciones (puentes × rampa × última pasada × lado).
+- **Decidido NO hacer (12-nov-2026), no lo agregues sin hablarlo con Jose:** (a) una "pasada
+  final delgada en el fondo" como la de Aspire — contradice la regla medida de `_passes()` de
+  arriba (una pasada de ~1 mm frota y deja rebaba); (b) entradas laterales (*leads*) — con
+  piezas acomodadas a 5 mm, una entrada por fuera puede morder la pieza vecina; necesita antes
+  una comprobación de choque contra las demás figuras.
 - **Menú "Archivo"** (`#btnFile`): Abrir, Importar, Guardar y Exportar. Los cuatro botones de antes
   siguen en el HTML con `hidden` y el menú los **pulsa** (`.click()`), así su lógica y su estado
   activo/inactivo no se duplican. Atajos: Cmd/Ctrl+S guarda, Cmd/Ctrl+O abre.

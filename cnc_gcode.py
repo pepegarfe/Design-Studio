@@ -418,7 +418,87 @@ def _tab_zones(perim, ntabs, tab_w, ramp_len):
     return zones
 
 
-def tab_report(toolpaths, tabs, depth):
+def _nearest_s(pts, cum, x, y):
+    """(posición de arco, distancia) del punto de la polilínea más cercano a (x, y)."""
+    best_s, best_d2 = 0.0, float('inf')
+    for k in range(len(pts) - 1):
+        ax, ay, bx, by = pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1]
+        dx, dy = bx - ax, by - ay
+        L2 = dx * dx + dy * dy
+        t = 0.0 if L2 < 1e-12 else max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / L2))
+        px, py = ax + dx * t, ay + dy * t
+        d2 = (x - px) ** 2 + (y - py) ** 2
+        if d2 < best_d2:
+            best_d2, best_s = d2, cum[k] + math.sqrt(L2) * t
+    return best_s, math.sqrt(best_d2)
+
+
+def _manual_zones(pts, cum, perim, tab_pts, tab_w, ramp_len, tol):
+    """Puentes A MANO: una zona centrada donde cae cada punto que el usuario puso sobre ESTE
+    contorno (a menos de `tol` mm). Devuelve (zonas | None, índices de los puntos usados).
+
+    ⚠️ El centro se acota a [full/2, perim - full/2]: la zona NUNCA cruza el empalme del anillo.
+    `_ring_pass` solo mete los bordes de zona como vértices dentro de la vuelta; un puente
+    partido por el empalme perdería esos vértices y, sobre un tramo recto largo, podría no
+    levantarse. Cuesta mover el puente unos mm cuando lo pones justo en el arranque."""
+    full = tab_w + 2 * ramp_len
+    if perim <= full * 1.5:
+        return None, []
+    cs, used = [], []
+    for i, (x, y) in enumerate(tab_pts):
+        s, d = _nearest_s(pts, cum, x, y)
+        if d <= tol:
+            cs.append(min(max(s, full / 2.0), perim - full / 2.0))
+            used.append(i)
+    zones, last = [], None
+    for c in sorted(cs):
+        if last is not None and c - last < full:      # encimado con el anterior: es el mismo puente
+            continue
+        zones.append((c - full / 2.0, c + full / 2.0))
+        last = c
+    return (zones or None), used
+
+
+def _ring_zones(pts, cum, perim, tabs, tab_w, ramp_len, tool_dia):
+    """Zonas de puente de UN contorno cerrado, automáticas (cantidad / cada X mm) o a mano.
+    Un solo sitio para `_contour_body`, `tab_report` y `tab_points`: la cuenta que avisa y el
+    dibujo del lienzo son la MISMA que corta."""
+    if tabs.get('mode') == 'manual':
+        tol = max(1.5, float(tool_dia) * 0.5)
+        return _manual_zones(pts, cum, perim, tabs.get('pts') or [], tab_w, ramp_len, tol)[0]
+    n = _tab_count(perim, tabs)
+    return _tab_zones(perim, n, tab_w, ramp_len) if n > 0 else None
+
+
+def tab_points(toolpaths, tabs, depth, tool_dia):
+    """Para la vista previa: ([x, y] del centro de cada puente que SÍ se va a cortar,
+    cuántos puntos puestos a mano no cayeron sobre ningún contorno)."""
+    if not tabs:
+        return [], 0
+    tab_w = float(tabs.get('w', 8.0))
+    tab_ramp = min(float(tabs.get('h', 3.0)), float(depth)) * _TAB_SLOPE
+    manual = tabs.get('mode') == 'manual'
+    mpts = tabs.get('pts') or []
+    tol = max(1.5, float(tool_dia) * 0.5)
+    out, used = [], set()
+    for rg in toolpaths:
+        pts = _rpts(rg)
+        if len(pts) < 2 or not _is_closed(pts):
+            continue
+        cum = _cum(pts)
+        perim = cum[-1]
+        if manual:
+            zones, u = _manual_zones(pts, cum, perim, mpts, tab_w, tab_ramp, tol)
+            used.update(u)
+        else:
+            zones = _ring_zones(pts, cum, perim, tabs, tab_w, tab_ramp, tool_dia)
+        for a, b in (zones or []):
+            q = _point_at(pts, cum, ((a + b) / 2.0) % perim)
+            out.append([round(q[0], 2), round(q[1], 2)])
+    return out, (len(mpts) - len(used) if manual else 0)
+
+
+def tab_report(toolpaths, tabs, depth, tool_dia=6.0):
     """(contornos con MENOS puentes de los pedidos, contornos SIN ninguno). Misma cuenta
     que `_contour_body`, para poder avisarle al usuario antes de cortar."""
     if not tabs:
@@ -430,7 +510,12 @@ def tab_report(toolpaths, tabs, depth):
         pts = _rpts(rg)
         if len(pts) < 2 or not _is_closed(pts):
             continue
-        perim = _cum(pts)[-1]
+        cum = _cum(pts)
+        perim = cum[-1]
+        if tabs.get('mode') == 'manual':          # a mano: solo importa quién quedó SIN ninguno
+            if _ring_zones(pts, cum, perim, tabs, tab_w, tab_ramp, tool_dia) is None:
+                none += 1
+            continue
         n = _tab_count(perim, tabs)
         if n <= 0:
             continue
@@ -748,9 +833,7 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
         perim = cum[-1]
         zones = None
         if closed and tabs:
-            n = _tab_count(perim, tabs)
-            if n > 0:
-                zones = _tab_zones(perim, n, tab_w, tab_ramp)
+            zones = _ring_zones(pts, cum, perim, tabs, tab_w, tab_ramp, tool.get('dia', 6.0))
         lines.append('G00 X%s Y%s' % (_f(pts[0][0]), _f(pts[0][1])))
         s_cur, z_prev, z_now = 0.0, z_start, None   # z_now = altura real de la fresa (None = arriba)
         rc = rcfg if closed else None

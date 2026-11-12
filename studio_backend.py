@@ -328,7 +328,7 @@ def cnc_get():
         if p.exists():
             saved = json.loads(p.read_text(encoding='utf-8'))
             for k in ('machine', 'theme', 'units', 'fillview', 'sheets', 'quote', 'work',
-                      'material', 'materials', 'tool_sel', 'tools'):
+                      'material', 'materials', 'tool_sel', 'tools', 'templates'):
                 if k in saved:
                     data[k] = saved[k]
             fix = _apply_preset_fixes(data, int(saved.get('preset_rev', 0) or 0))
@@ -357,8 +357,29 @@ def cnc_get():
                     pass
     except Exception:
         pass
+    if not isinstance(data.get('templates'), list):
+        data['templates'] = []
     data['ok'] = True
     return data
+
+
+def _limpiar_plantillas(lista):
+    """Plantillas de trayectoria: [{'name', 'recipe'}]. La receta es lo que el formulario de
+    Corte manda al Calcular (operación, lado, profundidad, puentes, rampa…); aquí solo se acota
+    (cuántas, largo del nombre, tamaño), no se interpreta: quien la valida es el generador al usarla."""
+    out, vistos = [], set()
+    for t in (lista or [])[:40]:
+        if not isinstance(t, dict):
+            continue
+        nm = str(t.get('name') or '').strip()[:60]
+        rec = t.get('recipe')
+        if not nm or nm.lower() in vistos or not isinstance(rec, dict):
+            continue
+        if len(json.dumps(rec, ensure_ascii=False)) > 4000:
+            continue
+        vistos.add(nm.lower())
+        out.append({'name': nm, 'recipe': rec})
+    return out
 
 
 @_en_fila
@@ -382,6 +403,8 @@ def cnc_set(patch):
             cur['units'] = patch['units']
         if 'fillview' in patch:
             cur['fillview'] = bool(patch['fillview'])
+        if 'templates' in patch:
+            cur['templates'] = _limpiar_plantillas(patch['templates'])
         if 'sheets' in patch:
             n = int(patch['sheets'])
             if not (1 <= n <= 8):
@@ -519,11 +542,23 @@ def _cnc_make(data):
     if tabs and not tabs.get('on', True):
         tabs = None
     if tabs:
-        v = float(tabs.get('v', tabs.get('n', 0)) or 0)   # 'n' = formato viejo (cantidad)
-        tabs = {'mode': 'dist' if tabs.get('mode') == 'dist' else 'n', 'v': v,
-                'w': float(tabs.get('w') or 8), 'h': float(tabs.get('h') or 3)}
-        if v <= 0:
-            tabs = None
+        if tabs.get('mode') == 'manual':
+            # puentes puestos A MANO: puntos [x, y] en mm sobre el recorrido. Sin puntos = sin
+            # puentes (lo avisa _cnc_warnings).
+            mp = []
+            for q in (tabs.get('pts') or [])[:400]:
+                try:
+                    mp.append([float(q[0]), float(q[1])])
+                except (TypeError, ValueError, IndexError):
+                    pass
+            tabs = ({'mode': 'manual', 'pts': mp, 'w': float(tabs.get('w') or 8),
+                     'h': float(tabs.get('h') or 3)} if mp else None)
+        else:
+            v = float(tabs.get('v', tabs.get('n', 0)) or 0)   # 'n' = formato viejo (cantidad)
+            tabs = {'mode': 'dist' if tabs.get('mode') == 'dist' else 'n', 'v': v,
+                    'w': float(tabs.get('w') or 8), 'h': float(tabs.get('h') or 3)}
+            if v <= 0:
+                tabs = None
     return (op, tps, drills, skipped, tool, material, depth, tabs,
             _norm_ramp(data.get('ramp')), data.get('name') or 'diseno')
 
@@ -605,9 +640,22 @@ def _cnc_warnings(data, job, op, tps, drills, tool, material):
         if per > dia + 1e-6:
             out.append('Cada pasada baja %.2f mm, más que el diámetro de la fresa (%g mm): '
                        'riesgo de romperla. Revisa el campo "Pasadas".' % (per, dia))
+    _tb = data.get('tabs') or {}
+    if op == 'profile' and _tb.get('on', True) and _tb.get('mode') == 'manual' and not job.get('tabs'):
+        out.append('Puentes "A mano" sin ningún puente puesto: las piezas saldrán SUELTAS. '
+                   'Abre la trayectoria y pulsa sobre el recorrido para colocarlos.')
     if op == 'profile' and job.get('tabs'):
-        fewer, none = cnc_gcode.tab_report(tps, job['tabs'], depth)
-        if none:
+        manual = job['tabs'].get('mode') == 'manual'
+        fewer, none = cnc_gcode.tab_report(tps, job['tabs'], depth, dia)
+        if manual:
+            _, lost = cnc_gcode.tab_points(tps, job['tabs'], depth, dia)
+            if lost:
+                out.append('%d puente(s) puestos a mano ya NO caen sobre el corte (¿se movió o '
+                           'cambió la pieza?): no se van a cortar. Vuelve a colocarlos.' % lost)
+            if none:
+                out.append('%d contorno(s) quedan SIN puentes: no les pusiste ninguno (o son '
+                           'demasiado chicos para que quepa).' % none)
+        elif none:
             out.append('%d contorno(s) quedan SIN puentes: son demasiado chicos para que quepa '
                        'uno. Sujétalos de otra forma.' % none)
         if fewer:
@@ -634,7 +682,9 @@ def cnc_toolpaths_preview(data):
         # JS<->Python de pywebview serializa JSON — floats completos lo engordan 2.4x)
         flat = [[[round(x, 2), round(y, 2)] for x, y in cnc_gcode._rpts(t)] for t in tps]
         gear = cnc_gcode.gear_for(tool.get('rpm', 18000), (material or {}).get('gears'))
-        return {'ok': True, 'op': op, 'toolpaths': flat, 'drills': drills,
+        tabs_xy = (cnc_gcode.tab_points(tps, job['tabs'], job['depth'], float(tool.get('dia', 6.0)))[0]
+                   if (op == 'profile' and job.get('tabs')) else [])
+        return {'ok': True, 'op': op, 'toolpaths': flat, 'drills': drills, 'tabs_xy': tabs_xy,
                 'dia': float(tool.get('dia', 6.0)), 'skipped': skipped, 'secs': round(secs),
                 'gear': gear or None, 'bbox': _cnc_bbox(tps, drills, float(tool.get('dia', 6.0))),
                 'warnings': _cnc_warnings(data, job, op, tps, drills, tool, material)}

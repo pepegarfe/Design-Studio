@@ -382,6 +382,80 @@ caso_izq_der()
 caso_fresas_mezcladas()
 
 
+def _z_cortando_cerca(tap, x, y, r=2.0):
+    """Alturas de la fresa mientras corta (Z<0) a menos de r mm de (x, y). Sigue el G-code
+    MODAL (los ejes que no cambian se omiten) y muestrea cada movimiento cada 0.4 mm."""
+    import math
+    X = Y = 0.0
+    Z = 5.0
+    out = []
+    for ln in tap.splitlines():
+        if ln.startswith('('):
+            continue
+        x0, y0, z0 = X, Y, Z
+        pal = re.findall(r'([XYZ])(-?\d+\.?\d*)', ln)
+        if not pal:
+            continue
+        for eje, v in pal:
+            if eje == 'X':
+                X = float(v)
+            elif eje == 'Y':
+                Y = float(v)
+            else:
+                Z = float(v)
+        n = max(2, int(math.hypot(X - x0, Y - y0) / 0.4) + 1)
+        for k in range(n + 1):
+            f = k / n
+            px, py, pz = x0 + (X - x0) * f, y0 + (Y - y0) * f, z0 + (Z - z0) * f
+            if pz < 0 and math.hypot(px - x, py - y) <= r:
+                out.append(pz)
+    return out
+
+
+def caso_puentes_a_mano():
+    """Puentes colocados A MANO (12-nov-2026): la fresa deja material justo donde se puso el
+    punto y en ningún otro lado; un punto que ya no cae sobre el corte se ignora Y se avisa."""
+    base = {'paths': [sq(0, 0, 200, 120)], 'op': 'profile', 'side': 'outside', 'direction': 'climb',
+            'depth': 15.0, 'tool': TOOL, 'material': MAT_TOP, 'name': 'prueba', 'label': 'perfil'}
+    P = [100.0, -3.0]                       # sobre el recorrido: 3 mm por fuera del lado inferior
+    LEJOS = [203.0, 60.0]                   # otro punto del MISMO recorrido, sin puente
+    for nombre, ramp in (('sin rampa', None), ('suave', {'on': True, 'type': 'smooth', 'mode': 'angle', 'v': 10}),
+                         ('zigzag', {'on': True, 'type': 'zigzag', 'mode': 'dist', 'v': 25}),
+                         ('espiral', {'on': True, 'type': 'spiral'})):
+        for last in (0, 0.5):
+            pl = dict(base, ramp=ramp, last_pass=last, last_rev=bool(last),
+                      tabs={'on': True, 'mode': 'manual', 'pts': [P], 'w': 8.0, 'h': 3.0})
+            r = sb.cnc_build_tap(pl)
+            caso = 'puente a mano (%s, última pasada %s)' % (nombre, last)
+            check(caso + ': genera', r.get('ok'), str(r.get('error')))
+            if not r.get('ok'):
+                continue
+            zp = _z_cortando_cerca(r['tap'], P[0], P[1])
+            zl = _z_cortando_cerca(r['tap'], LEJOS[0], LEJOS[1])
+            check(caso + ': en el puente deja 3 mm (no baja de -12)', zp and min(zp) >= -12.001, str(min(zp) if zp else None))
+            check(caso + ': fuera del puente llega al fondo (-15)', zl and min(zl) <= -14.999, str(min(zl) if zl else None))
+    pv = sb.cnc_toolpaths_preview(dict(base, tabs={'on': True, 'mode': 'manual', 'pts': [P, [900.0, 900.0]], 'w': 8.0, 'h': 3.0}))
+    check('puente a mano: la vista previa marca 1 puente', len(pv.get('tabs_xy') or []) == 1, str(pv.get('tabs_xy')))
+    check('puente a mano: avisa del punto que ya no cae sobre el corte',
+          any('ya NO caen' in w for w in pv.get('warnings') or []), str(pv.get('warnings')))
+    pv = sb.cnc_toolpaths_preview(dict(base, tabs={'on': True, 'mode': 'manual', 'pts': [], 'w': 8.0, 'h': 3.0}))
+    check('puente a mano sin ningún punto: avisa que las piezas salen sueltas',
+          any('SUELTAS' in w for w in pv.get('warnings') or []), str(pv.get('warnings')))
+    # el puente pedido justo en el arranque del anillo no se pierde (no cruza el empalme)
+    r0 = sb.cnc_toolpaths_preview(dict(base, tabs=None))
+    ini = r0['toolpaths'][0][0]
+    pl = dict(base, tabs={'on': True, 'mode': 'manual', 'pts': [ini], 'w': 8.0, 'h': 3.0})
+    pv = sb.cnc_toolpaths_preview(pl)
+    r = sb.cnc_build_tap(pl)
+    check('puente a mano en el arranque del anillo: existe', len(pv.get('tabs_xy') or []) == 1, str(pv.get('tabs_xy')))
+    if pv.get('tabs_xy') and r.get('ok'):
+        z = _z_cortando_cerca(r['tap'], pv['tabs_xy'][0][0], pv['tabs_xy'][0][1])
+        check('puente a mano en el arranque: deja 3 mm', z and min(z) >= -12.001, str(min(z) if z else None))
+
+
+caso_puentes_a_mano()
+
+
 print(f'\n== {len(OK)} verificaciones OK ==')
 if FALLAS:
     print(f'\n!! {len(FALLAS)} FALLAS:')

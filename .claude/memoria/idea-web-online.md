@@ -351,6 +351,12 @@ teléfono (está hecha para computadora).
   prueba de corte: mismo código, otro sitio) y en un teléfono real. Sin decidir: guardar
   velocidad/presión **por material** en el plotter (Jose no contestó). `CLAUDE.md` va en 333
   líneas contra su regla de <200: ofrecido moverlo a `.claude/rules/`, sin respuesta.
+- ✅ **Corte de CNC rehecho como Aspire (12-nov-2026)**, tras comparar función por función contra
+  la documentación de Vectric: lista ↔ formulario separados, fresa en el formulario, tiempo por
+  trayectoria, duplicar, plantillas y **puentes a mano** sobre el lienzo. Jose pidió "todos los
+  cambios"; **dejé fuera dos a propósito** y se lo dije: pasada final delgada (choca con la regla
+  de `_passes`) y *leads* (riesgo de morder la pieza vecina). ⏳ Falta el primer corte REAL con
+  puentes a mano, y decidir esas dos. V-carve quedó anotado como proyecto aparte.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las
