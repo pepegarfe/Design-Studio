@@ -187,14 +187,22 @@
   .abtn:hover{color:var(--accent);border-color:var(--accent);}
   .abtn:disabled{opacity:.45;cursor:default;}
   .abtn svg{width:16px;height:16px;}
-  .orgrow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;align-items:center;}
-  .orgrow.lbl{grid-template-columns:52px 1fr 1fr;}
-  .orgrow label{font-size:12px;font-weight:600;color:var(--muted);}
-  .obtn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px;min-width:0;border-radius:6px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
-  .obtn svg{width:15px;height:15px;flex:none;color:var(--muted);}
-  .obtn span{overflow:hidden;text-overflow:ellipsis;}
-  .obtn:hover:not(:disabled){border-color:var(--accent);} .obtn:hover:not(:disabled) svg{color:var(--accent);}
-  .obtn:disabled{opacity:.45;cursor:default;}
+  /* Organizar: fichas con el icono arriba y el NOMBRE debajo (un renglón de cinco) */
+  .otiles{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+  .otile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:46px;min-width:0;padding:0 1px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--muted);font:inherit;cursor:pointer;}
+  .otile svg{width:16px;height:16px;flex:none;}
+  .otile span{font-size:9.5px;font-weight:600;color:var(--ink);white-space:nowrap;}
+  .otile:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+  .otile:disabled{opacity:.45;cursor:default;}
+  /* Candado de cada capa / grupo */
+  .lkbtn{margin-left:auto;width:26px;height:26px;flex:none;border:0;background:transparent;border-radius:6px;color:var(--faint);opacity:.45;cursor:pointer;display:grid;place-content:center;padding:0;}
+  .lkbtn svg{width:14px;height:14px;}
+  .lkbtn:hover{background:var(--hover);opacity:1;color:var(--ink);}
+  .lkbtn.on{opacity:1;color:var(--accent);}
+  .layer .lkbtn+.on-dot,.grp-hdr .lkbtn+.grp-dot{margin-left:4px;}
+  .layer.lk .nm,.layer.lk .th{opacity:.5;}
+  #tipBox{position:fixed;z-index:9500;max-width:260px;background:var(--ink);color:var(--panel);font-size:12px;font-weight:500;line-height:1.35;padding:6px 9px;border-radius:7px;box-shadow:0 6px 18px -6px #0008;pointer-events:none;opacity:0;transition:opacity .12s;}
+  #tipBox.show{opacity:1;}
   .asep{width:1px;height:20px;background:var(--line);margin:0 3px;flex:none;}
   .fliprow{display:flex;align-items:center;gap:6px;}
   .flip-lbl{font-size:11px;color:var(--faint);margin-right:auto;}
@@ -392,7 +400,15 @@
     .sendgrp,#btnTapTop{position:sticky;right:0;flex:none;}
     .statbtn .lbl{display:none;} .status{font-size:11px;gap:10px;}
   }
+  /* deshacer/rehacer flotando sobre el lienzo (solo en teléfono; ver "barraMovil") */
+  #undoFloat{position:absolute;left:10px;bottom:58px;display:none;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:0 4px 14px -6px #0006;z-index:3;}
+  #undoFloat .icobtn{min-width:36px;width:36px;height:36px;}
   @media (max-width:520px){
+    /* La barra pedía 473 px en una pantalla de 390 y "Enviar" tapaba rehacer y el botón del panel.
+       Plotter/CNC quedan en icono y deshacer/rehacer bajan al lienzo: cabe hasta en 360 px. */
+    .mach button{font-size:0;gap:0;padding:0 10px;} .mach button svg{width:17px;height:17px;}
+    #undoFloat{display:flex;}
+    #stSel{display:none;}
     #sendLbl{font-size:0;} #sendLbl::after{content:'Enviar';font-size:13px;}
     #btnTapTop span{font-size:0;} #btnTapTop span::after{content:'G-code';font-size:13px;}
   }
@@ -409,8 +425,8 @@
       <small>Built By Jose</small>
     </div>
     <div class="seg mach" id="machSeg" title="Máquina de trabajo">
-      <button class="on" data-m="plotter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>Plotter</button>
-      <button data-m="cnc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v7"/><path d="m9 10 3 4 3-4z" fill="currentColor" stroke="none"/><rect x="4" y="17" width="16" height="3" rx="1"/><path d="M7 17v-2M17 17v-2"/></svg>CNC</button>
+      <button class="on" data-m="plotter" title="Plotter" aria-label="Plotter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>Plotter</button>
+      <button data-m="cnc" title="CNC" aria-label="CNC"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v7"/><path d="m9 10 3 4 3-4z" fill="currentColor" stroke="none"/><rect x="4" y="17" width="16" height="3" rx="1"/><path d="M7 17v-2M17 17v-2"/></svg>CNC</button>
     </div>
     <button class="tbtn" id="btnFile" title="Archivo: abrir, importar, guardar y exportar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>Archivo<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;margin-left:-2px"><path d="m6 9 6 6 6-6"/></svg></button>
     <button class="icobtn" id="btnUndo" title="Deshacer (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
@@ -477,6 +493,7 @@
       <label><input type="checkbox" id="shpStar"> Estrella</label>
       <span>Interior</span><input id="shpInner" value="50" disabled><span>%</span>
     </div>
+    <div id="undoFloat"></div>
     <div class="pillbar"><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
   </main>
 
@@ -517,6 +534,7 @@
             <div class="field"><label>∠</label><input id="fr" value="0" disabled><select id="rotPreset" class="mini-sel" disabled><option value="">°▾</option><option>0</option><option>45</option><option>90</option><option>135</option><option>180</option><option>225</option><option>270</option><option>315</option></select></div>
             <div class="field"><label>%</label><input id="fs" value="100" disabled><span class="u"> </span></div>
           </div>
+          <div class="alignrow" style="margin-top:8px"><button class="abtn" id="orgRot" disabled title="Rotar 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg></button><button class="abtn" id="orgFlipH" disabled title="Voltear horizontal (espejo izquierda-derecha)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2 3"/><path d="M9 7 4 17h5zM15 7l5 10h-5z"/></svg></button><button class="abtn" id="orgFlipV" disabled title="Voltear vertical (espejo arriba-abajo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18" stroke-dasharray="2 3"/><path d="M7 9 17 4v5zM7 15l10 5v-5z"/></svg></button></div>
         </div>
       </div>
 
@@ -540,11 +558,7 @@
       </div>
 
       <div class="grp-t sec">Organizar</div>
-      <div class="orgrow"><button class="obtn" id="orgGroup" disabled title="Agrupar (Cmd+G): las figuras elegidas se mueven juntas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 3"/><rect x="7" y="7" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/></svg><span>Agrupar</span></button><button class="obtn" id="orgUngroup" disabled title="Desagrupar (Cmd+Shift+G): cada figura vuelve a moverse sola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/><path d="M14 6h4M6 14v4"/></svg><span>Desagrupar</span></button></div>
-      <div class="orgrow lbl"><label>Voltear</label><button class="obtn" id="orgFlipH" disabled title="Voltear horizontal (espejo izquierda-derecha)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2 3"/><path d="M9 7 4 17h5zM15 7l5 10h-5z"/></svg><span>Horizontal</span></button><button class="obtn" id="orgFlipV" disabled title="Voltear vertical (espejo arriba-abajo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18" stroke-dasharray="2 3"/><path d="M7 9 17 4v5zM7 15l10 5v-5z"/></svg><span>Vertical</span></button></div>
-      <div class="orgrow lbl"><label>Orden</label><button class="obtn" id="orgFront" disabled title="Traer al frente: queda encima de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" fill="currentColor" fill-opacity=".3"/></svg><span>Al frente</span></button><button class="obtn" id="orgBack" disabled title="Enviar atrás: queda debajo de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="1.5"/><path d="M15 9h3.5A1.5 1.5 0 0 1 20 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 9 18.5V15" fill="currentColor" fill-opacity=".3"/></svg><span>Atrás</span></button></div>
-      <div class="orgrow"><button class="obtn" id="orgRot" disabled title="Rotar 90°"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/></svg><span>Rotar 90°</span></button><button class="obtn" id="orgCenter" disabled title="Centrar en la hoja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><rect x="9" y="9" width="6" height="6" fill="currentColor" fill-opacity=".3"/></svg><span>Centrar en hoja</span></button></div>
-      <div class="orgrow"><button class="obtn" id="orgCopies" disabled title="Copias… en rejilla o en círculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg><span>Copias…</span></button><button class="obtn" id="orgLock" disabled title="Bloquear: no se mueve ni se selecciona por accidente (se desbloquea con clic derecho en el lienzo o desde Capas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>Bloquear</span></button></div>
+      <div class="otiles"><button class="otile" id="orgGroup" disabled title="Agrupar (Cmd+G): las figuras elegidas se mueven juntas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 3"/><rect x="7" y="7" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/></svg><span>Agrupar</span></button><button class="otile" id="orgUngroup" disabled title="Desagrupar (Cmd+Shift+G): cada figura vuelve a moverse sola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/><path d="M14 6h4M6 14v4"/></svg><span>Separar</span></button><button class="otile" id="orgFront" disabled title="Traer al frente: queda encima de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" fill="currentColor" fill-opacity=".3"/></svg><span>Al frente</span></button><button class="otile" id="orgBack" disabled title="Enviar atrás: queda debajo de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="1.5"/><path d="M15 9h3.5A1.5 1.5 0 0 1 20 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 9 18.5V15" fill="currentColor" fill-opacity=".3"/></svg><span>Atrás</span></button><button class="otile" id="orgCopies" disabled title="Copias… en rejilla o en círculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg><span>Copias</span></button></div>
       <div class="grp-t sec">Combinar</div>
       <div class="alignrow">
         <button class="abtn" id="boolU" disabled title="Unir (soldar): las figuras seleccionadas se funden en una sola"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 9.5A1.5 1.5 0 0 1 5.5 8H10V5.5A1.5 1.5 0 0 1 11.5 4h7A1.5 1.5 0 0 1 20 5.5v7a1.5 1.5 0 0 1-1.5 1.5H14v4.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 18.5z"/></svg></button>
@@ -1031,6 +1045,7 @@
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="tipBox" role="tooltip"></div>
 
 <script id="motor-plotter">
 // Motor del envío al plotter DESDE EL NAVEGADOR (Web Serial). Va aparte y sin tocar la página
@@ -1317,6 +1332,32 @@ var PlotterMotor = (function(){
   function pushUndo(){ redoStack.length=0; undoStack.push(snapshot()); if(undoStack.length>UNDO_MAX) undoStack.shift(); updateUndoBtns(); killPrev(); dirtySince=true; sinGuardar=true; }
   function undo(){ if(!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); refreshUI(); toast('Deshecho'); }
   function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); refreshUI(); toast('Rehecho'); }
+  // Teléfono: deshacer/rehacer se MUDAN (los mismos botones, con su lógica) de la barra al lienzo.
+  (function barraMovil(){ var mq=window.matchMedia('(max-width:520px)'), casa=el('btnUndo').parentNode, sig=el('btnRedo').nextSibling;
+    function poner(){ var f=el('undoFloat');
+      if(mq.matches){ f.appendChild(el('btnUndo')); f.appendChild(el('btnRedo')); }
+      else { casa.insertBefore(el('btnUndo'),sig); casa.insertBefore(el('btnRedo'),sig); } }
+    poner(); if(mq.addEventListener) mq.addEventListener('change',poner); else if(mq.addListener) mq.addListener(poner); })();
+  // ===== Avisos al pasar el ratón, dibujados por la app =====
+  // Los `title` nativos tardan ~1 s, no salen en botones inactivos y a Jose no le aparecían. Aquí:
+  // al entrar el ratón se GUARDA el title en data-tip y se quita (para que no salga además el
+  // nativo); al salir se devuelve. Así todo el código que lee o escribe `.title` sigue igual.
+  (function avisos(){ var box=el('tipBox'), cur=null, t=null;
+    function soltar(){ clearTimeout(t); box.classList.remove('show');
+      if(cur){ if(cur.hasAttribute('data-tip') && !cur.getAttribute('title')) cur.setAttribute('title',cur.getAttribute('data-tip')); cur.removeAttribute('data-tip'); cur=null; } }
+    document.addEventListener('mouseover',function(e){
+      if(TOQ>1) return;                                   // con el dedo no hay "pasar por encima"
+      var n=e.target.closest&&e.target.closest('[title]');
+      if(n===cur) return; if(cur&&cur.contains(e.target)) return;
+      soltar(); if(!n||!n.getAttribute('title')) return;
+      cur=n; var txt=n.getAttribute('title'); n.setAttribute('data-tip',txt); n.removeAttribute('title');
+      t=setTimeout(function(){ if(cur!==n) return; box.textContent=txt; box.style.left='0px'; box.style.top='0px'; box.classList.add('show');
+        var r=n.getBoundingClientRect(), w=box.offsetWidth, h=box.offsetHeight;
+        var x=Math.max(8,Math.min(r.left+r.width/2-w/2, window.innerWidth-w-8));
+        var y=r.bottom+8; if(y+h>window.innerHeight-8) y=Math.max(8,r.top-h-8);
+        box.style.left=x+'px'; box.style.top=y+'px'; },350); });
+    document.addEventListener('mouseout',function(e){ if(cur && !cur.contains(e.relatedTarget)) soltar(); });
+    ['mousedown','keydown','wheel','scroll'].forEach(function(ev){ document.addEventListener(ev,soltar,true); }); })();
   function updateUndoBtns(){ el('btnUndo').disabled=!undoStack.length; el('btnRedo').disabled=!redoStack.length; }
 
   // ===== Operaciones =====
@@ -1819,7 +1860,7 @@ var PlotterMotor = (function(){
     sideSegRefresh();
     var has=hasDoc();
     ['fx','fy','fw','fh','fr','fs'].forEach(function(id){el(id).disabled=!has;});
-    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgFront','orgBack','orgCenter','orgCopies','orgLock'].forEach(function(id){el(id).disabled=!has;});
+    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgFront','orgBack','orgCopies'].forEach(function(id){el(id).disabled=!has;});
     el('alignTo').querySelectorAll('button').forEach(function(b){b.disabled=!has;});   // segmentado: apagar sus botones
     if(has){ var actIdx=activeIdx(); var nUnits=activeUnits().length; el('disH').disabled = nUnits<3; el('disV').disabled = nUnits<3;
       ['boolU','boolD','boolI','boolX','boolDiv'].forEach(function(id){ el(id).disabled = nUnits<2; });   // combinar pide 2+ figuras
@@ -1896,13 +1937,32 @@ var PlotterMotor = (function(){
 
   // ===== Capas =====
   var layerCollapsed={};   // gid -> true si el grupo está plegado en el panel de Capas
+  // Candado de una capa (o de un grupo entero): bloquear = no se mueve ni se selecciona por
+  // accidente en el lienzo. Es el ÚNICO sitio visible para DESbloquear una sola figura (antes solo
+  // existía "Desbloquear todo" en el clic derecho).
+  var LK_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+      LK_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.500-1.900"/></svg>'.replace('7.500-1.900','7.5-1.9');
+  function lockBtn(idxs){
+    var todos=idxs.length>0 && idxs.every(isLocked);
+    var b=document.createElement('button'); b.className='lkbtn'+(todos?' on':'');
+    b.innerHTML=todos?LK_ON:LK_OFF;
+    b.title=todos?'Bloqueado — pulsa para desbloquear':'Bloquear: no se mueve ni se selecciona por accidente';
+    b.setAttribute('aria-label',todos?'Desbloquear':'Bloquear');
+    b.addEventListener('click',function(e){ e.stopPropagation();
+      if(!hasDoc()||cncLock()) return;
+      pushUndo();
+      idxs.forEach(function(i){ if(todos) lockedUids.delete(doc.uid[i]); else lockedUids.add(doc.uid[i]); });
+      if(!todos){ if(idxs.indexOf(sel.idx)>=0) sel.idx=-1; idxs.forEach(function(i){ sel.set.delete(i); }); }
+      refreshUI(); toast(todos?'Desbloqueado':'Bloqueado — el candado de Capas lo desbloquea'); });
+    return b; }
   function layerRow(i, isChild){
     var m=mode();
     var row=document.createElement('div'); row.className='layer'+(( (m==='ind'&&sel.idx===i)||(m==='grp'&&sel.set.has(i)) )?' on':'');
     var th=document.createElement('canvas'); th.className='th'; th.width=64; th.height=64; drawThumb(th,i);
     var info=document.createElement('div'); info.innerHTML='<div class="nm">Objeto '+(i+1)+'</div><div class="mt">'+doc.paths[i].pts.length+' pts</div>';
     var dot=document.createElement('span'); dot.className='on-dot';
-    row.appendChild(th); row.appendChild(info); row.appendChild(dot);
+    if(isLocked(i)) row.className+=' lk';
+    row.appendChild(th); row.appendChild(info); row.appendChild(lockBtn([i])); row.appendChild(dot);
     row.addEventListener('click',function(e){ e.stopPropagation();
       if(e.shiftKey){ sel.idx=-1; if(sel.set.has(i)) sel.set.delete(i); else sel.set.add(i); }   // hijo: sumar/quitar 1
       else if(isChild){ sel.set=new Set(); sel.idx=(sel.idx===i?-1:i); }                          // hijo: seleccionar ESE objeto (entrar al grupo)
@@ -1921,7 +1981,7 @@ var PlotterMotor = (function(){
     ico.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><path d="M13 6h5a3 3 0 0 1 3 3v0M6 13v0a3 3 0 0 0 3 3h0"/></svg>';
     var info=document.createElement('div'); info.innerHTML='<div class="grp-nm">Grupo</div><div class="grp-mt">'+members.length+' objetos</div>';
     var dot=document.createElement('span'); dot.className='grp-dot';
-    hdr.appendChild(tri); hdr.appendChild(ico); hdr.appendChild(info); hdr.appendChild(dot);
+    hdr.appendChild(tri); hdr.appendChild(ico); hdr.appendChild(info); hdr.appendChild(lockBtn(members)); hdr.appendChild(dot);
     tri.addEventListener('click',function(e){ e.stopPropagation(); layerCollapsed[gid]=!layerCollapsed[gid]; buildLayers(); });
     hdr.addEventListener('click',function(){ sel.idx=-1; sel.set=new Set(members); refreshUI(); });
     return hdr;
@@ -2980,9 +3040,7 @@ var PlotterMotor = (function(){
   el('orgRot').addEventListener('click',function(){ rotate90(1); });
   el('orgFront').addEventListener('click',function(){ reorderActive(true); });
   el('orgBack').addEventListener('click',function(){ reorderActive(false); });
-  el('orgCenter').addEventListener('click',function(){ op(centerActive); });
   el('orgCopies').addEventListener('click',function(){ el('gridModal').style.display='flex'; });
-  el('orgLock').addEventListener('click',lockActive);
   el('boolU').addEventListener('click',function(){ doBoolean('union'); });
   el('boolD').addEventListener('click',function(){ doBoolean('difference'); });
   el('boolI').addEventListener('click',function(){ doBoolean('intersection'); });
@@ -3305,7 +3363,7 @@ var PlotterMotor = (function(){
     pushUndo();
     A.forEach(function(i){ lockedUids.add(doc.uid[i]); });
     sel.idx=-1; sel.set=new Set();
-    refreshUI(); toast('Bloqueado — desbloquea con clic derecho en zona vacía');
+    refreshUI(); toast('Bloqueado — se desbloquea con su candado en Capas');
   }
   function unlockAll(){
     if(!lockedUids.size) return;

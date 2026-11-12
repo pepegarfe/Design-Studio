@@ -255,9 +255,19 @@ NO se deducen del código:
 - **Menú "Archivo"** (`#btnFile`): Abrir, Importar, Guardar y Exportar. Los cuatro botones de antes
   siguen en el HTML con `hidden` y el menú los **pulsa** (`.click()`), así su lógica y su estado
   activo/inactivo no se duplican. Atajos: Cmd/Ctrl+S guarda, Cmd/Ctrl+O abre.
-- **Fila "Organizar"** (Propiedades) y **botón "Imagen"** del riel (calcar / referencia): llaman a
-  las MISMAS funciones que el menú de clic derecho. Una acción nueva de ese menú merece su botón:
-  con el dedo, el clic derecho es una pulsación larga que nadie adivina.
+- **Organizar está repartido por significado** (opción elegida por Jose, 12-nov): girar y
+  voltear van en **Transformar**, junto al giro (`#orgRot`, `#orgFlipH`, `#orgFlipV`); en
+  **Organizar** queda un renglón de cinco fichas con nombre (`.otile`: Agrupar, Separar, Al
+  frente, Atrás, Copias); y el **candado vive en cada capa** (`lockBtn()` en `layerRow` y
+  `groupHeader`) — es el único sitio visible para desbloquear UNA figura. Todo llama a las
+  mismas funciones que el clic derecho. El **botón "Imagen"** del riel junta calcar y referencia.
+- **Los avisos al pasar el ratón los dibuja la app** (`#tipBox`, bloque "avisos"): al entrar el
+  ratón el `title` se muda a `data-tip` y al salir se devuelve, así que **sigue poniendo y
+  leyendo `.title` como siempre** — no hay que usar otra propiedad. No actúa con el dedo (`TOQ>1`).
+- **Barra superior en teléfono (≤ 520 px)**: Plotter/CNC en icono y **deshacer/rehacer se mudan
+  al lienzo** (`#undoFloat`, bloque "barraMovil": son los MISMOS botones, movidos de padre).
+  ⚠️ Si agregas un botón a `.top`, mide a 360 px: con los textos la barra pedía 473 px en una
+  pantalla de 390 y "Enviar" tapaba al botón del panel.
 
 ## Aspecto visual — sistema de diseño (tokens)
 
