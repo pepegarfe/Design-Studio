@@ -242,6 +242,11 @@ NO se deducen del código:
 - **Las figuras de un corte se pueden cambiar**: con el formulario abierto, el clic en el lienzo
   selecciona FIGURAS (no suelta el corte ni salta a otro) y "Usar las seleccionadas" las deja en
   `formUids`, que se aplican al Calcular. Al abrir un corte, sus figuras quedan seleccionadas.
+- **"Ver recorrido" y "Ver en 3D" viven SOLO en Revisar** (`#revPrev`, `#revSim`; pedido de Jose,
+  12-nov). Los de antes (`#btnTpPrev`, `#btnSim3d`) siguen en el HTML, **ocultos**, porque tienen
+  la lógica y los de Revisar los pulsan. Al abrir un corte para editarlo, su recorrido se enciende
+  solo (hace falta para poner puentes a mano). **El botón dice lo que hace**: en Cortes "Revisar",
+  en Revisar "Guardar G-code" — no "Revisar y guardar" para un paso que solo revisa.
 - **Revisar es el único camino para guardar** (`abrirRev()` → `guardarRev()`). Vuelve a pedir los
   avisos al entrar y **`revDatos` se anula al empezar cada revisión**: nunca se guarda con el
   resumen de una anterior. Hace dos cosas que antes no existían: **un archivo por fresa**

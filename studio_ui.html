@@ -458,7 +458,7 @@
     .pillbar .wapill.wa{display:none;}
     .zoompill span{min-width:0;padding:0 12px;line-height:38px;}
     #sendLbl{font-size:0;} #sendLbl::after{content:'Enviar';font-size:13px;}
-    #btnTapTop span{font-size:0;} #btnTapTop span::after{content:'G-code';font-size:13px;}
+    #btnTapTop span{font-size:0;} #btnTapTop span::after{content:attr(data-corto);font-size:13px;}
   }
   /* Foco de teclado visible (Tab). Los campos ya lo marcan con su borde. */
   button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -491,7 +491,7 @@
       <button class="cta" id="btnSendTop" disabled><span class="sdot" id="sendDot"></span><span id="sendLbl">Enviar Directo</span></button>
       <button class="cta" id="btnSendMenu" title="Elegir a dónde se envía el corte · ajustes del plotter"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
-    <button class="cta" id="btnTapTop" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span>Guardar G-code</span></button>
+    <button class="cta" id="btnTapTop" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span data-corto="Revisar">Revisar</span></button>
   </header>
 
   <nav class="rail">
@@ -735,11 +735,11 @@
       <div class="muted-note" id="tpEmpty">Aún no hay cortes. Selecciona en el dibujo las figuras que quieres cortar (ninguna = todas) y elige arriba qué hacerles.</div>
       <div class="muted-note" id="tpSin" style="display:none"></div>
       <div id="tpWarn" style="display:none;margin:8px 0 2px;padding:8px 10px;border:1px solid var(--bad);border-radius:8px;color:var(--ink);font-size:12.5px;line-height:1.45;user-select:text"></div>
-      <div class="rowbtns">
+      <div class="rowbtns" style="display:none">
         <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver recorrido</span></button>
         <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
       </div>
-      <button class="pbtn acc" id="revGo" style="display:none;width:100%;margin-top:14px;height:36px;font-weight:700" title="Paso 2: ver el resumen, los avisos y guardar el G-code">Revisar y guardar ›</button>
+      <button class="pbtn acc" id="revGo" style="display:none;width:100%;margin-top:14px;height:36px;font-weight:700" title="Paso 2: ver el resumen y los avisos antes de guardar">Revisar ›</button>
       </div>
       <div id="cutRev" style="display:none">
         <div id="revBody"></div>
@@ -4632,7 +4632,7 @@ var PlotterMotor = (function(){
     el('tabNField').style.display=man?'none':'';
     el('tabManNote').style.display=man?'block':'none';
     if(man) el('tabManNote').innerHTML = (tpSel>=0)
-      ? ('<b>'+tabPts.length+'</b> puente(s) puestos. Pulsa sobre la <b>línea gruesa</b> del recorrido para poner uno; pulsa un puente para quitarlo. Al terminar, <b>Recalcular</b>.'+(cncPrev?'':' <br>Enciende «Ver recorrido» en la lista para ver la línea.'))
+      ? ('<b>'+tabPts.length+'</b> puente(s) puestos. Pulsa sobre la <b>línea gruesa</b> del recorrido para poner uno; pulsa un puente para quitarlo. Al terminar, <b>Recalcular</b>.'+(cncPrev?'':' <br>Calculando el recorrido…'))
       : 'Primero pulsa <b>Calcular</b> para crear la trayectoria. Después ábrela desde la lista y acomoda aquí sus puentes.';
     el('tabVLbl').textContent = tabModeV==='n'?'N.º':'Cada';
     el('tabVU').textContent = tabModeV==='n'?'':'mm'; }
@@ -4645,7 +4645,7 @@ var PlotterMotor = (function(){
     for(var i=0;i<tabPts.length;i++){ var q=tp(tabPts[i][0],tabPts[i][1]);
       if(Math.hypot(q[0]-sx,q[1]-sy)<=thr){ tabPts.splice(i,1); paintTabMode(); draw(); return true; } }
     var G=grupoDe(tpSel);
-    if(!G){ toast('Enciende «Ver recorrido» para ver dónde poner los puentes'); return true; }
+    if(!G){ toast('El recorrido de este corte aún no está a la vista — espera un momento o pulsa Recalcular'); return true; }
     var mm=sp(sx,sy), best=null, bd=1e18;
     G.tps.forEach(function(pts){ for(var k=0;k<pts.length-1;k++){
       var ax=pts[k][0], ay=pts[k][1], dx=pts[k+1][0]-ax, dy=pts[k+1][1]-ay, L2=dx*dx+dy*dy;
@@ -4973,12 +4973,16 @@ var PlotterMotor = (function(){
     var enRev=revOpen&&!formOpen, sb=el('stepBar').querySelectorAll('button');
     sb[0].className=enRev?'ok':'on'; sb[0].textContent=(enRev?'✓ ':'1 · ')+'Cortes'; sb[1].className=enRev?'on':'';
     el('revGo').style.display=tpaths.length?'':'none';
-    el('btnTapTop').querySelector('span').textContent=enRev?'Guardar G-code':'Revisar y guardar';
+    var bt=el('btnTapTop'), sp=bt.querySelector('span');
+    sp.textContent=enRev?'Guardar G-code':'Revisar'; sp.setAttribute('data-corto',enRev?'G-code':'Revisar');
+    bt.title=enRev?'Generar el G-code (.tap) de los cortes activos, en el orden de la lista — pásalo a la CNC en una USB':'Paso 2: revisar el resumen y los avisos antes de guardar el G-code';
+    bt.querySelector('svg').style.display=enRev?'':'none';
     pintarCorte(); }
   var formUids=null;      // figuras elegidas con "Usar las seleccionadas" (se aplican al Calcular)
   function selFigs(I){ sel.idx=-1; sel.set=new Set(); if(I.length===1) sel.idx=I[0]; else if(I.length>1) sel.set=new Set(I); refreshUI(); }
   function abrirForm(){ volverRev=revOpen; revOpen=false; formOpen=true; formUids=null;
     if(tpSel>=0&&tpaths[tpSel]) selFigs(tpResolve(tpaths[tpSel]));   // al editar, sus figuras quedan seleccionadas: se VE a cuáles aplica
+    if(tpSel>=0 && !cncPrev && activeTps().length){ prevOn=true; computePreview(); }   // y su recorrido a la vista (el botón de verlo vive en Revisar)
     pintarVista(); var a=document.querySelector('.inspect'); if(a) a.scrollTop=0; }
   function cerrarForm(){ formOpen=false; formUids=null; if(tpSel>=0){ tpSel=-1; el('tpName').value=''; paintTps(); }
     if(volverRev){ volverRev=false; abrirRev(); } else pintarVista(); }
@@ -5023,7 +5027,8 @@ var PlotterMotor = (function(){
       ctx.lineWidth=1.5; ctx.strokeStyle=cvar('--panel'); ctx.stroke();
       ctx.fillStyle='#fff'; ctx.font='700 10px '+(getComputedStyle(document.body).fontFamily||'sans-serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
-  { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs(); }; }   // tras cada redibujo: la barra sigue a la selección
+  { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
+      var rp=el('revPrev'), tx=cncPrev?'Ocultar recorrido':'Ver recorrido'; if(rp.textContent!==tx){ rp.textContent=tx; rp.classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
     el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
