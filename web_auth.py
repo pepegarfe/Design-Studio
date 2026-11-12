@@ -480,21 +480,23 @@ def _marco(pestana, titulo, sub, cuerpo, ancho=360):
 <link rel="icon" type="image/png" sizes="192x192" href="/iconos/studio-192.png">
 <link rel="apple-touch-icon" href="/iconos/studio-180.png">
 <style>
-:root{{--bg:#f4f4f2;--card:#fff;--ink:#1d1d1b;--muted:#6b6b66;--line:#dcdcd6;--acc:#e8590c;--bad:#c92a2a}}
-@media (prefers-color-scheme:dark){{:root{{--bg:#151515;--card:#1f1f1f;--ink:#ececea;--muted:#9a9a94;--line:#333;--acc:#ff7a2e;--bad:#ff6b6b}}}}
+/* Los MISMOS colores que el editor (studio_ui.html): antes esto era naranja y parecía otro
+   producto. --acc = fondo de botón con letra blanca; --lnk = enlaces y bordes. */
+:root{{--bg:#EDEEF1;--card:#FFFFFF;--ink:#1A1D23;--muted:#576070;--line:#D3D7DE;--acc:#D11E68;--lnk:#D11E68;--bad:#D64541}}
+@media (prefers-color-scheme:dark){{:root{{--bg:#0E1013;--card:#171A20;--ink:#EDEFF2;--muted:#9AA2AE;--line:#333A45;--acc:#CF2F6F;--lnk:#EC4A86;--bad:#E5484D}}}}
 *{{box-sizing:border-box}} body{{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);
 font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px}}
 .card{{width:100%;max-width:{ancho}px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px 24px}}
 h1{{font-size:21px;margin:0 0 4px}} .sub{{color:var(--muted);margin:0 0 20px;font-size:13.5px}}
 label{{display:block;font-size:13px;font-weight:600;margin-bottom:14px}}
 input{{display:block;width:100%;margin-top:6px;height:40px;border:1px solid var(--line);border-radius:8px;padding:0 12px;
-font:inherit;background:var(--bg);color:var(--ink)}} input:focus{{outline:2px solid var(--acc);border-color:transparent}}
+font:inherit;background:var(--bg);color:var(--ink)}} input:focus{{outline:2px solid var(--lnk);border-color:transparent}}
 button{{width:100%;height:42px;border:0;border-radius:8px;background:var(--acc);color:#fff;font:inherit;font-weight:700;cursor:pointer;margin-top:4px}}
 .err{{color:var(--bad);font-size:13.5px;margin:0 0 14px}}
 button.sec{{background:transparent;color:var(--ink);border:1px solid var(--line)}}
 .prueba{{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}} .prueba p{{margin:8px 0 0;font-size:12.5px;color:var(--muted);text-align:center}}
-a{{color:var(--acc)}} .pie{{margin:16px 0 0;font-size:13.5px;text-align:center}}
-.dato{{border:1px solid var(--acc);border-radius:8px;padding:12px;margin:0 0 16px;font-size:13.5px}}
+a{{color:var(--lnk)}} .pie{{margin:16px 0 0;font-size:13.5px;text-align:center}}
+.dato{{border:1px solid var(--lnk);border-radius:8px;padding:12px;margin:0 0 16px;font-size:13.5px}}
 .dato code{{display:block;margin:8px 0;font-size:16px;overflow-wrap:anywhere;user-select:all}}
 .lista{{list-style:none;margin:0 0 20px;padding:0}} .lista li{{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}}
 .lista span{{display:block;color:var(--muted);font-size:12.5px}} .acc{{display:flex;gap:6px}}

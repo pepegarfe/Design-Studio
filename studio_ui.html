@@ -12,7 +12,10 @@
 <style>
   :root{
     --bg:#0E1013; --panel:#171A20; --rail:#131519; --line:#282D36; --line-2:#333A45;
-    --ink:#EDEFF2; --muted:#9AA2AE; --faint:#616977; --accent:#EC4A86; --accent-dim:#C33169;
+    --ink:#EDEFF2; --muted:#9AA2AE; --faint:#8A93A1; --accent:#EC4A86; --accent-dim:#C33169;
+    /* --accent-btn: el fondo de los botones LLENOS con letra blanca. En oscuro el acento
+       (#EC4A86) es para líneas y texto: con letra blanca encima daba contraste 3.6 (mínimo 4.5). */
+    --accent-btn:#CF2F6F; --accent-btn-dim:#B3245D;
     --accent-soft:#EC4A8622; --good:#38C990; --bad:#E5484D; --warn:#E0A040;
     --canvas:#0A0C0F; --cut:#EC4A86; --grid:#181B21; --gridax:#2C333E;
     --stroke:#c7ccd4; --sel:#EC4A86; --group:#5B9DF9;
@@ -22,7 +25,8 @@
   }
   :root[data-theme="light"]{
     --bg:#EDEEF1; --panel:#FFFFFF; --rail:#F4F5F7; --line:#E4E6EB; --line-2:#D3D7DE;
-    --ink:#1A1D23; --muted:#576070; --faint:#98A0AD; --accent:#D11E68; --accent-dim:#AE1556;
+    --ink:#1A1D23; --muted:#576070; --faint:#687180; --accent:#D11E68; --accent-dim:#AE1556;
+    --accent-btn:#D11E68; --accent-btn-dim:#AE1556;
     --accent-soft:#D11E6814; --good:#1E9E6A; --bad:#D64541; --warn:#B7791F;
     --canvas:#E3E5EA; --cut:#D11E68; --grid:#DADCE2; --gridax:#C2C6CE;
     --stroke:#3a4150; --sel:#D11E68; --group:#2D6FD6;
@@ -51,7 +55,7 @@
   .tbtn svg{width:15px;height:15px;}
   .conn{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 30%,transparent);color:var(--bad);font-size:12.5px;font-weight:600;font-family:var(--mono);}
   .conn .dot{width:7px;height:7px;border-radius:50%;background:var(--bad);}
-  .cta{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:8px;background:linear-gradient(180deg,var(--accent),var(--accent-dim));border:0;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 12px -3px var(--accent-dim);}
+  .cta{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 16px;border-radius:8px;background:linear-gradient(180deg,var(--accent-btn),var(--accent-btn-dim));border:0;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 12px -3px var(--accent-dim);}
   .cta:disabled{opacity:.45;cursor:default;box-shadow:none;}
   /* Botón único de envío: [● Enviar Directo/Remoto][▾]. El punto dice si ese destino está listo. */
   .sendgrp{display:inline-flex;align-items:center;gap:1px;flex:none;}
@@ -108,7 +112,7 @@
   .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:2;pointer-events:none;}
   .empty .ill{width:64px;height:64px;color:var(--line-2);}
   .empty p{margin:0;color:var(--faint);font-size:15px;}
-  .empty button{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 18px;border-radius:9px;background:linear-gradient(180deg,var(--accent),var(--accent-dim));color:#fff;border:0;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;box-shadow:0 3px 14px -4px var(--accent-dim);}
+  .empty button{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 18px;border-radius:9px;background:linear-gradient(180deg,var(--accent-btn),var(--accent-btn-dim));color:#fff;border:0;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;box-shadow:0 3px 14px -4px var(--accent-dim);}
   .empty button svg{width:15px;height:15px;}
   .empty .starts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;pointer-events:auto;}
   .empty button.alt{background:var(--panel);color:var(--ink);border:1px solid var(--line-2);box-shadow:none;height:32px;padding:0 13px;font-size:12.5px;font-weight:600;}
@@ -271,7 +275,7 @@
   .track .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--accent);}
   .track .knob{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 1px 3px #0007;border:1px solid var(--line-2);}
   .send{margin:auto 16px 16px;}
-  .send .btn{width:100%;height:44px;border:0;border-radius:10px;color:#fff;font:inherit;font-size:14px;font-weight:700;background:linear-gradient(180deg,var(--accent),var(--accent-dim));cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 5px 18px -5px var(--accent-dim);}
+  .send .btn{width:100%;height:44px;border:0;border-radius:10px;color:#fff;font:inherit;font-size:14px;font-weight:700;background:linear-gradient(180deg,var(--accent-btn),var(--accent-btn-dim));cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 5px 18px -5px var(--accent-dim);}
   .send .btn:disabled{opacity:.4;cursor:default;box-shadow:none;}
   .send .btn svg{width:16px;height:16px;}
 
@@ -322,7 +326,7 @@
   .mrow{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
   .sheet select,.pbtn{height:32px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;}
   .sheet select{flex:1;} .pbtn{padding:0 12px;font-weight:600;} .pbtn:hover{border-color:var(--accent);}
-  .pbtn.acc{background:var(--accent);color:#fff;border-color:var(--accent);} .pbtn.acc:hover{background:var(--accent-dim);}
+  .pbtn.acc{background:var(--accent-btn);color:#fff;border-color:var(--accent-btn);} .pbtn.acc:hover{background:var(--accent-btn-dim);}
   .pbtn:disabled{opacity:.45;cursor:default;}
   .rng{width:100%;accent-color:var(--accent);margin:2px 0 6px;cursor:pointer;height:4px;}
   .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;}
@@ -341,6 +345,8 @@
   @media (max-width:1180px){ .brand small{display:none;} .top{gap:8px;} }
   @media (max-width:1060px){ .top .tbtn{font-size:0;gap:0;padding:0 9px;} .top .tbtn svg{width:17px;height:17px;} }
   @media (max-width:760px){ .brand{font-size:0;gap:0;} .top{gap:4px;padding:0 8px;} .top .tbtn{padding:0 6px;} }
+  /* Foco de teclado visible (Tab). Los campos ya lo marcan con su borde. */
+  button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -3584,11 +3590,35 @@ var PlotterMotor = (function(){
       window.DS_INVITADO = true;
       var b = document.createElement('div');
       b.id = 'avisoPrueba';
-      b.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9000;max-width:calc(100vw - 32px);padding:7px 14px;border-radius:999px;background:#1d1d1b;color:#fff;font-size:12.5px;box-shadow:0 2px 10px rgba(0,0,0,.3)';
-      b.innerHTML = 'Modo de prueba: nada se guarda · <a href="/salir" style="color:#ff9a5c">Salir</a>';
+      b.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9000;max-width:calc(100vw - 32px);padding:7px 14px;border-radius:999px;background:var(--ink);color:var(--panel);font-size:12.5px;box-shadow:0 2px 10px rgba(0,0,0,.3)';
+      b.innerHTML = 'Modo de prueba: nada se guarda · <a href="/salir" style="color:inherit;font-weight:700">Salir</a>';
       document.body.appendChild(b);
     }).catch(function(){});
   });
+  // ===== Diálogos: Esc cierra el de ARRIBA, siempre (antes ninguno cerraba con Esc) =====
+  // Hace lo mismo que su X, así cada diálogo conserva su lógica de cierre (el de confirmar
+  // distingue "cerré" de "no"; el de "Recuperar trabajo" no tiene X y por eso no se cierra).
+  // ⚠️ El clic en el velo NO se unificó a propósito: los diálogos con formulario (fresas,
+  // materiales, texto) no se cierran con un clic fuera para no tirar lo que estás escribiendo.
+  function dialogoDeArriba(){ var ms=document.querySelectorAll('.modal'), top=null;
+    for(var i=0;i<ms.length;i++) if(ms[i].style.display&&ms[i].style.display!=='none') top=ms[i];
+    return top; }
+  function cerrarDialogo(m){ var x=m&&m.querySelector('.sheet-h button, .simsheet-h button, [data-cerrar]');
+    if(x&&x.style.display!=='none') x.click(); }
+  document.addEventListener('keydown',function(e){ if(e.key!=='Escape') return;
+    var m=dialogoDeArriba(); if(!m) return;
+    var dd=el('fpDD'); if(dd&&dd.style.display&&dd.style.display!=='none') return;   // primero se cierra la lista de fuentes
+    e.preventDefault(); e.stopImmediatePropagation(); cerrarDialogo(m); },true);
+  // Accesibilidad barata: nombre para los botones de solo icono y para los campos.
+  window.addEventListener('load',function(){
+    document.querySelectorAll('.sheet-h button, .simsheet-h button').forEach(function(b){ if(!b.title){ b.title='Cerrar'; } b.setAttribute('aria-label',b.title); });
+    var DIR={up:'Mover arriba',down:'Mover abajo',left:'Mover a la izquierda',right:'Mover a la derecha'};
+    document.querySelectorAll('.jogpad [data-dir]').forEach(function(b){ var n=DIR[b.getAttribute('data-dir')]; if(n){ b.title=b.title||n; b.setAttribute('aria-label',n); } });
+    document.querySelectorAll('button[title]:not([aria-label])').forEach(function(b){ if(!b.textContent.trim()) b.setAttribute('aria-label',b.title.split(' — ')[0]); });
+    document.querySelectorAll('.field').forEach(function(f,i){ var l=f.querySelector('label'), inp=f.querySelector('input,select');
+      if(!l||!inp||l.contains(inp)) return; if(!inp.id) inp.id='campo'+i; l.setAttribute('for',inp.id);
+      if(!inp.getAttribute('aria-label')) inp.setAttribute('aria-label',(f.title||l.textContent).split(' — ')[0].trim()); }); });
+
   // ===== Menú de cuenta (riel, abajo): antes "Cerrar sesión" vivía escondido tras el n.º de versión =====
   function armarCuenta(r){ var b=el('toolCuenta'), m=el('cuentaMenu'); b.style.display='';
     var h='<div class="quien">'+(r.invitado?'<b>Modo de prueba</b> · nada se guarda':'Cuenta <b>'+hesc(r.usuario||'')+'</b>'+(r.dueno?' · dueño':''))+'</div><div class="sep"></div>';
