@@ -387,9 +387,6 @@
   .revcard .l{color:var(--muted);}
   .revwarn{border:1px solid var(--bad);border-radius:8px;padding:7px 9px;margin-top:8px;font-size:12.5px;line-height:1.4;display:flex;gap:8px;align-items:center;justify-content:space-between;}
   .revwarn .lnk{font-weight:600;flex:none;}
-  .addrow.pics .gbtn{flex-direction:column;height:auto;padding:6px 2px 5px;gap:3px;font-size:11.5px;}
-  .addrow.pics .gbtn svg{width:44px;height:30px;}
-  .addrow.pics .pi{fill:none;stroke:var(--ink);stroke-width:1.6;} .addrow.pics .pa{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:3 2;} .addrow.pics .pd{fill:var(--accent);}
   .figsrow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding:7px 9px;border:1px solid var(--line-2);border-radius:7px;background:var(--input);font-size:12px;color:var(--muted);line-height:1.35;}
   .figsrow b{color:var(--ink);} .figsrow .lnk{flex:none;font-weight:600;text-align:right;}
   .thrurow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--muted);}
@@ -724,10 +721,10 @@
       <div class="stepbar" id="stepBar"><button class="on" data-st="cuts">1 · Cortes</button><button data-st="rev">2 · Revisar</button></div>
       <div id="cutList">
       <div class="grp-t" style="margin:12px 0 7px">Agregar un corte</div>
-      <div class="addrow pics" id="addRow">
-        <button class="gbtn" data-add="profile" title="Perfil — cortar siguiendo el contorno (con compensación de la fresa)"><svg viewBox="0 0 44 30"><rect x="11" y="7" width="22" height="16" class="pi"/><rect x="6" y="2.5" width="32" height="25" rx="4" class="pa"/></svg>Perfil</button>
-        <button class="gbtn" data-add="pocket" title="Cajeado — vaciar el interior de las formas cerradas"><svg viewBox="0 0 44 30"><rect x="8" y="4" width="28" height="22" class="pi" style="fill:var(--accent);fill-opacity:.22"/><rect x="13" y="8" width="18" height="14" class="pa"/></svg>Cajeado</button>
-        <button class="gbtn" data-add="drill" title="Taladro — barreno en el centro de cada contorno cerrado"><svg viewBox="0 0 44 30"><circle cx="22" cy="15" r="9" class="pi"/><circle cx="22" cy="15" r="2.6" class="pd"/></svg>Taladro</button>
+      <div class="addrow" id="addRow">
+        <button class="gbtn" data-add="profile" title="Perfil — cortar siguiendo el contorno (con compensación de la fresa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><rect x="3.5" y="3.5" width="17" height="17" rx="2.5" stroke-dasharray="2.6 2.2" opacity=".65"/></svg>Perfil</button>
+        <button class="gbtn" data-add="pocket" title="Cajeado — vaciar el interior de las formas cerradas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.2" opacity=".65"/><rect x="10.5" y="10.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".8"/></svg>Cajeado</button>
+        <button class="gbtn" data-add="drill" title="Taladro — barreno en el centro de cada contorno cerrado"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>Taladro</button>
       </div>
       <div class="grp-t sec" style="margin-top:14px">Orden de corte<span class="opname" id="tpCount"></span></div>
       <div class="tplist" id="tpList"></div>
