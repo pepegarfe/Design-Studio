@@ -361,19 +361,12 @@
   #panePlot select{height:32px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;flex:1;}
   .cutsum{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;font-size:12.5px;color:var(--ink);}
   .cutsum span{min-width:0;}
-  details.mas{margin-top:10px;border-top:1px solid var(--line);padding-top:9px;}
-  details.mas summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted);user-select:none;}
-  details.mas summary:hover{color:var(--ink);}
-  details.mas summary span{font-weight:500;color:var(--faint);margin-left:8px;font-size:11.5px;}
   .addrow{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
   .addrow .gbtn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;font-weight:600;}
   .addrow .gbtn svg{width:15px;height:15px;}
   .formhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:10px;margin-bottom:2px;border-bottom:1px solid var(--line);}
   .formhead b{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .formhead .lnk{font-size:12.5px;font-weight:600;flex:none;}
-  .tplrow{display:flex;gap:6px;align-items:center;margin-top:10px;} .tplrow .gbtn{flex:none;white-space:nowrap;}
-  .tplname{flex:1;min-width:0;height:32px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:12.5px;padding:0 9px;outline:none;}
-  .tplname:focus{border-color:var(--accent);}
   .tptotal{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding:7px 7px 0;}
   .tprow{flex-wrap:wrap;row-gap:0;} .tprow .tpmeta{order:10;flex:0 0 100%;padding-left:33px;margin-top:-1px;}
   .stepbar{display:grid;grid-template-columns:1fr 1fr;margin:10px 0 2px;}
@@ -409,6 +402,9 @@
   .tprow .tpmeta{font-family:var(--font);font-size:11px;color:var(--muted);white-space:normal;line-height:1.4;padding:1px 4px 2px 28px;}
   .tprow{padding:7px 7px 6px;border-color:var(--line);margin-top:3px;}
   .tpbtn{width:26px;height:26px;} .tpbtn svg{width:15px;height:15px;}
+  .grp-t.fsec{margin:14px 0 7px;}
+  /* Cancelar / Calcular pegados al fondo del panel: el formulario es largo y fijo */
+  .formbtns{position:sticky;bottom:-15px;z-index:2;display:flex;gap:7px;margin:14px -16px -15px;padding:10px 16px 14px;background:var(--panel);border-top:1px solid var(--line);}
   .cstat{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;} .cstat.ok{color:var(--good);}
   .sendbar{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;width:340px;box-shadow:0 14px 34px -8px #000b;z-index:41;display:none;}
   .sendbar .pb{height:6px;border-radius:3px;background:var(--input);margin:9px 0;overflow:hidden;} .sendbar .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s;}
@@ -752,6 +748,9 @@
         <div class="muted-note" id="revNote" style="margin-top:8px"></div>
       </div>
       <div id="cutForm" style="display:none">
+      <!-- Orden del formulario (12-nov-2026, a pedido de Jose: todo FIJO, sin "Más opciones" ni plantillas).
+           Sigue el orden en que se decide un corte: por dónde pasa → qué tan hondo → con qué fresa →
+           cómo entra → cómo se sujeta la pieza → cómo se termina. Calcular queda pegado abajo. -->
       <div class="formhead"><button class="lnk" id="formBack" title="Volver a la lista sin aplicar cambios">‹ Cortes</button><b id="formTit">Nueva trayectoria</b><span class="opname" id="opName" style="display:none">Perfil</span></div>
       <div class="figsrow"><span id="formFigs"></span><button class="lnk" id="formFigsUse" style="display:none"></button></div>
       <div class="seg" id="opSeg" style="display:none">
@@ -759,39 +758,28 @@
         <button data-o="pocket" title="Cajeado — vaciar el interior de las formas cerradas con anillos concéntricos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.2" opacity=".65"/><rect x="10.5" y="10.5" width="3" height="3" rx=".6" fill="currentColor" stroke="none" opacity=".8"/></svg>Cajeado</button>
         <button data-o="drill" title="Taladro — barreno en el centro de cada contorno cerrado (círculos = puntos de taladro)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>Taladro</button>
       </div>
-      <div class="grid2" style="margin-top:9px">
-        <div class="field" title="Profundidad de corte DESDE la inicial (se llena sola con el grosor del material)"><label>Prof.</label><input id="cutDepth"><span class="u">mm</span></div>
-        <div class="field" title="Se calcula sola (profundidad ÷ pasada de la fresa). Edítala para forzar N pasadas parejas — p.ej. 18mm en 3 pasadas = 6mm cada una"><label>Pasadas</label><input id="passInfo"></div>
-      </div>
-      <div class="thrurow" id="thruRow" style="display:none"><span id="thruNote"></span></div>
-      <select class="selfield" id="tpTool" style="margin-top:9px" title="Fresa de ESTA trayectoria (sus datos de corte salen de la biblioteca, para el material activo)"></select>
-      <div class="toolsum" id="tpToolSum">—</div>
       <div id="profileOpts">
-        <div class="seg pics" id="sideSeg">
+        <div class="grp-t fsec">Lado del corte</div>
+        <div class="seg pics" id="sideSeg" style="margin-top:0">
           <button class="on" data-s="outside" title="La fresa corre por FUERA de la línea — para recortar piezas a su medida exacta"><svg viewBox="0 0 44 30"><rect x="11" y="7" width="22" height="16" class="pi"/><rect x="6" y="2.5" width="32" height="25" rx="4" class="pa"/></svg>Fuera</button>
           <button data-s="inside" title="Por DENTRO de la línea — para huecos y ventanas a medida exacta"><svg viewBox="0 0 44 30"><rect x="6" y="3" width="32" height="24" class="pi"/><rect x="11" y="7.5" width="22" height="15" rx="3" class="pa"/></svg>Dentro</button>
           <button data-s="on" title="El centro de la fresa va SOBRE la línea (sin compensar)"><svg viewBox="0 0 44 30"><rect x="8" y="5" width="28" height="20" class="pi"/><rect x="8" y="5" width="28" height="20" class="pa"/></svg>Sobre</button><button data-s="left" title="Fresa medio diámetro al lado IZQUIERDO de la dirección del trazo — para trazos abiertos con lado definido. Verifica el lado con las flechas de la vista previa"><svg viewBox="0 0 44 30"><path d="M6 20 38 12" class="pi"/><path d="M5 14 37 6" class="pa"/></svg>Izq</button><button data-s="right" title="Fresa medio diámetro al lado DERECHO de la dirección del trazo — para trazos abiertos con lado definido. Verifica el lado con las flechas de la vista previa"><svg viewBox="0 0 44 30"><path d="M6 14 38 6" class="pi"/><path d="M7 22 39 14" class="pa"/></svg>Der</button>
         </div>
-        <label class="chk" style="margin-top:10px"><input type="checkbox" id="tabsOn"> Puentes (sujetan la pieza al soltarse)</label>
-        <div id="tabFields">
-          <div style="margin-top:8px">
-            <div class="seg" id="tabMode" style="margin-top:0">
-              <button class="on" data-tm="n" title="Cantidad fija de puentes por pieza">Cantidad</button>
-              <button data-tm="dist" title="Un puente cada tantos mm de contorno — las piezas grandes reciben más solas">Cada X mm</button>
-              <button data-tm="manual" title="Tú decides dónde va cada puente: pulsa sobre el recorrido para ponerlo, y sobre un puente para quitarlo">A mano</button>
-            </div>
-            <div class="muted-note" id="tabManNote" style="display:none;margin-top:8px"></div>
-            <div class="field" id="tabNField" style="margin-top:8px" title="Cantidad de puentes (o cada cuántos mm, según el modo)"><label id="tabVLbl">N.º</label><input id="tabN" value="3"><span class="u" id="tabVU"></span></div>
-          </div>
-        </div>
       </div>
       <div class="muted-note" id="opNote" style="display:none;margin-top:9px"></div>
-      <details class="mas" id="masOpc">
-        <summary>Más opciones<span id="masRes"></span></summary>
+      <div class="grp-t fsec">Profundidad</div>
+      <div class="grid2" style="margin-top:0">
+        <div class="field" title="Profundidad de corte DESDE la inicial (se llena sola con el grosor del material)"><label>Prof.</label><input id="cutDepth"><span class="u">mm</span></div>
+        <div class="field" title="Se calcula sola (profundidad ÷ pasada de la fresa). Edítala para forzar N pasadas parejas — p.ej. 18mm en 3 pasadas = 6mm cada una"><label>Pasadas</label><input id="passInfo"></div>
+      </div>
       <div class="grid2" style="margin-top:8px">
         <div class="field" title="Empezar a cortar desde esta profundidad (0 = superficie). Útil si otra trayectoria ya rebajó la zona."><label>P. inicial</label><input id="startDepth" value="0"><span class="u">mm</span></div>
         <div class="field" id="allowWrap" title="Holgura: positiva DEJA material (para pasada de acabado), negativa sobrecorta"><label>Holgura</label><input id="allowOff" value="0"><span class="u">mm</span></div>
       </div>
+      <div class="thrurow" id="thruRow" style="display:none"><span id="thruNote"></span></div>
+      <div class="grp-t fsec">Fresa y sentido de corte</div>
+      <select class="selfield" id="tpTool" style="margin-top:0" title="Fresa de ESTA trayectoria (sus datos de corte salen de la biblioteca, para el material activo)"></select>
+      <div class="toolsum" id="tpToolSum">—</div>
       <div class="seg" id="dirSeg" style="margin-top:8px" title="Sentido del corte respecto al giro de la fresa">
         <button class="on" data-d="climb" title="A favor (concordante/climb) — el filo muerde de lleno: corte limpio y menos calor. El default de Aspire y el recomendado">A favor</button>
         <button data-d="conv" title="Contra (convencional) — empuja la fresa contra el material: más estable si hay vibración o juego en los ejes; útil como remate con 'Invertir dir.'">Contra</button>
@@ -812,9 +800,23 @@
           </div>
         </div>
       </div>
-      <div class="grid2" id="tabDims" style="margin-top:8px">
+      <div id="tabsWrap">
+        <label class="chk" style="margin-top:10px"><input type="checkbox" id="tabsOn"> Puentes (sujetan la pieza al soltarse)</label>
+        <div id="tabFields">
+          <div style="margin-top:8px">
+            <div class="seg" id="tabMode" style="margin-top:0">
+              <button class="on" data-tm="n" title="Cantidad fija de puentes por pieza">Cantidad</button>
+              <button data-tm="dist" title="Un puente cada tantos mm de contorno — las piezas grandes reciben más solas">Cada X mm</button>
+              <button data-tm="manual" title="Tú decides dónde va cada puente: pulsa sobre el recorrido para ponerlo, y sobre un puente para quitarlo">A mano</button>
+            </div>
+            <div class="muted-note" id="tabManNote" style="display:none;margin-top:8px"></div>
+            <div class="field" id="tabNField" style="margin-top:8px" title="Cantidad de puentes (o cada cuántos mm, según el modo)"><label id="tabVLbl">N.º</label><input id="tabN" value="3"><span class="u" id="tabVU"></span></div>
+          </div>
+        </div>
+        <div class="grid2" id="tabDims" style="margin-top:8px">
         <div class="field" title="Ancho de cada puente"><label>Puente ancho</label><input id="tabW" value="8"><span class="u">mm</span></div>
         <div class="field" title="Alto del puente medido desde el fondo del corte (la fresa sube y baja en rampa)"><label>Puente alto</label><input id="tabH" value="3"><span class="u">mm</span></div>
+      </div>
       </div>
       <div id="lastWrap">
         <label class="chk" style="margin-top:10px" title="El desbaste corta dejando una cáscara y una PASADA FINAL a profundidad completa la quita a medida exacta — borde limpio, sin marcas. Al activarla se encienden solas la entrada en rampa (obligada: esa pasada va a fondo de una vez) e Invertir dir.; puedes apagarlas."><input type="checkbox" id="lastOn"> Última pasada separada</label>
@@ -824,15 +826,9 @@
         </div>
       </div>
       <div class="field" style="margin-top:9px" title="Nombre de la trayectoria (aparece en la lista y como marca dentro del archivo)"><label>Nombre</label><input id="tpName" style="text-align:left" placeholder="(automático)"></div>
-      </details>
-      </details>
-      <div class="rowbtns" style="margin-top:12px"><button class="pbtn" id="formCancel" style="flex:1;height:36px">Cancelar</button>
+      <div class="formbtns"><button class="pbtn" id="formCancel" style="flex:1;height:36px">Cancelar</button>
       <button class="pbtn acc" id="btnCalc" style="flex:1.6;height:36px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.09V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 6 19.4l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Calcular</button>
       </div>
-      <details class="mas" id="tplBox" style="margin-top:14px"><summary>Plantillas</summary>
-      <div class="tplrow"><select class="selfield" id="tplPick" title="Plantillas: ajustes guardados con nombre para repetir un trabajo (p. ej. «MDF 12 corte completo»)"></select><button class="gbtn" id="tplDel" style="display:none" title="Borrar la plantilla elegida">Borrar</button></div>
-      <div class="tplrow"><input class="tplname" id="tplName" placeholder="Nombre de plantilla" maxlength="60"><button class="gbtn" id="tplSave" title="Guardar los ajustes de este formulario con ese nombre, para usarlos en otro trabajo">Guardar plantilla</button></div>
-      </details>
       <button class="pbtn acc" id="btnSaveTap" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 20h16"/></svg>Guardar G-code (.tap)</button>
       </div>
     </div>
@@ -4617,6 +4613,7 @@ var PlotterMotor = (function(){
     el('opName').textContent = OPLBL[o]||'';
     el('profileOpts').style.display = o==='profile'?'block':'none';
     el('lastWrap').style.display = o==='profile'?'block':'none';
+    el('tabsWrap').style.display = o==='profile'?'block':'none';
     el('rampWrap').style.display = o==='drill'?'none':'block';
     el('dirSeg').style.display = o==='drill'?'none':'flex';
     el('allowWrap').style.visibility = o==='drill'?'hidden':'visible';
@@ -4982,7 +4979,7 @@ var PlotterMotor = (function(){
   function selFigs(I){ sel.idx=-1; sel.set=new Set(); if(I.length===1) sel.idx=I[0]; else if(I.length>1) sel.set=new Set(I); refreshUI(); }
   function abrirForm(){ volverRev=revOpen; revOpen=false; formOpen=true; formUids=null;
     if(tpSel>=0&&tpaths[tpSel]) selFigs(tpResolve(tpaths[tpSel]));   // al editar, sus figuras quedan seleccionadas: se VE a cuáles aplica
-    pintarPlantillas(); pintarVista(); var a=document.querySelector('.inspect'); if(a) a.scrollTop=0; }
+    pintarVista(); var a=document.querySelector('.inspect'); if(a) a.scrollTop=0; }
   function cerrarForm(){ formOpen=false; formUids=null; if(tpSel>=0){ tpSel=-1; el('tpName').value=''; paintTps(); }
     if(volverRev){ volverRev=false; abrirRev(); } else pintarVista(); }
   function nuevaTp(op,lado){ if(!hasDoc()){ toast('Abre o dibuja un diseño primero'); return; }
@@ -5000,25 +4997,6 @@ var PlotterMotor = (function(){
     if(document.activeElement!==a && a.value!==b.value) a.value=b.value;
     var tt=cncTool(); el('tpToolSum').textContent=tt?('baja '+tt.pass_depth+' mm por pasada · '+Math.round(tt.feed)+' mm/min · '+Math.round(tt.rpm)+' RPM'):'—'; }
   el('tpTool').addEventListener('change',function(){ el('toolPick').value=this.value; el('toolPick').dispatchEvent(new Event('change')); });
-  // Plantillas: la receta del formulario con nombre, guardada en la cuenta (CNC.set → templates).
-  function plantillas(){ return (state.cnc&&state.cnc.templates)||[]; }
-  function pintarPlantillas(){ var p=el('tplPick'), h='<option value="">Plantilla: ninguna</option>';
-    plantillas().forEach(function(t,k){ h+='<option value="'+k+'">'+hesc(t.name)+'</option>'; });
-    p.innerHTML=h; p.value=''; el('tplDel').style.display='none'; }
-  function guardarPlantillas(lista,msg){ CNC.set({templates:lista}).then(function(r){
-    if(r&&r.ok){ state.cnc=r; pintarPlantillas(); toast(msg); } else toast((r&&r.error)||'No se pudo guardar la plantilla'); }); }
-  el('tplPick').addEventListener('change',function(){ var t=plantillas()[parseInt(this.value,10)];
-    el('tplDel').style.display=t?'':'none'; if(!t) return;
-    var nombre=el('tpName').value, rec=JSON.parse(JSON.stringify(t.recipe)); rec.name=nombre;
-    loadEditor(rec); paintTabMode(); syncTpTool(); toast('Plantilla «'+t.name+'» aplicada — revisa y pulsa Calcular'); });
-  el('tplDel').addEventListener('click',function(){ var k=parseInt(el('tplPick').value,10), l=plantillas().slice(); if(!(k>=0)||!l[k]) return;
-    var nm=l[k].name; l.splice(k,1); guardarPlantillas(l,'Plantilla «'+nm+'» borrada'); });
-  el('tplSave').addEventListener('click',function(){ var nm=el('tplName').value.trim();
-    if(!nm){ toast('Escribe un nombre para la plantilla'); el('tplName').focus(); return; }
-    var rec=editorState(); delete rec.name;
-    if(rec.tabs&&rec.tabs.mode==='manual'){ rec.tabs.mode='n'; rec.tabs.v=parseFloat(tabVals.n)||3; rec.tabs.pts=[]; }   // los puntos son de ESTA pieza, no viajan en la plantilla
-    var l=plantillas().filter(function(t){ return t.name.toLowerCase()!==nm.toLowerCase(); });   // mismo nombre = se reemplaza
-    l.push({name:nm, recipe:rec}); el('tplName').value=''; guardarPlantillas(l,'Plantilla «'+nm+'» guardada'); });
   // --- A qué figuras se aplica el corte del formulario ---
   function pintarFigs(){ if(!formOpen) return; var selI=(mode()==='all')?[]:activeIdx(), b=el('formFigsUse');
     if(tpSel>=0&&tpaths[tpSel]){ var t=tpaths[tpSel], cur=(formUids||t.uids).filter(function(u){ return doc.uid.indexOf(u)>=0; });
@@ -5050,19 +5028,11 @@ var PlotterMotor = (function(){
     el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
     syncTpTool();
-    var a=[]; if(parseFloat(el('startDepth').value)) a.push('empieza en '+el('startDepth').value+' mm');
-    if(parseFloat(el('allowOff').value)) a.push('holgura');
-    var dc=el('dirSeg').querySelector('button.on'); if(dc&&dc.getAttribute('data-d')==='conv') a.push('contra');
-    if(el('rampOn').checked && el('rampWrap').style.display!=='none') a.push('rampa');
-    if(el('lastOn').checked && el('lastWrap').style.display!=='none') a.push('última pasada');
-    if(el('tpName').value.trim() && tpSel<0) a.push('con nombre');
-    el('masRes').textContent=a.length?('· '+a.join(', ')):''; }
+  }
   ['change','input','click'].forEach(function(ev){ el('paneCncCut').addEventListener(ev,function(){ setTimeout(pintarCorte,60); }); });
   el('tabCncCut').addEventListener('click',function(){ setTimeout(pintarCorte,0); });
   el('modeSeg').addEventListener('click',function(){ setTimeout(pintarCorte,0); });
   el('cutSumGo').addEventListener('click',function(){ showTab('cnccfg'); });
-  try{ if(localStorage.getItem('ds_masopc')==='1') el('masOpc').open=true; }catch(e){}
-  el('masOpc').addEventListener('toggle',function(){ try{ localStorage.setItem('ds_masopc',el('masOpc').open?'1':'0'); }catch(e){} });
   // El botón final de la CNC vive ARRIBA A LA DERECHA, donde el plotter tiene "Enviar": la acción
   // que termina el trabajo siempre está en el mismo sitio. Sin trayectorias, lleva a hacerlas.
   el('btnTapTop').addEventListener('click',function(){

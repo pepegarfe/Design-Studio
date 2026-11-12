@@ -227,15 +227,18 @@ NO se deducen del código:
   El **material ya no es una pestaña**: es el encabezado `#cutSum` con "Cambiar", que lleva a
   `#paneCncCfg` (grosores a un toque, cero de Z con dibujo). `#tabsBar` se oculta en Corte.
   `#opSeg` sigue en el HTML, oculto, porque `curOp()` lo lee. Los campos conservan sus `id`.
-  Lo poco usado va en `<details id="masOpc">`; **si metes otra opción ahí, agrégala a
-  `pintarCorte()`** (`#masRes` avisa lo que hay activo aunque esté plegado).
+  **El formulario es FIJO, sin "Más opciones"** (pedido de Jose, 12-nov): todo a la vista, en el
+  orden en que se decide un corte — lado → profundidad (Prof./Pasadas, P. inicial/Holgura) →
+  fresa y sentido → entrada en rampa → puentes → última pasada → nombre. Cancelar/Calcular van
+  pegados al fondo del panel (`.formbtns`, `position:sticky`) porque el formulario es largo.
 - **Un corte se crea desde `#addRow`** (Perfil, Cajeado, Taladro), sobre las figuras seleccionadas
   en el lienzo (ninguna = todas). Cada corte tiene **color** (`colorTp()`, `TP_COLORES`), el mismo
   en su fila y en el lienzo, y su **número de orden** pintado donde arranca (`pintarInsignias()`).
   ⚠️ `draw` está **envuelta** (`_dibujar`): lo que deba seguir a cada redibujo va en esa envoltura.
 - **Quitado a pedido de Jose (12-nov-2026), no lo vuelvas a poner sin preguntarle:** la barra de
-  acciones que aparecía junto a la figura seleccionada, el botón "Atravesar el material" y el
-  dibujo del material de canto con las pasadas. Lo probó y no le gustaron.
+  acciones que aparecía junto a la figura seleccionada, el botón "Atravesar el material", el
+  dibujo del material de canto con las pasadas, las **plantillas** de trayectoria y el plegable
+  "Más opciones". Los probó y no le gustaron.
 - **Las figuras de un corte se pueden cambiar**: con el formulario abierto, el clic en el lienzo
   selecciona FIGURAS (no suelta el corte ni salta a otro) y "Usar las seleccionadas" las deja en
   `formUids`, que se aplican al Calcular. Al abrir un corte, sus figuras quedan seleccionadas.
@@ -250,9 +253,6 @@ NO se deducen del código:
   (Configuración): al cambiarlo PULSA aquel. No dupliques la lógica de `tool_sel`/`resetPasses`.
 - **Tiempo por trayectoria** (`t._secs`) y total (`#tpTotal`): salen de la ÚLTIMA vista previa; si
   no se ha pedido "Ver recorrido" tras cambiar el diseño, son de antes (por eso llevan "≈").
-- **Plantillas de trayectoria**: la receta del formulario con nombre, en la cuenta
-  (`cnc_set({'templates': …})`, `_limpiar_plantillas`). ⚠️ Los puentes "A mano" **no viajan** en
-  la plantilla (sus puntos son de una pieza concreta): se guarda como "Cantidad".
 - ⚠️ **CNC: puentes "A mano"** (`tabs.mode == 'manual'`, `tabs.pts` = puntos `[x, y]` en mm sobre
   el recorrido). `_ring_zones()` es el ÚNICO sitio que decide las zonas de puente de un contorno:
   lo usan el corte (`_contour_body`), los avisos (`tab_report`) y las marcas del lienzo

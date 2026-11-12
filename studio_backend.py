@@ -328,7 +328,7 @@ def cnc_get():
         if p.exists():
             saved = json.loads(p.read_text(encoding='utf-8'))
             for k in ('machine', 'theme', 'units', 'fillview', 'sheets', 'quote', 'work',
-                      'material', 'materials', 'tool_sel', 'tools', 'templates'):
+                      'material', 'materials', 'tool_sel', 'tools'):
                 if k in saved:
                     data[k] = saved[k]
             fix = _apply_preset_fixes(data, int(saved.get('preset_rev', 0) or 0))
@@ -357,29 +357,8 @@ def cnc_get():
                     pass
     except Exception:
         pass
-    if not isinstance(data.get('templates'), list):
-        data['templates'] = []
     data['ok'] = True
     return data
-
-
-def _limpiar_plantillas(lista):
-    """Plantillas de trayectoria: [{'name', 'recipe'}]. La receta es lo que el formulario de
-    Corte manda al Calcular (operación, lado, profundidad, puentes, rampa…); aquí solo se acota
-    (cuántas, largo del nombre, tamaño), no se interpreta: quien la valida es el generador al usarla."""
-    out, vistos = [], set()
-    for t in (lista or [])[:40]:
-        if not isinstance(t, dict):
-            continue
-        nm = str(t.get('name') or '').strip()[:60]
-        rec = t.get('recipe')
-        if not nm or nm.lower() in vistos or not isinstance(rec, dict):
-            continue
-        if len(json.dumps(rec, ensure_ascii=False)) > 4000:
-            continue
-        vistos.add(nm.lower())
-        out.append({'name': nm, 'recipe': rec})
-    return out
 
 
 @_en_fila
@@ -403,8 +382,6 @@ def cnc_set(patch):
             cur['units'] = patch['units']
         if 'fillview' in patch:
             cur['fillview'] = bool(patch['fillview'])
-        if 'templates' in patch:
-            cur['templates'] = _limpiar_plantillas(patch['templates'])
         if 'sheets' in patch:
             n = int(patch['sheets'])
             if not (1 <= n <= 8):
