@@ -357,6 +357,12 @@ teléfono (está hecha para computadora).
   cambios"; **dejé fuera dos a propósito** y se lo dije: pasada final delgada (choca con la regla
   de `_passes`) y *leads* (riesgo de morder la pieza vecina). ⏳ Falta el primer corte REAL con
   puentes a mano, y decidir esas dos. V-carve quedó anotado como proyecto aparte.
+- ✅ **Corte de CNC, propuesta "D" (12-nov-2026)**: Jose no quedó conforme con el flujo tipo
+  Aspire; le dibujé cuatro propuestas (página en claude.ai, no persiste aquí) y eligió la
+  combinada: material como encabezado, pasos Cortes/Revisar, corte creado desde el dibujo con
+  una barra junto a la selección, color y número por corte, formulario con dibujos y "Atravesar",
+  un archivo por fresa y aviso de orden. Reglas en CLAUDE.md. ⏳ Sin probar en la máquina ni
+  con Ángel; yo le propuse **ver a alguien nuevo preparar un corte** y ajustar con eso.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las

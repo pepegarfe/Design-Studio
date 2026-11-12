@@ -221,12 +221,29 @@ NO se deducen del código:
 - **Ya no existe la ventana "Plotter"** (`#plotterModal`): cuchilla, conexión, mover el cabezal y
   "Dónde se corta" viven en `#panePlot`, el paso Corte del plotter. `openPlotter()` ahora **lleva
   a ese paso** (y abre el cajón en pantallas chicas); no abre nada encima del diseño.
-- **Corte de la CNC, flujo como Aspire: o estás en la LISTA (`#cutList`) o dentro de UNA
-  trayectoria (`#cutForm`), nunca en las dos** (`formOpen`, `abrirForm()`/`cerrarForm()`). La
-  operación se elige al agregar (`nuevaTp('profile'|'pocket'|'drill')`; `#opSeg` sigue en el HTML,
-  oculto, porque `curOp()` lo lee). Calcular y Cancelar vuelven a la lista. Los campos conservan
-  sus `id`. Lo que casi nunca cambia va en `<details id="masOpc">`; `#masRes` avisa qué hay activo
-  ahí aunque esté plegado — **si metes otra opción ahí, agrégala a `pintarCorte()`**.
+- **Corte de la CNC = propuesta "D" (aprobada por Jose, 12-nov-2026): dos pasos, `1 · Cortes` y
+  `2 · Revisar`** (`#stepBar`). Tres vistas, nunca dos a la vez (`pintarVista()`): la LISTA
+  (`#cutList`), el FORMULARIO de un corte (`#cutForm`, `formOpen`) y REVISAR (`#cutRev`, `revOpen`).
+  El **material ya no es una pestaña**: es el encabezado `#cutSum` con "Cambiar", que lleva a
+  `#paneCncCfg` (grosores a un toque, cero de Z con dibujo). `#tabsBar` se oculta en Corte.
+  `#opSeg` sigue en el HTML, oculto, porque `curOp()` lo lee. Los campos conservan sus `id`.
+  Lo poco usado va en `<details id="masOpc">`; **si metes otra opción ahí, agrégala a
+  `pintarCorte()`** (`#masRes` avisa lo que hay activo aunque esté plegado).
+- **Un corte se crea desde el DIBUJO**: con figuras seleccionadas en el paso Corte aparece
+  `#cutBar` junto a ellas (`posCutBar()`, se recoloca tras cada `draw()`), o desde `#addRow`.
+  Cada corte tiene **color** (`colorTp()`, `TP_COLORES`), el mismo en su fila y en el lienzo, y su
+  **número de orden** pintado donde arranca (`pintarInsignias()`). ⚠️ `draw` está **envuelta**
+  (`_dibujar`): lo que deba seguir a cada redibujo va en esa envoltura, no dentro de `draw()`.
+- **Las figuras de un corte se pueden cambiar**: con el formulario abierto, el clic en el lienzo
+  selecciona FIGURAS (no suelta el corte ni salta a otro) y "Usar las seleccionadas" las deja en
+  `formUids`, que se aplican al Calcular. Al abrir un corte, sus figuras quedan seleccionadas.
+- **Revisar es el único camino para guardar** (`abrirRev()` → `guardarRev()`). Vuelve a pedir los
+  avisos al entrar y **`revDatos` se anula al empezar cada revisión**: nunca se guarda con el
+  resumen de una anterior. Hace dos cosas que antes no existían: **un archivo por fresa**
+  (`gruposPorFresa()`; el RichAuto no cambia de herramienta solo) y el **aviso de orden**
+  (`ordenMalo()`: un perfil que atraviesa la pieza antes que un cajeado, un taladro o un perfil
+  por dentro de esa misma pieza) con "Ordenar" (`ordenarCortes()`). `saveTap()`/`tapResumen()`
+  siguen en el archivo pero ya nada visible los llama.
 - **La fresa se elige dentro del formulario** (`#tpTool`), que es un **espejo** de `#toolPick`
   (Configuración): al cambiarlo PULSA aquel. No dupliques la lógica de `tool_sel`/`resetPasses`.
 - **Tiempo por trayectoria** (`t._secs`) y total (`#tpTotal`): salen de la ÚLTIMA vista previa; si
