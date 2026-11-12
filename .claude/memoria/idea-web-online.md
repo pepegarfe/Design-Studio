@@ -344,6 +344,13 @@ teléfono (está hecha para computadora).
   código, datos donde están). ⚠️ Trampa: el túnel entra desde la propia Mac → todo visitante parece
   "esta computadora"; revisar `es_esta_computadora()` con `DS_PROXY=1` antes de prenderlo.
   Después: mini-PC en el taller, o Railway con volume cuando haya clientes.
+- ⏳ **Interfaz "Diseño → Corte" (12-nov-2026, commit `62a14d8`, en línea)**: maqueta aprobada por
+  Jose y programada (reglas en CLAUDE.md, sección "Diseño → Corte"). Probada con navegador
+  invisible (Playwright en `/tmp/ds-maqueta`, no persiste) y `.tap` idéntico byte a byte al
+  anterior. **Falta que Jose la pruebe con el plotter REAL conectado** (conectar, mover cabezal,
+  prueba de corte: mismo código, otro sitio) y en un teléfono real. Sin decidir: guardar
+  velocidad/presión **por material** en el plotter (Jose no contestó). `CLAUDE.md` va en 333
+  líneas contra su regla de <200: ofrecido moverlo a `.claude/rules/`, sin respuesta.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las
