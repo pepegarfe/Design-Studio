@@ -2631,12 +2631,35 @@ var PlotterMotor = (function(){
     var it=(sub.indexOf('italic')>=0||sub.indexOf('oblique')>=0)?'italic':'normal';
     return {fam:(f.family||f.name), w:w, it:it};
   }
+  // ⚠️ En la web el navegador NO tiene las fuentes: el catálogo vive en el servidor. Pintar el
+  // nombre "con su fuente" solo por CSS caía en la letra de reserva en todo aparato que no las
+  // tuviera instaladas (o sea, casi todos). Ahora el servidor manda una MUESTRA de cada fuente
+  // (solo las letras de su nombre, ~2 KB) cuando su fila entra a la vista, y la fuente ENTERA
+  // solo de la elegida, para el recuadro donde se escribe. El CSS de familia se deja como primer
+  // intento: si el aparato sí la tiene, sale al instante.
+  var fMuestra={}, fEntera={};
+  function cargarFuente(cache,pref,ruta,i){
+    if(cache[i]) return cache[i];
+    if(!window.FontFace||api()) return (cache[i]=Promise.reject(new Error('sin FontFace')));
+    var ff=new FontFace(pref+i,'url('+ruta+'?i='+i+')');
+    cache[i]=ff.load().then(function(x){ document.fonts.add(x); return pref+i; });
+    cache[i].catch(function(){});            // una fuente que no carga no debe ensuciar la consola
+    return cache[i]; }
+  function ponerMuestra(nodo,i,sigue){ cargarFuente(fMuestra,'dsm','/api/font_muestra',i).then(function(fam){
+      if(sigue && !sigue()) return;
+      nodo.style.fontFamily='"'+fam+'"'; nodo.style.fontWeight='400'; nodo.style.fontStyle='normal'; }).catch(function(){}); }
+  var fpObs=window.IntersectionObserver ? new IntersectionObserver(function(es){ es.forEach(function(e){
+      if(!e.isIntersecting) return; fpObs.unobserve(e.target); ponerMuestra(e.target, +e.target.getAttribute('data-fi')); }); },
+    {root:el('fpList'), rootMargin:'160px'}) : null;
   function applyFontPreview(){
     var f=(fontsCache||[])[fontSel]; if(!f) return;
-    var c=cssFontOf(f);
+    var c=cssFontOf(f), i=fontSel;
     el('fpName').textContent=f.name;
     [el('fpName'), el('txText')].forEach(function(n){   // el recuadro de texto escribe CON la fuente elegida
       n.style.fontFamily='"'+c.fam+'"'; n.style.fontWeight=c.w; n.style.fontStyle=c.it; });
+    ponerMuestra(el('fpName'), i, function(){ return fontSel===i; });
+    cargarFuente(fEntera,'dsf','/api/font_archivo',i).then(function(fam){ if(fontSel!==i) return;
+      var t=el('txText'); t.style.fontFamily='"'+fam+'"'; t.style.fontWeight='400'; t.style.fontStyle='normal'; }).catch(function(){});
   }
   function setFontByName(wanted){
     var fonts=fontsCache||[]; if(!fonts.length) return;
@@ -2707,6 +2730,8 @@ var PlotterMotor = (function(){
     }
     var c=cssFontOf(f);
     d.style.fontFamily='"'+c.fam+'"'; d.style.fontWeight=c.w; d.style.fontStyle=c.it;
+    d.setAttribute('data-fi',r.font);                 // su muestra se pide al entrar a la vista
+    if(fpObs) fpObs.observe(d); else ponerMuestra(d,r.font);
     d.addEventListener('click',function(ev){ ev.stopPropagation();
       if(!r.sub && e.styles.length>1 && fpOpen!==r.fam){     // familia con varios pesos: abrirla
         fpOpen=r.fam; fontSel=r.font; applyFontPreview(); fillFontList(el('fpSearch').value); return; }

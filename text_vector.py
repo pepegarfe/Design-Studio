@@ -397,3 +397,83 @@ def text_paths(opts):
             font.close()
         except Exception:
             pass
+
+
+# ---------- muestras para el selector de la web ----------
+# En la web el catálogo vive en el SERVIDOR: el navegador de quien diseña no tiene esas fuentes
+# instaladas, así que pintar "cada nombre con su tipografía" por CSS caía siempre en la letra de
+# reserva (en el escritorio funcionaba porque app y fuentes estaban en la misma máquina). El
+# servidor manda una MUESTRA: la fuente recortada a las letras de su propio nombre (~2 KB, ~10 ms),
+# y la fuente entera solo de la que se elige, para que el recuadro de texto escriba con ella.
+_MUESTRAS = {}
+_MUESTRAS_MAX = 2500
+
+
+def _fuente_de_lista(i):
+    fonts = list_fonts().get('fonts') or []
+    try:
+        i = int(i)
+    except (TypeError, ValueError):
+        return None
+    return fonts[i] if 0 <= i < len(fonts) else None
+
+
+def font_sample(i):
+    """WOFF con SOLO los glifos del nombre de la fuente i de la lista (o None)."""
+    f = _fuente_de_lista(i)
+    if not f:
+        return None
+    clave = (f.get('path'), f.get('index') or 0)
+    if clave in _MUESTRAS:
+        return _MUESTRAS[clave]
+    try:
+        import io
+        from fontTools import subset
+        from fontTools.ttLib import TTFont
+        o = subset.Options()
+        o.layout_features = []
+        o.name_IDs = []
+        o.hinting = False
+        o.notdef_outline = True
+        o.glyph_names = False
+        o.legacy_kern = False
+        o.ignore_missing_glyphs = True
+        o.ignore_missing_unicodes = True
+        o.drop_tables += ['DSIG', 'GPOS', 'GSUB', 'GDEF', 'kern', 'meta', 'STAT',
+                          'fvar', 'gvar', 'avar', 'HVAR', 'MVAR']
+        font = TTFont(f['path'], fontNumber=f.get('index') or 0, lazy=True)
+        sub = subset.Subsetter(o)
+        sub.populate(text=(f.get('family') or '') + (f.get('name') or '') + (f.get('sub') or '') + 'Regular')
+        sub.subset(font)
+        buf = io.BytesIO()
+        font.flavor = 'woff'
+        font.save(buf)
+        data = buf.getvalue()
+    except Exception:
+        data = None            # fuente rara: la fila sale con la letra de reserva, como antes
+    if len(_MUESTRAS) >= _MUESTRAS_MAX:
+        _MUESTRAS.clear()
+    _MUESTRAS[clave] = data
+    return data
+
+
+def font_file(i):
+    """(bytes, tipo MIME) de la fuente i ENTERA, para que el navegador escriba con ella. De una
+    colección .ttc se extrae solo esa cara: el navegador no sabe elegir dentro de una colección."""
+    f = _fuente_de_lista(i)
+    if not f:
+        return None, None
+    path = f['path']
+    ext = os.path.splitext(path)[1].lower()
+    try:
+        if ext in ('.ttc', '.otc', '.dfont'):
+            import io
+            from fontTools.ttLib import TTFont
+            font = TTFont(path, fontNumber=f.get('index') or 0)
+            buf = io.BytesIO()
+            font.save(buf)
+            return buf.getvalue(), ('font/otf' if 'CFF ' in font else 'font/ttf')
+        with open(path, 'rb') as fh:
+            return fh.read(), ('font/otf' if ext == '.otf' else 'font/ttf')
+    except Exception:
+        return None, None

@@ -470,6 +470,26 @@ def api_fonts():
     return _json(texter.list_fonts())
 
 
+def _fuente_http(datos, tipo):
+    """Una fuente (o su muestra) para el navegador. Solo sale lo que está en la lista de fuentes:
+    el índice lo resuelve text_vector contra esa lista, nunca una ruta que mande el cliente."""
+    if not datos:
+        return HTTPResponse(status=404, body='')
+    return HTTPResponse(body=datos, status=200, headers={
+        'Content-Type': tipo, 'Cache-Control': 'private, max-age=604800'})
+
+
+@app.get('/api/font_muestra')
+def api_font_muestra():
+    return _fuente_http(texter.font_sample(request.query.get('i')), 'font/woff')
+
+
+@app.get('/api/font_archivo')
+def api_font_archivo():
+    datos, tipo = texter.font_file(request.query.get('i'))
+    return _fuente_http(datos, tipo or 'font/ttf')
+
+
 @app.post('/api/text')
 def api_text():
     d = request.json or {}

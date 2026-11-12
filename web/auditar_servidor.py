@@ -198,6 +198,16 @@ try:
     for _ruta in ('/api/update_start', '/api/update_status', '/api/update_apply'):
         r = pedir(_ruta, {'url': 'https://example.com/lo-que-sea.zip', 'job': 'x'})
         ok(r.get('ok') is False and 'HTTP 40' in (r.get('error') or ''), f'{_ruta} ya no existe (no se descarga ni instala nada)', r.get('error'))
+    # muestras de tipografía para el selector: solo por índice de la lista, nunca por ruta
+    tipo, cuerpo = pedir('/api/font_muestra?i=0', crudo=True)
+    ok(tipo.startswith('font/woff') and cuerpo[:4] == b'wOFF' and len(cuerpo) < 40000, 'muestra de la primera tipografía → WOFF pequeño', f'{tipo} {len(cuerpo)} bytes')
+    tipo, cuerpo = pedir('/api/font_archivo?i=0', crudo=True)
+    ok(tipo.startswith('font/') and len(cuerpo) > 1000, 'archivo completo de la primera tipografía → una fuente', f'{tipo} {len(cuerpo)} bytes')
+    for _malo in ('999999', '-1', 'abc', '../../etc/passwd', ''):
+        r = pedir('/api/font_archivo?i=' + urllib.parse.quote(_malo))
+        ok(r.get('ok') is False and 'HTTP 404' in (r.get('error') or ''), f'tipografía con índice inválido ({_malo!r}) → 404, sin leer nada', r.get('error'))
+    st, h, cuerpo = http_crudo('GET', '/api/font_archivo?i=0')
+    ok(st in (302, 303, 401, 403), 'tipografías sin sesión → no se entregan', str(st))
     r = pedir('/api/update_check')
     ok(r.get('web') and r.get('newer') is False and re.fullmatch(r'[0-9a-f]{12}', r.get('build') or ''), 'update_check → versión web, con la huella del despliegue', r.get('build'))
     r = pedir('/api/connect', {'port': '/dev/cu.usbserial-AO004NFH', 'baud': 9600})

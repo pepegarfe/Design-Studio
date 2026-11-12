@@ -310,6 +310,15 @@ hardcodear colores ni fuentes en los widgets** — todo sale de aquí:
   (`fonts_cache.json`) se invalida solo con una firma de esas carpetas (`_dirs_sig`), pero **esa
   firma solo mira el PRIMER NIVEL**: fuentes metidas dentro de una subcarpeta que ya existía
   pueden no detectarse — instalarlas sueltas, o borrar el caché.
+- ⚠️ **En la web el navegador NO tiene las fuentes: el catálogo vive en el servidor.** Pintar
+  cada nombre "con su tipografía" solo por CSS (`font-family` = nombre de la familia) cae en la
+  letra de reserva en todo aparato que no las tenga instaladas — en la Mac de Jose no se notaba
+  porque ahí SÍ están (12-nov-2026). El servidor manda una **muestra** por fila
+  (`/api/font_muestra?i=`: la fuente recortada a las letras de su nombre, ~2 KB, `font_sample()`)
+  cuando la fila entra a la vista (`IntersectionObserver`), y la fuente **entera** solo de la
+  elegida (`/api/font_archivo?i=`), para el recuadro donde se escribe. Las dos van **por índice
+  de la lista**, nunca por ruta. Para probarlo hay que usar fuentes que el navegador de prueba
+  NO tenga (`DS_FUENTES` con familias renombradas); con las del sistema el fallo no aparece.
 - ⚠️ **El selector de fuentes dibuja POR TANDAS y agrupado por familia** (`fillFontList`/
   `fpDrawRows` en `studio_ui.html`). **No volver a pintar una fila por archivo de fuente**: cada
   fila se dibuja con su propia tipografía, así que la lista completa obliga al motor web a cargar
