@@ -774,7 +774,7 @@
         <div class="field" title="Profundidad de corte DESDE la inicial (se llena sola con el grosor del material)"><label>Prof.</label><input id="cutDepth"><span class="u">mm</span></div>
         <div class="field" title="Se calcula sola (profundidad ÷ pasada de la fresa). Edítala para forzar N pasadas parejas — p.ej. 18mm en 3 pasadas = 6mm cada una"><label>Pasadas</label><input id="passInfo"></div>
       </div>
-      <div class="thrurow"><button class="chipb" id="btnThru" title="Poner la profundidad igual al grosor del material, para cortar la pieza por completo">Atravesar el material</button><span id="thruNote"></span></div>
+      <div class="thrurow" id="thruRow" style="display:none"><span id="thruNote"></span></div>
       <div id="cantoBox" title="El material visto de canto: cada línea punteada es una pasada"></div>
       <select class="selfield" id="tpTool" style="margin-top:9px" title="Fresa de ESTA trayectoria (sus datos de corte salen de la biblioteca, para el material activo)"></select>
       <div class="toolsum" id="tpToolSum">—</div>
@@ -5041,14 +5041,12 @@ var PlotterMotor = (function(){
       el('formFigs').innerHTML=selI.length?('Se aplicará a <b>'+selI.length+(selI.length===1?' figura seleccionada':' figuras seleccionadas')+'</b>')
         :('Se aplicará a <b>todas las figuras</b> ('+doc.paths.length+'). Selecciona en el dibujo para elegir solo algunas.'); } }
   el('formFigsUse').addEventListener('click',function(){ if(this._u&&this._u.length){ formUids=this._u.slice(); pintarFigs(); sideSegRefresh(); } });
-  // --- "Atravesar" y el dibujo del material de canto ---
-  el('btnThru').addEventListener('click',function(){ if(!state.cnc) return; var th=state.cnc.material.thickness, st=Math.max(0,parseFloat(el('startDepth').value)||0);
-    el('cutDepth').value=Math.round(Math.max(0.1,th-st)*100)/100; depthAuto=null; paintPasses(); pintarCorte(); });
+  // --- El dibujo del material de canto (el botón "Atravesar" se quitó a pedido de Jose, 12-nov-2026) ---
   function pintarCanto(){ if(!state.cnc) return; var th=parseFloat(state.cnc.material.thickness)||12, st=Math.max(0,parseFloat(el('startDepth').value)||0),
         d=parseFloat(el('cutDepth').value)||0, n=Math.max(1,parseInt(el('passInfo').value,10)||1), op=curOp(), fondo=st+d;
     var pasa=fondo>=th-0.01, mas=fondo>th+0.01;
-    el('btnThru').classList.toggle('on',pasa&&!mas);
     el('thruNote').textContent=mas?('baja '+(Math.round((fondo-th)*100)/100)+' mm en la cama'):(pasa?'':'quedan '+(Math.round((th-fondo)*100)/100)+' mm sin cortar');
+    el('thruRow').style.display=el('thruNote').textContent?'':'none';
     var W=270, x0=92, x1=178, yT=13, esc=30/Math.max(th,fondo,0.1), yM=yT+th*esc, yF=yT+fondo*esc, yS=yT+st*esc, H=Math.max(yM,yF)+16;
     var tabH=(op==='profile'&&el('tabsOn').checked)?Math.min(parseFloat(el('tabH').value)||0,d):0, yTab=yF-tabH*esc;
     var h='<svg viewBox="0 0 '+W+' '+Math.round(H)+'" aria-hidden="true">'+
