@@ -359,8 +359,6 @@
   .lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;} .lnk:hover{text-decoration:underline;}
   #panePlot{padding:0;} #panePlot .grp-t{margin-bottom:10px;}
   #panePlot select{height:32px;border-radius:7px;background:var(--input);border:1px solid var(--line-2);color:var(--ink);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;flex:1;}
-  .cutsum{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;font-size:12.5px;color:var(--ink);}
-  .cutsum span{min-width:0;}
   .addrow{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
   .addrow .gbtn{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;font-weight:600;}
   .addrow .gbtn svg{width:15px;height:15px;}
@@ -369,10 +367,6 @@
   .formhead .lnk{font-size:12.5px;font-weight:600;flex:none;}
   .tptotal{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding:7px 7px 0;}
   .tprow{flex-wrap:wrap;row-gap:0;} .tprow .tpmeta{order:10;flex:0 0 100%;padding-left:33px;margin-top:-1px;}
-  .stepbar{display:grid;grid-template-columns:1fr 1fr;margin:10px 0 2px;}
-  .stepbar button{height:34px;border:0;border-bottom:2px solid var(--line-2);background:none;color:var(--faint);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
-  .stepbar button.on{color:var(--accent);border-bottom-color:var(--accent);}
-  .stepbar button.ok{color:var(--good);border-bottom-color:var(--good);}
   .chiprow{display:flex;gap:5px;flex-wrap:wrap;}
   .chiprow button{height:28px;min-width:38px;padding:0 10px;border-radius:14px;border:1px solid var(--line-2);background:var(--input);color:var(--muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
   .chiprow button.on{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--ink);}
@@ -400,8 +394,29 @@
   .grp-t.fsec{margin:14px 0 7px;}
   /* Cancelar / Calcular pegados al fondo del panel: el formulario es largo y fijo */
   .formbtns{position:sticky;bottom:-15px;z-index:2;display:flex;gap:7px;margin:14px -16px -15px;padding:10px 16px 14px;background:var(--panel);border-top:1px solid var(--line);}
-  #revGo,#revSave{display:flex;align-items:center;justify-content:center;gap:7px;} #revGo svg,#revSave svg{width:15px;height:15px;}
+  #revGo,#revSave{align-items:center;justify-content:center;gap:7px;} #revSave{display:flex;} #revGo svg,#revSave svg{width:15px;height:15px;}
   #cutRev .rowbtns .gbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;} #cutRev .rowbtns .gbtn svg{width:14px;height:14px;}
+  /* Pasos del Corte de la CNC: tres BOTONES encadenados, cada uno con su resumen */
+  /* ⚠️ flex:none — .inspect es una columna flex con scroll: sin esto, cuando el contenido es largo
+     (Revisar con dos archivos) la barra se APLASTA y queda debajo del panel. Va pegada arriba para
+     que los pasos sigan a la vista al bajar; la sombra del color del panel tapa lo que pasa detrás. */
+  .stp{display:flex;flex:none;margin:12px 16px 0;border:1px solid var(--line-2);border-radius:9px;overflow:hidden;position:sticky;top:12px;z-index:3;box-shadow:0 0 0 12px var(--panel);}
+  .modebar{flex:none;}
+  .stp button{flex:1;min-width:0;padding:6px 6px 6px 9px;display:flex;flex-direction:column;gap:1px;align-items:flex-start;text-align:left;border:0;border-right:1px solid var(--line-2);background:var(--input);font:inherit;cursor:pointer;}
+  .stp button:last-child{border-right:0;}
+  .stp button:hover{background:var(--hover);}
+  .stp b{font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:5px;}
+  .stp small{font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;min-height:13px;}
+  .stp i{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--faint);font:700 9px var(--font);font-style:normal;display:grid;place-content:center;color:var(--faint);flex:none;}
+  .stp button.ok i{border-color:var(--good);background:var(--good);color:var(--panel);} .stp button.ok b{color:var(--ink);}
+  .stp button.on{background:var(--panel);box-shadow:inset 0 -2.5px 0 var(--accent);} .stp button.on b{color:var(--accent);} .stp button.on i{border-color:var(--accent);color:var(--accent);}
+  /* Ir atrás / adelante al pie de cada paso */
+  .navrow{display:flex;gap:7px;margin-top:14px;}
+  .navrow .pbtn{flex:1;height:36px;font-weight:600;white-space:nowrap;} .navrow .pbtn.acc{flex:1.5;font-weight:700;}
+  .tlsub{text-transform:none;letter-spacing:0;font-family:var(--font);color:var(--faint);}
+  .tall{display:flex;flex-direction:column;gap:6px;}
+  .tl{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:1px solid var(--line-2);border-radius:8px;padding:9px 10px;background:var(--input);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-align:left;}
+  .tl:hover{border-color:var(--accent);} .tl small{font-weight:500;color:var(--muted);font-size:11.5px;white-space:nowrap;}
   .cstat{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;} .cstat.ok{color:var(--good);}
   .sendbar{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;width:340px;box-shadow:0 14px 34px -8px #000b;z-index:41;display:none;}
   .sendbar .pb{height:6px;border-radius:3px;background:var(--input);margin:9px 0;overflow:hidden;} .sendbar .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s;}
@@ -557,6 +572,13 @@
       <button class="tab" id="tabCncCut" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v7"/><path d="m9 10 3 4 3-4z" fill="currentColor" stroke="none"/><rect x="4" y="17" width="16" height="3" rx="1"/><path d="M7 17v-2M17 17v-2"/></svg>Corte</button>
     </div>
 
+    <!-- Los TRES pasos del Corte de la CNC, siempre a la vista y los tres pulsables (12-nov-2026).
+         Antes eran dos textos con raya y el material un enlace aparte: no se entendía que se podía volver. -->
+    <div class="stp" id="cncSteps" style="display:none">
+      <button data-st="mat" title="Paso 1: qué vas a cortar, su grosor y dónde está el cero de Z"><b><i>1</i>Material</b><small id="stMat"></small></button>
+      <button data-st="cuts" title="Paso 2: los cortes y su orden"><b><i>2</i>Cortes</b><small id="stCuts"></small></button>
+      <button data-st="rev" title="Paso 3: revisar el resumen y los avisos, y guardar el G-code"><b><i>3</i>Revisar</b><small id="stRev"></small></button>
+    </div>
     <div class="pane" id="paneTransform">
       <div class="grp-t sec">Transformar</div>
       <div class="xform-row">
@@ -688,37 +710,32 @@
     </div>
     </div>
     <div class="pane" id="paneCncCfg" style="display:none">
-      <div class="formhead"><button class="lnk" id="cfgBack" title="Volver a los cortes">‹ Cortes</button><b>Material y máquina</b></div>
-      <div class="grp-t sec">¿Qué vas a cortar?</div>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-        <select class="selfield" id="matType" title="Material ACTIVO — decide qué juego de datos de corte usa cada fresa"></select>
-        <button class="gbtn" id="btnMats" style="width:36px" title="Gestionar la lista de materiales"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.09V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 6 19.4l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-      </div>
-      <div class="grp-t sec">Grosor</div>
+      <div class="grp-t sec">Este trabajo</div>
+      <select class="selfield" id="matType" title="Material que vas a cortar — decide qué datos de corte usa cada fresa"></select>
+      <div class="grp-t fsec">Grosor</div>
       <div class="chiprow" id="thickChips"><button data-th="3">3</button><button data-th="6">6</button><button data-th="9">9</button><button data-th="12">12</button><button data-th="15">15</button><button data-th="18">18</button></div>
       <div class="field" style="margin-top:8px" title="Grosor de la placa a cortar: elige uno de arriba o escribe el tuyo"><label>Otro</label><input id="matThick" value="15"><span class="u">mm</span></div>
       <input id="matDia" type="hidden" value="6">
-      <div class="grp-t sec">¿Dónde está el cero de Z?</div>
+      <div class="grp-t fsec">¿Dónde está el cero de Z?</div>
       <div class="seg pics" id="zZeroSeg2" style="margin-top:0">
         <button data-z="top" title="Z0 en la cara superior del material (lo más común: se toca la placa con la fresa)"><svg viewBox="0 0 44 30"><rect x="4" y="12" width="36" height="12" class="pm"/><path d="M22 2v9" class="pa" stroke-width="2"/><circle cx="22" cy="12" r="2.4" class="pd"/></svg>Cara del material</button>
         <button data-z="bed" title="Z0 en la cama de la máquina (la placa queda en Z = su grosor)"><svg viewBox="0 0 44 30"><rect x="4" y="8" width="36" height="12" class="pm"/><path d="M2 22h40" class="pk" stroke-width="2"/><circle cx="8" cy="22" r="2.4" class="pd"/></svg>Cama de la máquina</button>
       </div>
-      <button class="gbtn" id="btnAdv" style="width:100%;margin-top:10px" title="Ajustes que casi nunca se tocan: cero de Z, Z segura, espera y marchas del husillo, volver a 0,0">Ajustes de la máquina…</button>
-      <div class="grp-t sec">Fresa habitual</div>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
-        <select class="selfield" id="toolPick"></select>
-        <button class="gbtn" id="btnTools" style="width:36px" title="Gestionar fresas: alta, baja y datos de corte por material"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.9 1.09V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 6 19.4l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      <div class="grp-t sec">Tu taller <span class="tlsub">· casi nunca cambia</span></div>
+      <div class="tall">
+        <button class="tl" id="btnTools" title="Gestionar fresas: alta, baja y datos de corte por material"><span>Fresas</span><small id="tlFresas">›</small></button>
+        <button class="tl" id="btnMats" title="Gestionar la lista de materiales"><span>Materiales</span><small id="tlMats">›</small></button>
+        <button class="tl" id="btnAdv" title="Z segura, espera y marchas del husillo, volver a 0,0 al terminar"><span>Máquina</span><small>Z segura, husillo, marchas ›</small></button>
       </div>
-      <div class="toolsum" id="toolSum">—</div>
-      <div class="muted-note" style="margin-top:8px">Es la que aparece elegida al agregar un corte; cada corte puede llevar otra.</div>
-      <button class="pbtn acc" id="btnGoCut" style="width:100%;margin-top:14px;height:36px;font-weight:700" title="Volver a los cortes">Listo</button>
+      <!-- La fresa "habitual" ya no se elige aquí: es la última usada en un corte. El selector sigue en
+           el HTML, oculto, porque es el que guarda la elección (#tpTool del formulario es su espejo). -->
+      <div style="display:none"><select class="selfield" id="toolPick"></select><div class="toolsum" id="toolSum">—</div></div>
+      <div class="navrow"><button class="pbtn acc" id="btnGoCut" title="Paso 2: los cortes">Cortes ›</button></div>
     </div>
 
     <div class="pane" id="paneCncCut" style="display:none">
       <!-- Flujo como Aspire (12-nov-2026): o estás en la LISTA (#cutList) o dentro de UNA trayectoria
            (#cutForm), nunca en las dos. La operación se elige al agregar; el formulario trae su fresa. -->
-      <div class="cutsum"><span id="cutSum">—</span><button class="lnk" id="cutSumGo" title="Cambiar el material, su grosor, el cero de Z o los ajustes de la máquina">Cambiar</button></div>
-      <div class="stepbar" id="stepBar"><button class="on" data-st="cuts">1 · Cortes</button><button data-st="rev">2 · Revisar</button></div>
       <div id="cutList">
       <div class="grp-t" style="margin:12px 0 7px">Agregar un corte</div>
       <div class="addrow" id="addRow">
@@ -736,12 +753,12 @@
         <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver recorrido</span></button>
         <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
       </div>
-      <button class="pbtn acc" id="revGo" style="display:none;width:100%;margin-top:14px;height:36px;font-weight:700" title="Paso 2: ver el resumen y los avisos antes de guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/></svg> Revisar</button>
+      <div class="navrow"><button class="pbtn" id="navMat" title="Paso 1: material, grosor y cero de Z">‹ Material</button><button class="pbtn acc" id="revGo" style="display:none" title="Paso 2: ver el resumen y los avisos antes de guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/></svg> Revisar</button></div>
       </div>
       <div id="cutRev" style="display:none">
         <div id="revBody"></div>
         <div class="rowbtns"><button class="gbtn" id="revPrev" title="Pintar en el lienzo el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="revPrevLbl">Ver recorrido</span></button><button class="gbtn" id="revSim" title="Simulación 3D del resultado con el MISMO G-code que se lleva la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver en 3D</button></div>
-        <button class="pbtn acc" id="revSave" style="width:100%;margin-top:10px;height:38px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> <span id="revSaveLbl">Guardar G-code</span></button>
+        <div class="navrow"><button class="pbtn" id="navCuts" title="Paso 2: volver a los cortes para cambiar algo">‹ Cortes</button><button class="pbtn acc" id="revSave" style=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> <span id="revSaveLbl">Guardar G-code</span></button></div>
         <div class="muted-note" id="revNote" style="margin-top:8px"></div>
       </div>
       <div id="cutForm" style="display:none">
@@ -1354,9 +1371,11 @@ var PlotterMotor = (function(){
   // ===== Tabs del panel: Propiedades / Capas / CNC (esta última solo en modo CNC) =====
   var TABS={transform:'paneTransform', layers:'paneLayers', cnccfg:'paneCncCfg', cnccut:'paneCncCut', plot:'panePlot'};
   var TABBTN={transform:'tabTransform', layers:'tabLayers', cnccfg:'tabCncCfg', cnccut:'tabCncCut', plot:'tabPlot'};
-  function showTab(t){ Object.keys(TABS).forEach(function(k){
+  var tabActual='transform';
+  function showTab(t){ tabActual=t; Object.keys(TABS).forEach(function(k){
     el(TABBTN[k]).classList.toggle('on',k===t);
-    el(TABS[k]).style.display=k===t?'block':'none'; }); }
+    el(TABS[k]).style.display=k===t?'block':'none'; });
+    if(typeof pintarPasos==='function') pintarPasos(); }
   // Toggle primario estilo Aspire: paso 1 Diseño (Propiedades/Capas) · paso 2 CNC (Configuración/Corte)
   var sideMode='design';
   // sideMode: 'design' = paso Diseño · 'cnc' = paso CORTE (el nombre es histórico: hoy vale para
@@ -1366,6 +1385,7 @@ var PlotterMotor = (function(){
     var dsg=(m==='design'), cnc=(state.machine==='cnc');
     el('tabTransform').style.display=dsg?'':'none'; el('tabLayers').style.display=dsg?'':'none';
     el('tabCncCfg').style.display=(!dsg&&cnc)?'':'none'; el('tabCncCut').style.display=(!dsg&&cnc)?'':'none';
+    el('cncSteps').style.display=(!dsg&&cnc)?'flex':'none';
     el('tabsBar').style.display=dsg?'':'none';   // en Corte no hay pestañas: plotter = un panel; CNC = Cortes ↔ Material (enlace "Cambiar")
     showTab(dsg?'transform':(cnc?'cnccut':'plot'));   // el Corte de la CNC entra por la lista; el resumen lleva a Configuración
     if(!dsg&&!cnc) refrescarPlotter();
@@ -1377,8 +1397,7 @@ var PlotterMotor = (function(){
   el('tabLayers').addEventListener('click',function(){ showTab('layers'); });
   el('tabCncCfg').addEventListener('click',function(){ showTab('cnccfg'); });
   el('tabCncCut').addEventListener('click',function(){ showTab('cnccut'); });
-  el('btnGoCut').addEventListener('click',function(){ showTab('cnccut'); });
-  el('cfgBack').addEventListener('click',function(){ showTab('cnccut'); });
+  el('btnGoCut').addEventListener('click',function(){ irPaso(1); });
 
   // ===== Geometría =====
   function bboxOfPts(pts){var mnx=1e9,mny=1e9,mxx=-1e9,mxy=-1e9;for(var i=0;i<pts.length;i++){var x=pts[i][0],y=pts[i][1];if(x<mnx)mnx=x;if(y<mny)mny=y;if(x>mxx)mxx=x;if(y>mxy)mxy=y;}return [mnx,mny,mxx,mxy];}
@@ -4439,6 +4458,8 @@ var PlotterMotor = (function(){
   function cncTool(){ return flatTool(cncToolRaw()); }
   function fmtTool(t){ return t ? ('Ø '+t.dia+' mm · pasada '+t.pass_depth+' mm · '+Math.round(t.feed)+' mm/min · '+Math.round(t.rpm)+' RPM · paso '+(t.stepover_pct||40)+'%') : '—'; }
   function paintCnc(){ if(!state.cnc) return; setTimeout(pintarCorte,0);
+    el('tlFresas').textContent=(state.cnc.tools||[]).length+' en la biblioteca ›';
+    el('tlMats').textContent=(state.cnc.materials||[]).length+' en la lista ›';
     el('matThick').value=state.cnc.material.thickness;
     el('matClear').value=state.cnc.material.clearance!=null?state.cnc.material.clearance:5;
     el('matSpin').value=state.cnc.material.spinup!=null?state.cnc.material.spinup:10;
@@ -4971,10 +4992,9 @@ var PlotterMotor = (function(){
   function pintarVista(){
     el('cutList').style.display=(formOpen||revOpen)?'none':''; el('cutForm').style.display=formOpen?'':'none';
     el('cutRev').style.display=(revOpen&&!formOpen)?'':'none';
-    el('cutSum').parentNode.style.display=formOpen?'none':'';
-    var enRev=revOpen&&!formOpen, sb=el('stepBar').querySelectorAll('button');
-    sb[0].className=enRev?'ok':'on'; sb[0].textContent=(enRev?'✓ ':'1 · ')+'Cortes'; sb[1].className=enRev?'on':'';
-    el('revGo').style.display=tpaths.length?'':'none';
+    var enRev=revOpen&&!formOpen;
+    el('revGo').style.display=tpaths.length?'flex':'none';
+    pintarPasos();
     var bt=el('btnTapTop'), sp=bt.querySelector('span');
     sp.textContent=enRev?'Guardar G-code':'Revisar'; sp.setAttribute('data-corto',enRev?'G-code':'Revisar');
     bt.title=enRev?'Generar el G-code (.tap) de los cortes activos, en el orden de la lista — pásalo a la CNC en una USB':'Paso 2: revisar el resumen y los avisos antes de guardar el G-code';
@@ -5035,14 +5055,13 @@ var PlotterMotor = (function(){
   { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
       var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
-    el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
+    pintarPasos();
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
     syncTpTool();
   }
   ['change','input','click'].forEach(function(ev){ el('paneCncCut').addEventListener(ev,function(){ setTimeout(pintarCorte,60); }); });
   el('tabCncCut').addEventListener('click',function(){ setTimeout(pintarCorte,0); });
   el('modeSeg').addEventListener('click',function(){ setTimeout(pintarCorte,0); });
-  el('cutSumGo').addEventListener('click',function(){ showTab('cnccfg'); });
   // El botón final de la CNC vive ARRIBA A LA DERECHA, donde el plotter tiene "Enviar": la acción
   // que termina el trabajo siempre está en el mismo sitio. Sin trayectorias, lleva a hacerlas.
   el('btnTapTop').addEventListener('click',function(){
@@ -5172,9 +5191,24 @@ var PlotterMotor = (function(){
   el('revGo').addEventListener('click',abrirRev);
   el('revPrev').addEventListener('click',function(){ el('btnTpPrev').click(); });
   el('revSim').addEventListener('click',function(){ el('btnSim3d').click(); });
-  el('stepBar').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
-    if(b.getAttribute('data-st')==='rev'){ if(!tpaths.length){ toast('Primero agrega un corte'); return; } abrirRev(); }
-    else { formOpen=false; revOpen=false; volverRev=false; if(tpSel>=0){ tpSel=-1; paintTps(); } pintarVista(); } });
+  // ===== Los tres pasos: Material · Cortes · Revisar =====
+  function pasoActual(){ return tabActual==='cnccfg'?0:((revOpen&&!formOpen)?2:1); }
+  function pintarPasos(){ var c=el('cncSteps'); if(!c||!state.cnc) return;
+    var act=pasoActual(), bs=c.querySelectorAll('button');
+    for(var k=0;k<3;k++){ bs[k].className=(k===act)?'on':(k<act?'ok':''); bs[k].querySelector('i').textContent=(k<act)?'✓':String(k+1); }
+    var mt=el('matType'), nom=(mt.options[mt.selectedIndex]||{}).textContent||'';
+    el('stMat').textContent=nom.split('/')[0].trim()+' '+(Math.round(parseFloat(state.cnc.material.thickness)*100)/100)+' mm';
+    el('stCuts').textContent=tpaths.length?(tpaths.length+(tpaths.length===1?' corte':' cortes')):'ninguno aún';
+    var tot=0, hay=false; tpaths.forEach(function(t){ if(t.enabled&&t._secs!=null){ tot+=t._secs; hay=true; } });
+    el('stRev').textContent=hay?('≈ '+fmtSecs(tot)):''; }
+  function irPaso(k){
+    if(k===0){ formOpen=false; revOpen=false; volverRev=false; if(tpSel>=0){ tpSel=-1; paintTps(); } pintarVista(); showTab('cnccfg'); return; }   // salir de Revisar: el botón de arriba no debe guardar desde Material
+    if(k===2){ if(!tpaths.length){ toast('Primero agrega un corte en el paso 2'); return; } showTab('cnccut'); abrirRev(); return; }
+    showTab('cnccut'); formOpen=false; revOpen=false; volverRev=false; if(tpSel>=0){ tpSel=-1; paintTps(); } pintarVista(); }
+  el('cncSteps').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
+    irPaso({mat:0,cuts:1,rev:2}[b.getAttribute('data-st')]); });
+  el('navMat').addEventListener('click',function(){ irPaso(0); });
+  el('navCuts').addEventListener('click',function(){ irPaso(1); });
   function saveTap(){ if(!hasDoc()||!state.cnc) return;
     var list0=activeTps();
     if(!list0.length){ toast('No hay trayectorias que exportar — configura la operación y pulsa Calcular.'); return; }

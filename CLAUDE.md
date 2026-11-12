@@ -234,11 +234,18 @@ NO se deducen del código:
 - **Ya no existe la ventana "Plotter"** (`#plotterModal`): cuchilla, conexión, mover el cabezal y
   "Dónde se corta" viven en `#panePlot`, el paso Corte del plotter. `openPlotter()` ahora **lleva
   a ese paso** (y abre el cajón en pantallas chicas); no abre nada encima del diseño.
-- **Corte de la CNC = propuesta "D" (aprobada por Jose, 12-nov-2026): dos pasos, `1 · Cortes` y
-  `2 · Revisar`** (`#stepBar`). Tres vistas, nunca dos a la vez (`pintarVista()`): la LISTA
-  (`#cutList`), el FORMULARIO de un corte (`#cutForm`, `formOpen`) y REVISAR (`#cutRev`, `revOpen`).
-  El **material ya no es una pestaña**: es el encabezado `#cutSum` con "Cambiar", que lleva a
-  `#paneCncCfg` (grosores a un toque, cero de Z con dibujo). `#tabsBar` se oculta en Corte.
+- **Corte de la CNC: TRES pasos en una barra — `1 Material`, `2 Cortes`, `3 Revisar`** (`#cncSteps`,
+  `pintarPasos()`, `irPaso(k)`; aprobado por Jose, 12-nov-2026). La barra vive FUERA de los paneles
+  (se ve también en Material), los tres son botones con su resumen, y cada pantalla tiene abajo
+  su botón de regreso y el del siguiente paso (`.navrow`). Material es el panel `#paneCncCfg`;
+  Cortes y Revisar son vistas de `#paneCncCut` (`pintarVista()`: LISTA `#cutList`, FORMULARIO
+  `#cutForm`/`formOpen`, REVISAR `#cutRev`/`revOpen`). Al entrar a Corte se abre en Cortes.
+  ⚠️ **`.stp` lleva `flex:none`**: `.inspect` es una columna flex con scroll y, sin eso, con
+  contenido largo la barra se APLASTA y queda tapada (lo destapó la prueba de dos fresas).
+  ⚠️ **`irPaso(0)` apaga `revOpen`**: si no, el botón magenta de arriba guardaría desde Material.
+  **Pantalla de Material**: "Este trabajo" (material, grosor, cero de Z) y "Tu taller" (Fresas,
+  Materiales, Máquina: los botones `#btnTools`, `#btnMats`, `#btnAdv`). `#toolPick` ("fresa
+  habitual") sigue en el HTML, **oculto**: guarda la última fresa usada y `#tpTool` es su espejo.
   `#opSeg` sigue en el HTML, oculto, porque `curOp()` lo lee. Los campos conservan sus `id`.
   **El formulario es FIJO, sin "Más opciones"** (pedido de Jose, 12-nov): todo a la vista, en el
   orden en que se decide un corte — lado → profundidad (Prof./Pasadas, P. inicial/Holgura) →
