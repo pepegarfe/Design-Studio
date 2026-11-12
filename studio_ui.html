@@ -5036,7 +5036,7 @@ var PlotterMotor = (function(){
       ctx.fillStyle='#fff'; ctx.font='700 10px '+(getComputedStyle(document.body).fontFamily||'sans-serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
   { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
-      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido';   // corto: con el icono, "Ocultar recorrido" se partía en dos renglones if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
+      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
     el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
