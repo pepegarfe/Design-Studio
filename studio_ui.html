@@ -404,15 +404,11 @@
   .thrurow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--muted);}
   .chipb{height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--line-2);background:var(--input);color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;flex:none;}
   .chipb.on{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--ink);}
-  #cantoBox{margin-top:8px;} #cantoBox svg{display:block;width:100%;height:auto;}
   .tprow .tpdot{width:10px;height:10px;border-radius:50%;flex:none;}
   .tprow .tptime{font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none;white-space:nowrap;}
   .tprow .tpmeta{font-family:var(--font);font-size:11px;color:var(--muted);white-space:normal;line-height:1.4;padding:1px 4px 2px 28px;}
   .tprow{padding:7px 7px 6px;border-color:var(--line);margin-top:3px;}
   .tpbtn{width:26px;height:26px;} .tpbtn svg{width:15px;height:15px;}
-  #cutBar{position:absolute;z-index:4;display:flex;gap:3px;padding:3px;background:var(--panel);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 8px 20px -8px #0008;white-space:nowrap;}
-  #cutBar button{height:30px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
-  #cutBar button:hover{background:var(--hover);} #cutBar button:first-child{background:var(--ink);color:var(--panel);}
   .cstat{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;} .cstat.ok{color:var(--good);}
   .sendbar{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;width:340px;box-shadow:0 14px 34px -8px #000b;z-index:41;display:none;}
   .sendbar .pb{height:6px;border-radius:3px;background:var(--input);margin:9px 0;overflow:hidden;} .sendbar .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s;}
@@ -467,7 +463,6 @@
     .zoompill span{min-width:0;padding:0 12px;line-height:38px;}
     #sendLbl{font-size:0;} #sendLbl::after{content:'Enviar';font-size:13px;}
     #btnTapTop span{font-size:0;} #btnTapTop span::after{content:'G-code';font-size:13px;}
-    #cutBar{gap:1px;} #cutBar button{height:36px;padding:0 7px;font-size:11.5px;}
   }
   /* Foco de teclado visible (Tab). Los campos ya lo marcan con su borde. */
   button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -549,12 +544,6 @@
       <span>Lados</span><input id="shpSides" value="5">
       <label><input type="checkbox" id="shpStar"> Estrella</label>
       <span>Interior</span><input id="shpInner" value="50" disabled><span>%</span>
-    </div>
-    <div id="cutBar" style="display:none">
-      <button data-add="profile" data-side="outside" title="Perfil por fuera de las figuras seleccionadas">Cortar por fuera</button>
-      <button data-add="profile" data-side="inside" title="Perfil por dentro de las figuras seleccionadas">Por dentro</button>
-      <button data-add="pocket" title="Cajeado: vaciar el interior de las figuras seleccionadas">Vaciar</button>
-      <button data-add="drill" title="Taladro en el centro de cada figura seleccionada">Taladrar</button>
     </div>
     <div id="undoFloat"></div>
     <div class="pillbar"><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill wa"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
@@ -775,7 +764,6 @@
         <div class="field" title="Se calcula sola (profundidad ÷ pasada de la fresa). Edítala para forzar N pasadas parejas — p.ej. 18mm en 3 pasadas = 6mm cada una"><label>Pasadas</label><input id="passInfo"></div>
       </div>
       <div class="thrurow" id="thruRow" style="display:none"><span id="thruNote"></span></div>
-      <div id="cantoBox" title="El material visto de canto: cada línea punteada es una pasada"></div>
       <select class="selfield" id="tpTool" style="margin-top:9px" title="Fresa de ESTA trayectoria (sus datos de corte salen de la biblioteca, para el material activo)"></select>
       <div class="toolsum" id="tpToolSum">—</div>
       <div id="profileOpts">
@@ -4989,7 +4977,7 @@ var PlotterMotor = (function(){
     sb[0].className=enRev?'ok':'on'; sb[0].textContent=(enRev?'✓ ':'1 · ')+'Cortes'; sb[1].className=enRev?'on':'';
     el('revGo').style.display=tpaths.length?'':'none';
     el('btnTapTop').querySelector('span').textContent=enRev?'Guardar G-code':'Revisar y guardar';
-    pintarCorte(); posCutBar(); }
+    pintarCorte(); }
   var formUids=null;      // figuras elegidas con "Usar las seleccionadas" (se aplican al Calcular)
   function selFigs(I){ sel.idx=-1; sel.set=new Set(); if(I.length===1) sel.idx=I[0]; else if(I.length>1) sel.set=new Set(I); refreshUI(); }
   function abrirForm(){ volverRev=revOpen; revOpen=false; formOpen=true; formUids=null;
@@ -5041,38 +5029,13 @@ var PlotterMotor = (function(){
       el('formFigs').innerHTML=selI.length?('Se aplicará a <b>'+selI.length+(selI.length===1?' figura seleccionada':' figuras seleccionadas')+'</b>')
         :('Se aplicará a <b>todas las figuras</b> ('+doc.paths.length+'). Selecciona en el dibujo para elegir solo algunas.'); } }
   el('formFigsUse').addEventListener('click',function(){ if(this._u&&this._u.length){ formUids=this._u.slice(); pintarFigs(); sideSegRefresh(); } });
-  // --- El dibujo del material de canto (el botón "Atravesar" se quitó a pedido de Jose, 12-nov-2026) ---
+  // --- Nota de profundidad: cuánto falta por cortar o cuánto baja en la cama. (La barra sobre la
+  // selección, el botón "Atravesar" y el dibujo del material de canto se quitaron a pedido de Jose,
+  // 12-nov-2026: no los vuelvas a poner sin preguntarle.) ---
   function pintarCanto(){ if(!state.cnc) return; var th=parseFloat(state.cnc.material.thickness)||12, st=Math.max(0,parseFloat(el('startDepth').value)||0),
-        d=parseFloat(el('cutDepth').value)||0, n=Math.max(1,parseInt(el('passInfo').value,10)||1), op=curOp(), fondo=st+d;
-    var pasa=fondo>=th-0.01, mas=fondo>th+0.01;
+        fondo=st+(parseFloat(el('cutDepth').value)||0), pasa=fondo>=th-0.01, mas=fondo>th+0.01;
     el('thruNote').textContent=mas?('baja '+(Math.round((fondo-th)*100)/100)+' mm en la cama'):(pasa?'':'quedan '+(Math.round((th-fondo)*100)/100)+' mm sin cortar');
-    el('thruRow').style.display=el('thruNote').textContent?'':'none';
-    var W=270, x0=92, x1=178, yT=13, esc=30/Math.max(th,fondo,0.1), yM=yT+th*esc, yF=yT+fondo*esc, yS=yT+st*esc, H=Math.max(yM,yF)+16;
-    var tabH=(op==='profile'&&el('tabsOn').checked)?Math.min(parseFloat(el('tabH').value)||0,d):0, yTab=yF-tabH*esc;
-    var h='<svg viewBox="0 0 '+W+' '+Math.round(H)+'" aria-hidden="true">'+
-      '<rect x="1" y="'+yT+'" width="'+(W-2)+'" height="'+(yM-yT)+'" fill="var(--input)" stroke="var(--line-2)"/>'+
-      '<rect x="1" y="'+yM+'" width="'+(W-2)+'" height="'+(H-yM-1)+'" fill="var(--line)"/>'+
-      '<path d="M'+x0+' '+yT+'V'+yF+'H'+x1+'V'+yT+'" fill="var(--panel)" stroke="'+(mas?'var(--bad)':'var(--ink)')+'" stroke-width="1.3"/>';
-    for(var k=1;k<n&&n<=12;k++){ var y=yS+(yF-yS)*k/n; h+='<path d="M'+x0+' '+y+'H'+x1+'" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 2"/>'; }
-    if(tabH>0) h+='<rect x="'+(x0+30)+'" y="'+yTab+'" width="26" height="'+(yF-yTab)+'" fill="var(--warn)" opacity=".75"/>';
-    h+='<rect x="'+(x0+34)+'" y="1" width="18" height="'+(yT-1)+'" rx="2" fill="var(--muted)"/>'+
-      '<text x="6" y="'+(yT+(yM-yT)/2+3)+'" font-size="9" fill="var(--muted)" font-family="monospace">material '+th+' mm</text>'+
-      '<text x="6" y="'+(H-4)+'" font-size="8" fill="var(--faint)" font-family="monospace">cama</text>'+
-      '<text x="'+(x1+6)+'" y="'+(yT+11)+'" font-size="9" fill="var(--muted)" font-family="monospace">'+(op==='drill'?'barreno':n+(n===1?' pasada':' pasadas'))+'</text>'+
-      '<text x="'+(x1+6)+'" y="'+(yT+22)+'" font-size="9" fill="var(--muted)" font-family="monospace">'+(op==='drill'?'':('de '+(Math.round(d/n*100)/100)+' mm'))+'</text>'+
-      (tabH>0?'<text x="'+(x1+6)+'" y="'+Math.min(H-4,yT+33)+'" font-size="9" fill="var(--warn)" font-family="monospace">puente '+tabH+' mm</text>':'')+'</svg>';
-    el('cantoBox').innerHTML=h; }
-  // --- Barra sobre la selección: crear el corte desde el DIBUJO ---
-  function posCutBar(){ var b=el('cutBar'); if(!b) return;
-    var ver=cncStep()&&hasDoc()&&!formOpen&&!revOpen&&mode()!=='all'&&!moving&&!marquee&&el('paneCncCut').style.display!=='none';
-    if(!ver){ if(b.style.display!=='none') b.style.display='none'; return; }
-    var bb=bboxOf(activeIdx()), a=tp(bb[0],bb[3]), z=tp(bb[2],bb[1]), r=cv.getBoundingClientRect();
-    b.style.display='flex';
-    var w=b.offsetWidth, hgt=b.offsetHeight, x=Math.max(4,Math.min(a[0], r.width-w-4)), y=a[1]-hgt-12;
-    if(y<30) y=Math.min(r.height-hgt-60, z[1]+12);
-    b.style.left=x+'px'; b.style.top=y+'px'; }
-  el('cutBar').addEventListener('mousedown',function(e){ e.stopPropagation(); });
-  el('cutBar').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; e.stopPropagation(); nuevaTp(b.getAttribute('data-add'), b.getAttribute('data-side')); mostrarPanel(); });
+    el('thruRow').style.display=el('thruNote').textContent?'':'none'; }
   // Número de ORDEN de cada corte, en su color, donde arranca su recorrido (encima de todo).
   function pintarInsignias(){ if(!(state.machine==='cnc'&&cncPrev&&view.ready)) return;
     cncPrev.groups.forEach(function(G){ if(G.tpi==null||!tpaths[G.tpi]) return;
@@ -5082,7 +5045,7 @@ var PlotterMotor = (function(){
       ctx.lineWidth=1.5; ctx.strokeStyle=cvar('--panel'); ctx.stroke();
       ctx.fillStyle='#fff'; ctx.font='700 10px '+(getComputedStyle(document.body).fontFamily||'sans-serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
-  { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); posCutBar(); pintarFigs(); }; }   // tras cada redibujo: la barra sigue a la selección
+  { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs(); }; }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
     el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));

@@ -229,11 +229,13 @@ NO se deducen del código:
   `#opSeg` sigue en el HTML, oculto, porque `curOp()` lo lee. Los campos conservan sus `id`.
   Lo poco usado va en `<details id="masOpc">`; **si metes otra opción ahí, agrégala a
   `pintarCorte()`** (`#masRes` avisa lo que hay activo aunque esté plegado).
-- **Un corte se crea desde el DIBUJO**: con figuras seleccionadas en el paso Corte aparece
-  `#cutBar` junto a ellas (`posCutBar()`, se recoloca tras cada `draw()`), o desde `#addRow`.
-  Cada corte tiene **color** (`colorTp()`, `TP_COLORES`), el mismo en su fila y en el lienzo, y su
-  **número de orden** pintado donde arranca (`pintarInsignias()`). ⚠️ `draw` está **envuelta**
-  (`_dibujar`): lo que deba seguir a cada redibujo va en esa envoltura, no dentro de `draw()`.
+- **Un corte se crea desde `#addRow`** (Perfil, Cajeado, Taladro), sobre las figuras seleccionadas
+  en el lienzo (ninguna = todas). Cada corte tiene **color** (`colorTp()`, `TP_COLORES`), el mismo
+  en su fila y en el lienzo, y su **número de orden** pintado donde arranca (`pintarInsignias()`).
+  ⚠️ `draw` está **envuelta** (`_dibujar`): lo que deba seguir a cada redibujo va en esa envoltura.
+- **Quitado a pedido de Jose (12-nov-2026), no lo vuelvas a poner sin preguntarle:** la barra de
+  acciones que aparecía junto a la figura seleccionada, el botón "Atravesar el material" y el
+  dibujo del material de canto con las pasadas. Lo probó y no le gustaron.
 - **Las figuras de un corte se pueden cambiar**: con el formulario abierto, el clic en el lienzo
   selecciona FIGURAS (no suelta el corte ni salta a otro) y "Usar las seleccionadas" las deja en
   `formUids`, que se aplican al Calcular. Al abrir un corte, sus figuras quedan seleccionadas.
