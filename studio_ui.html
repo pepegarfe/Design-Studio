@@ -387,8 +387,6 @@
   .revcard .l{color:var(--muted);}
   .revwarn{border:1px solid var(--bad);border-radius:8px;padding:7px 9px;margin-top:8px;font-size:12.5px;line-height:1.4;display:flex;gap:8px;align-items:center;justify-content:space-between;}
   .revwarn .lnk{font-weight:600;flex:none;}
-  .revck{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.4;margin-top:6px;cursor:pointer;}
-  .revck input{accent-color:var(--good);width:15px;height:15px;margin-top:1px;flex:none;}
   .addrow.pics .gbtn{flex-direction:column;height:auto;padding:6px 2px 5px;gap:3px;font-size:11.5px;}
   .addrow.pics .gbtn svg{width:44px;height:30px;}
   .addrow.pics .pi{fill:none;stroke:var(--ink);stroke-width:1.6;} .addrow.pics .pa{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:3 2;} .addrow.pics .pd{fill:var(--accent);}
@@ -5129,19 +5127,12 @@ var PlotterMotor = (function(){
         var gk=Object.keys(gears);
         h+='<div class="revcard"><h5><span>'+hesc(g.archivo)+'</span><small>≈ '+fmtSecs(secs)+'</small></h5>'+filas+
            '<div class="l">Fresa: '+hesc(g.tool.name||'')+' (Ø '+n1(g.tool.dia)+' mm) · '+Math.round(g.tool.rpm)+' RPM'+(gk.length?' → marcha '+gk.join('/'):'')+'</div></div>'; });
-      var conPuentes=list.some(function(t){ return t.op==='profile'&&t.tabs&&t.tabs.on!==false&&((t.tabs.v||0)>0||t.tabs.mode==='manual'); });
       h+='<div class="revcard"><div><b>'+list.length+(list.length===1?' corte':' cortes')+' · ≈ '+fmtSecs(total)+'</b> <span class="l">(aprox., suele ser un poco más)</span></div>'+
          '<div class="l">Material: '+hesc(selTxt('matType'))+' de '+n1(m.thickness)+' mm'+(bb?'<br>La fresa recorre de X '+bb[0]+' a '+bb[2]+' y de Y '+bb[1]+' a '+bb[3]+' mm':'')+'</div></div>';
-      h+='<div class="grp-t sec" style="margin-top:12px">En la máquina, antes de correr</div>'+
-         '<label class="revck"><input type="checkbox">Fresa montada: '+hesc(grupos[0].tool.name||'')+(grupos.length>1?' (la del primer archivo)':'')+'</label>'+
-         '<label class="revck"><input type="checkbox">Cero de X/Y en la esquina de la placa que es el 0,0 del diseño</label>'+
-         '<label class="revck"><input type="checkbox">Cero de Z en '+(m.z_zero==='bed'?'la cama de la máquina':'la cara superior del material')+'</label>'+
-         '<label class="revck"><input type="checkbox">Material sujeto'+(conPuentes?'':' — <b>sin puentes</b>: las piezas quedan sueltas al terminar')+'</label>'+
-         (grupos.length>1?'<label class="revck"><input type="checkbox">Al cambiar de fresa entre archivos, volver a fijar el cero de Z</label>':'');
       el('revBody').innerHTML=h;
       revDatos={grupos:grupos, avisos:nav}; el('revSave').disabled=false;
       el('revSave').textContent=(nav?'Guardar de todos modos':'Guardar')+(grupos.length>1?' los '+grupos.length+' archivos':' G-code');
-      el('revNote').textContent=grupos.length>1?'El navegador puede preguntar si permite bajar varios archivos: di que sí. Córrelos en el orden de la lista.':'';
+      el('revNote').textContent=grupos.length>1?'El navegador puede preguntar si permite bajar varios archivos: di que sí. Córrelos en el orden de la lista y, al cambiar de fresa, vuelve a fijar el cero de Z.':'';
     }); }
   el('revBody').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     if(b.getAttribute('data-ord')){ ordenarCortes(); abrirRev(); return; }
