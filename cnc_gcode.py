@@ -82,6 +82,12 @@ def _rfin(rg):
     return rg[1] if isinstance(rg, tuple) else False
 
 
+def _rslot(rg):
+    """mm INICIALES del trayecto que van a RANURA COMPLETA (el primer anillo de una cadena de
+    cajeado, que estrena material por los dos lados). 0 = nada."""
+    return float(rg[2]) if isinstance(rg, tuple) and len(rg) > 2 else 0.0
+
+
 def _rot_to_nearest(rg, cur):
     """Re-arranca un anillo cerrado en su vértice más cercano a `cur` (viaje mínimo)."""
     pts = _rpts(rg)
@@ -92,7 +98,7 @@ def _rot_to_nearest(rg, cur):
     if i:
         core = core[i:] + core[:i]
     out = core + [[core[0][0], core[0][1]]]
-    return (out, _rfin(rg)) if isinstance(rg, tuple) else out
+    return ((out,) + tuple(rg[1:])) if isinstance(rg, tuple) else out
 
 
 def _order_units(units, start=(0.0, 0.0)):
@@ -313,9 +319,34 @@ def _chain_rings(rings, libre, step):
     return out
 
 
-def make_pocket(paths, tool_dia, stepover_mm, direction='climb', allowance=0.0, link=True):
+# Avance del PRIMER anillo de cada cadena de cajeado, como fracción del avance de corte: ahí la
+# fresa abre camino a todo su ancho (100 % de empalme) mientras el resto de los anillos muerde solo
+# el paso lateral (~40 %). Es poco recorrido, así que frenarlo cuesta segundos.
+_SLOT_FEED = 0.6
+
+
+def _primer_anillo(pts):
+    """Largo del primer anillo CERRADO con que arranca una cadena (hasta volver a su inicio)."""
+    acc = 0.0
+    for k in range(1, len(pts)):
+        acc += math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1])
+        if abs(pts[k][0] - pts[0][0]) < 1e-6 and abs(pts[k][1] - pts[0][1]) < 1e-6:
+            return acc
+    return acc
+
+
+def make_pocket(paths, tool_dia, stepover_mm, direction='climb', allowance=0.0, link=True,
+                last_pass=0.0, last_rev=False):
     """CAJEADO: anillos concéntricos; cada zona completa (centro → pared), zonas por NN.
-    allowance positiva deja material en la pared (pasada de acabado aparte)."""
+    allowance positiva deja material en la pared.
+
+    last_pass > 0 = PASADA DE ACABADO EN LA PARED (dic-2026): el vaciado deja esa cáscara y por
+    cada zona se añade al final un anillo a la medida exacta, que se corre en UNA sola pasada a
+    profundidad completa (last_rev lo recorre al revés). Sin ella la pared se corta en cada nivel
+    con la carga del desbaste y quedan marcadas las líneas de cada pasada.
+
+    Cada cadena sale como `(puntos, False, mm_a_ranura)`: su primer anillo va a avance reducido
+    (ver `_SLOT_FEED`)."""
     region, skipped = _closed_region(paths)
     if region is None:
         return [], skipped
@@ -324,11 +355,12 @@ def make_pocket(paths, tool_dia, stepover_mm, direction='climb', allowance=0.0, 
         raise ValueError('La holgura negativa se come el radio de la fresa.')
     step = max(0.5, float(stepover_mm))
     sign = -1.0 if direction != 'conv' else 1.0     # cortar por dentro: climb = anillo horario
+    lp = max(0.0, float(last_pass or 0))
     units = []
     for poly in getattr(region, 'geoms', [region]):
         levels, k, libre = [], 0, None
         while True:
-            off = poly.buffer(-(r + k * step), quad_segs=16)
+            off = poly.buffer(-(r + lp + k * step), quad_segs=16)
             if off.is_empty:
                 break
             if k == 0:
@@ -338,8 +370,14 @@ def make_pocket(paths, tool_dia, stepover_mm, direction='climb', allowance=0.0, 
         rings = []
         for lev in reversed(levels):
             rings.extend(lev)
-        if rings:
-            units.append(_chain_rings(rings, libre, step) if link else rings)
+        cadenas = (_chain_rings(rings, libre, step) if link else rings) if rings else []
+        unit = [(c, False, _primer_anillo(c)) for c in cadenas]
+        if lp > 0:
+            fin = poly.buffer(-r, quad_segs=16)          # la pared, a la medida
+            if not fin.is_empty:
+                unit += [(rg, True) for rg in _rings_flat(fin, -sign if last_rev else sign)]
+        if unit:
+            units.append(unit)
     return _order_units(units), skipped
 
 
@@ -730,7 +768,7 @@ def _z_levels(material):
     return z_top, z_top + clear
 
 
-def _emit_cut(lines, verts, feed, plunge):
+def _emit_cut(lines, verts, feed, plunge, slot=0.0, slot_feed=None):
     """Emite un tramo de corte XYZ. Todo movimiento que BAJA va al avance de PICADA.
 
     ⚠️ Una rampa de entrada avanza y baja a la vez, así que para el control es un
@@ -743,10 +781,13 @@ def _emit_cut(lines, verts, feed, plunge):
     tramo llano de la misma pasada no se frene de más.
     """
     zp = verts[0][2]
+    xp, yp, hecho = verts[0][0], verts[0][1], 0.0
     for x, y, z in verts[1:]:
-        lines.append('G01 X%s Y%s Z%s F%s'
-                     % (_f(x), _f(y), _f(z), _f(plunge if z < zp - 1e-9 else feed)))
-        zp = z
+        # `slot` mm iniciales a ranura completa (primer anillo de un cajeado): avance reducido
+        f = plunge if z < zp - 1e-9 else (slot_feed if (slot_feed and hecho < slot - 1e-6) else feed)
+        lines.append('G01 X%s Y%s Z%s F%s' % (_f(x), _f(y), _f(z), _f(f)))
+        hecho += math.hypot(x - xp, y - yp)
+        xp, yp, zp = x, y, z
 
 
 _MOVE_RE = re.compile(r'^G0([01])((?: [XYZ]-?\d+(?:\.\d+)?)+)(?: F(\d+(?:\.\d+)?))?$')
@@ -827,6 +868,8 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
         if len(pts) < 2:
             continue
         finish = _rfin(rg)                # anillo de acabado: UNA pasada a profundidad completa
+        slot = 0.0 if finish else _rslot(rg)
+        slot_feed = round(feed * _SLOT_FEED) if slot > 0 else None
         ring_depths = [depths[-1]] if finish else depths
         closed = _is_closed(pts)
         cum = _cum(pts)
@@ -868,7 +911,7 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
             if verts is not None:
                 if z_now is None or abs(verts[0][2] - z_now) > 1e-9:   # no repetir una Z en la que ya está
                     lines.append('G01 Z%s F%s' % (_f(verts[0][2]), _f(plunge)))
-                _emit_cut(lines, verts, feed, plunge)
+                _emit_cut(lines, verts, feed, plunge, slot, slot_feed)
                 z_now = verts[-1][2]
                 if not closed and d != ring_depths[-1]:
                     # ⚠️ un trayecto ABIERTO termina en el extremo lejano, pero la pasada
@@ -880,8 +923,12 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
                     z_now = None
             else:
                 lines.append('G01 Z%s F%s' % (_f(z_cut), _f(plunge)))
-                for p in pts[1:]:
-                    lines.append('G01 X%s Y%s F%s' % (_f(p[0]), _f(p[1]), _f(feed)))
+                hecho = 0.0
+                for k in range(1, len(pts)):
+                    p = pts[k]
+                    f = slot_feed if (slot_feed and hecho < slot - 1e-6) else feed
+                    lines.append('G01 X%s Y%s F%s' % (_f(p[0]), _f(p[1]), _f(f)))
+                    hecho += math.hypot(p[0] - pts[k - 1][0], p[1] - pts[k - 1][1])
                 if not closed and d != ring_depths[-1]:
                     lines.append('G00 Z%s' % _f(safe))
                     lines.append('G00 X%s Y%s' % (_f(pts[0][0]), _f(pts[0][1])))
@@ -890,6 +937,8 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
                     z_now = z_cut
             z_prev = z_cut
             secs += (perim / feed + float(tool['pass_depth']) / plunge) * 60.0
+            if slot_feed:
+                secs += min(slot, perim) * (1.0 / slot_feed - 1.0 / feed) * 60.0
         if closed and rc and rc['type'] == 'spiral' and not finish:
             z_fin = z_start - ring_depths[-1]
             fzones = zones if (zones and z_fin < z_tab - 1e-9) else None

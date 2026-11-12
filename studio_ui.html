@@ -403,6 +403,8 @@
   .grp-t.fsec{margin:14px 0 7px;}
   /* Cancelar / Calcular pegados al fondo del panel: el formulario es largo y fijo */
   .formbtns{position:sticky;bottom:-15px;z-index:2;display:flex;gap:7px;margin:14px -16px -15px;padding:10px 16px 14px;background:var(--panel);border-top:1px solid var(--line);}
+  #revGo,#revSave{display:flex;align-items:center;justify-content:center;gap:7px;} #revGo svg,#revSave svg{width:15px;height:15px;}
+  #cutRev .rowbtns .gbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;} #cutRev .rowbtns .gbtn svg{width:14px;height:14px;}
   .cstat{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:2px;} .cstat.ok{color:var(--good);}
   .sendbar{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line-2);border-radius:10px;padding:12px 16px;width:340px;box-shadow:0 14px 34px -8px #000b;z-index:41;display:none;}
   .sendbar .pb{height:6px;border-radius:3px;background:var(--input);margin:9px 0;overflow:hidden;} .sendbar .pb i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s;}
@@ -489,7 +491,7 @@
       <button class="cta" id="btnSendTop" disabled><span class="sdot" id="sendDot"></span><span id="sendLbl">Enviar Directo</span></button>
       <button class="cta" id="btnSendMenu" title="Elegir a dónde se envía el corte · ajustes del plotter"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
     </div>
-    <button class="cta" id="btnTapTop" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span data-corto="Revisar">Revisar</span></button>
+    <button class="cta" id="btnTapTop" style="display:none" title="Generar el G-code (.tap) de las trayectorias activas, en el orden de la lista — pásalo a la CNC en una USB"><svg class="ic-save" style="display:none" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><svg class="ic-rev" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/></svg><span data-corto="Revisar">Revisar</span></button>
   </header>
 
   <nav class="rail">
@@ -737,12 +739,12 @@
         <button class="gbtn" id="btnTpPrev" title="Pintar en azul el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="tpPrevLbl">Ver recorrido</span></button>
         <button class="gbtn" id="btnSim3d" title="Simulación 3D del resultado: un bloque de material al que se le come el MISMO G-code que se llevaría la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver render</button>
       </div>
-      <button class="pbtn acc" id="revGo" style="display:none;width:100%;margin-top:14px;height:36px;font-weight:700" title="Paso 2: ver el resumen y los avisos antes de guardar">Revisar ›</button>
+      <button class="pbtn acc" id="revGo" style="display:none;width:100%;margin-top:14px;height:36px;font-weight:700" title="Paso 2: ver el resumen y los avisos antes de guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/></svg> Revisar</button>
       </div>
       <div id="cutRev" style="display:none">
         <div id="revBody"></div>
-        <div class="rowbtns"><button class="gbtn" id="revPrev" title="Pintar en el lienzo el recorrido del centro de la fresa">Ver recorrido</button><button class="gbtn" id="revSim" title="Simulación 3D del resultado con el MISMO G-code que se lleva la máquina">Ver en 3D</button></div>
-        <button class="pbtn acc" id="revSave" style="width:100%;margin-top:10px;height:38px;font-weight:700">Guardar G-code</button>
+        <div class="rowbtns"><button class="gbtn" id="revPrev" title="Pintar en el lienzo el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="revPrevLbl">Ver recorrido</span></button><button class="gbtn" id="revSim" title="Simulación 3D del resultado con el MISMO G-code que se lleva la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver en 3D</button></div>
+        <button class="pbtn acc" id="revSave" style="width:100%;margin-top:10px;height:38px;font-weight:700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> <span id="revSaveLbl">Guardar G-code</span></button>
         <div class="muted-note" id="revNote" style="margin-top:8px"></div>
       </div>
       <div id="cutForm" style="display:none">
@@ -817,7 +819,7 @@
       </div>
       </div>
       <div id="lastWrap">
-        <label class="chk" style="margin-top:10px" title="El desbaste corta dejando una cáscara y una PASADA FINAL a profundidad completa la quita a medida exacta — borde limpio, sin marcas. Al activarla se encienden solas la entrada en rampa (obligada: esa pasada va a fondo de una vez) e Invertir dir.; puedes apagarlas."><input type="checkbox" id="lastOn"> Última pasada separada</label>
+        <label class="chk" style="margin-top:10px" title="El desbaste corta dejando una cáscara y una PASADA FINAL a profundidad completa la quita a medida exacta — borde limpio, sin marcas. Al activarla se encienden solas la entrada en rampa (obligada: esa pasada va a fondo de una vez) e Invertir dir.; puedes apagarlas."><input type="checkbox" id="lastOn"> <span id="lastLbl">Última pasada separada</span></label>
         <div id="lastFields" style="display:none;margin-top:8px" class="grid2">
           <div class="field" title="Cáscara que deja el desbaste y quita la pasada final (0.2–0.5 mm típico)"><label>Deja</label><input id="lastAllow" value="0.5"><span class="u">mm</span></div>
           <label class="chk" style="height:32px;margin:0" title="La pasada final recorre el contorno en dirección CONTRARIA — corta las fibras paradas y minimiza marcas de la fresa"><input type="checkbox" id="lastRev"> Invertir dir.</label>
@@ -4610,7 +4612,11 @@ var PlotterMotor = (function(){
   function paintOp(){ var o=curOp();
     el('opName').textContent = OPLBL[o]||'';
     el('profileOpts').style.display = o==='profile'?'block':'none';
-    el('lastWrap').style.display = o==='profile'?'block':'none';
+    el('lastWrap').style.display = (o==='profile'||o==='pocket')?'block':'none';
+    el('lastLbl').textContent = o==='pocket'?'Pasada de acabado en la pared':'Última pasada separada';
+    el('lastOn').parentNode.title = o==='pocket'
+      ? 'El vaciado deja una cáscara en la pared y una pasada final a profundidad completa la quita a medida exacta: pared limpia, sin las líneas de cada nivel.'
+      : 'El desbaste corta dejando una cáscara y una PASADA FINAL a profundidad completa la quita a medida exacta — borde limpio, sin marcas.';
     el('tabsWrap').style.display = o==='profile'?'block':'none';
     el('rampWrap').style.display = o==='drill'?'none':'block';
     el('dirSeg').style.display = o==='drill'?'none':'flex';
@@ -4730,6 +4736,7 @@ var PlotterMotor = (function(){
     else if(t.op==='drill') s='Taladra '+fig+' · '+hondo;
     else s='Corta '+fig+' '+({outside:'por fuera',inside:'por dentro',on:'sobre la línea',left:'por la izquierda',right:'por la derecha'}[t.side]||'')+' · '+hondo;
     if(np) s+=' en '+np+(np===1?' pasada':' pasadas');
+    if(t.op==='pocket'&&(t.last_pass||0)>0) s+=' · acabado en la pared';
     if(t.op==='profile'){ var tb=t.tabs||{};
       if(tb.on!==false&&tb.mode==='manual') s+=' · '+((tb.pts||[]).length)+' puentes a mano';
       else if(tb.on!==false&&(tb.v||0)>0) s+=' · '+(tb.mode==='dist'?('un puente cada '+tb.v+' mm'):(tb.v+(tb.v===1?' puente':' puentes')+' por pieza'));
@@ -4974,7 +4981,7 @@ var PlotterMotor = (function(){
     var bt=el('btnTapTop'), sp=bt.querySelector('span');
     sp.textContent=enRev?'Guardar G-code':'Revisar'; sp.setAttribute('data-corto',enRev?'G-code':'Revisar');
     bt.title=enRev?'Generar el G-code (.tap) de los cortes activos, en el orden de la lista — pásalo a la CNC en una USB':'Paso 2: revisar el resumen y los avisos antes de guardar el G-code';
-    bt.querySelector('svg').style.display=enRev?'':'none';
+    bt.querySelector('.ic-save').style.display=enRev?'':'none'; bt.querySelector('.ic-rev').style.display=enRev?'none':'';
     pintarCorte(); }
   var formUids=null;      // figuras elegidas con "Usar las seleccionadas" (se aplican al Calcular)
   function selFigs(I){ sel.idx=-1; sel.set=new Set(); if(I.length===1) sel.idx=I[0]; else if(I.length>1) sel.set=new Set(I); refreshUI(); }
@@ -4988,6 +4995,9 @@ var PlotterMotor = (function(){
     tpSel=-1; el('tpName').value=''; setSeg('opSeg','data-o',op); sideSegRefresh();
     if(lado && el('sideSeg').querySelector('button[data-s="'+lado+'"]').style.display!=='none') setSeg('sideSeg','data-s',lado);
     tabPts=[]; if(tabModeV==='manual'){ tabModeV='n'; el('tabN').value=tabVals.n; }   // una nueva aún no tiene recorrido donde ponerlos
+    // Cajeado nuevo: entra en rampa (hundir en vertical la fresa en el centro es donde peor corta)
+    // y con pasada de acabado en la pared. Se ven en el formulario y se pueden apagar.
+    if(op==='pocket'){ el('rampOn').checked=true; el('lastOn').checked=true; el('lastAllow').value='0.3'; }
     paintTabMode(); paintOp(); resetPasses(); paintTps(); abrirForm(); }
   el('addRow').addEventListener('click',function(e){ var b=e.target.closest('button'); if(b) nuevaTp(b.getAttribute('data-add')); });
   el('formBack').addEventListener('click',cerrarForm);
@@ -5026,7 +5036,7 @@ var PlotterMotor = (function(){
       ctx.fillStyle='#fff'; ctx.font='700 10px '+(getComputedStyle(document.body).fontFamily||'sans-serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
   { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
-      var rp=el('revPrev'), tx=cncPrev?'Ocultar recorrido':'Ver recorrido'; if(rp.textContent!==tx){ rp.textContent=tx; rp.classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
+      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar recorrido':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
     el('cutSum').innerHTML='<b>'+hesc(selTxt('matType')||'Material')+' · '+hesc(el('matThick').value||'?')+' mm</b> · Z en '+((state.cnc&&state.cnc.material.z_zero==='bed')?'la cama':'la cara');
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
@@ -5131,7 +5141,7 @@ var PlotterMotor = (function(){
          '<div class="l">Material: '+hesc(selTxt('matType'))+' de '+n1(m.thickness)+' mm'+(bb?'<br>La fresa recorre de X '+bb[0]+' a '+bb[2]+' y de Y '+bb[1]+' a '+bb[3]+' mm':'')+'</div></div>';
       el('revBody').innerHTML=h;
       revDatos={grupos:grupos, avisos:nav}; el('revSave').disabled=false;
-      el('revSave').textContent=(nav?'Guardar de todos modos':'Guardar')+(grupos.length>1?' los '+grupos.length+' archivos':' G-code');
+      el('revSaveLbl').textContent=(nav?'Guardar de todos modos':'Guardar')+(grupos.length>1?' los '+grupos.length+' archivos':' G-code');
       el('revNote').textContent=grupos.length>1?'El navegador puede preguntar si permite bajar varios archivos: di que sí. Córrelos en el orden de la lista y, al cambiar de fresa, vuelve a fijar el cero de Z.':'';
     }); }
   el('revBody').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;

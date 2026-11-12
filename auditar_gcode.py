@@ -128,7 +128,8 @@ def parse(tap, mat, tool, depth, caso, start=0.0):
         if not rapid:
             if f_mod is None:
                 malas.append('G01 sin F vigente: ' + ln)
-            elif not aereo and f_mod not in (float(tool['feed']), float(tool['plunge'])):
+            elif not aereo and f_mod not in (float(tool['feed']), float(tool['plunge']),
+                                             float(round(float(tool['feed']) * 0.6))):   # 0.6 = primer anillo de un cajeado, a ranura completa
                 malas.append('F desconocida: ' + ln)
             # TODO lo que baja entrando al material va al avance de picada, sea una
             # bajada vertical o una rampa que avanza mientras baja (ver _emit_cut)
@@ -454,6 +455,67 @@ def caso_puentes_a_mano():
 
 
 caso_puentes_a_mano()
+
+
+def caso_cajeado_acabado():
+    """Cajeado (dic-2026): pasada de ACABADO en la pared, avance reducido en el primer anillo
+    (a ranura completa) y aviso de paso lateral mayor a 50 %."""
+    import math
+    from shapely.geometry import Polygon, Point
+    pl = {'paths': [sq(0, 0, 100, 70)], 'op': 'pocket', 'direction': 'climb', 'depth': 10.0,
+          'tool': TOOL, 'material': MAT_TOP, 'name': 'prueba', 'label': 'cajeado'}
+    rect = Polygon(sq(0, 0, 100, 70))
+    feed, lento = float(TOOL['feed']), float(round(TOOL['feed'] * 0.6))
+
+    def planos(tap):
+        """(distancia a la pared, z, F) de cada movimiento de corte EN PLANO."""
+        X = Y = None
+        Z, F, out = 5.0, None, []
+        for ln in tap.splitlines():
+            if ln.startswith('('):
+                continue
+            z0 = Z
+            pal = re.findall(r'([XYZF])(-?\d+\.?\d*)', ln)
+            for eje, v in pal:
+                if eje == 'X':
+                    X = float(v)
+                elif eje == 'Y':
+                    Y = float(v)
+                elif eje == 'Z':
+                    Z = float(v)
+                else:
+                    F = float(v)
+            if X is None or Y is None or Z >= 0 or abs(Z - z0) > 1e-9 or not any(e in 'XY' for e, _ in pal):
+                continue
+            out.append((rect.exterior.distance(Point(X, Y)), round(Z, 3), F))
+        return out
+
+    r0 = sb.cnc_build_tap(pl)
+    check('cajeado: genera', r0.get('ok'), str(r0.get('error')))
+    if r0.get('ok'):
+        m = planos(r0['tap'])
+        check('cajeado: el primer anillo va a avance reducido y el resto al de corte',
+              {x[2] for x in m} == {feed, lento}, str(sorted({x[2] for x in m})))
+        check('cajeado sin acabado: la pared se corta en cada nivel (como siempre)',
+              len({x[1] for x in m if x[0] < 3.05}) == 2, str(sorted({x[1] for x in m if x[0] < 3.05})))
+    r1 = sb.cnc_build_tap(dict(pl, last_pass=0.3, last_rev=False))
+    check('cajeado con acabado: genera', r1.get('ok'), str(r1.get('error')))
+    if r1.get('ok'):
+        m = planos(r1['tap'])
+        check('cajeado con acabado: el desbaste deja la cáscara (nunca a menos de 3.3 mm de la pared antes del fondo)',
+              all(x[0] >= 3.289 for x in m if x[1] > -9.999), str(min(x[0] for x in m if x[1] > -9.999)))
+        check('cajeado con acabado: la pared se corta SOLO a profundidad completa, a la medida exacta',
+              {x[1] for x in m if x[0] < 3.05} == {-10.0} and abs(min(x[0] for x in m) - 3.0) < 0.011,
+              str((sorted({x[1] for x in m if x[0] < 3.05}), min(x[0] for x in m))))
+    pv = sb.cnc_toolpaths_preview(dict(pl, tool=dict(TOOL, stepover_pct=60)))
+    check('cajeado con paso lateral de 60 %: avisa de las islas sin cortar',
+          any('Paso lateral' in w for w in pv.get('warnings') or []), str(pv.get('warnings')))
+    pv = sb.cnc_toolpaths_preview(pl)
+    check('cajeado con paso lateral de 40 %: sin ese aviso',
+          not any('Paso lateral' in w for w in pv.get('warnings') or []), str(pv.get('warnings')))
+
+
+caso_cajeado_acabado()
 
 
 print(f'\n== {len(OK)} verificaciones OK ==')

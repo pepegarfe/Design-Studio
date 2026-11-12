@@ -504,7 +504,9 @@ def _cnc_make(data):
     tps, drills = [], []
     if op == 'pocket':
         step = dia * float(tool.get('stepover_pct') or 40) / 100.0
-        tps, skipped = cnc_gcode.make_pocket(paths, dia, step, direction, allowance)
+        tps, skipped = cnc_gcode.make_pocket(paths, dia, step, direction, allowance,
+                                             last_pass=float(data.get('last_pass') or 0),
+                                             last_rev=bool(data.get('last_rev')))
     elif op == 'drill':
         drills, skipped = cnc_gcode.drill_points(paths)
     else:
@@ -638,6 +640,11 @@ def _cnc_warnings(data, job, op, tps, drills, tool, material):
         if fewer:
             out.append('%d contorno(s) llevan menos puentes de los pedidos (no cabían todos).'
                        % fewer)
+    if op == 'pocket':
+        pct = float(tool.get('stepover_pct') or 40)
+        if pct > 50:
+            out.append('Paso lateral de %g %% del diámetro: con más de 50 %% quedan islas SIN CORTAR '
+                       'entre un anillo y el siguiente. Bájalo en la biblioteca de fresas.' % pct)
     if op == 'pocket' or (op == 'profile' and data.get('side') == 'inside'):
         try:
             paths = [[(float(p[0]), float(p[1])) for p in q] for q in (data.get('paths') or [])]
