@@ -380,7 +380,13 @@
   /* ===== Táctil y pantallas chicas ===== */
   #cv{touch-action:none;}                       /* los gestos del lienzo los maneja la app, no el navegador */
   .sheet.simsheet{overflow:hidden;}
-  #btnInsp{display:none;}
+  /* Panel de propiedades plegable también en tableta ancha y computadora (.app.noinsp). En ≤820 px
+     el panel es un cajón (.app.insp) y este mismo botón lo abre y lo cierra. */
+  @media (min-width:821px){
+    .app.noinsp{grid-template-columns:52px 1fr;grid-template-areas:"top top" "rail canvas" "status status";}
+    .app.noinsp .inspect{display:none;}
+  }
+  #btnInsp.off{color:var(--accent);}
   /* Solo en pantallas MUY bajas (teléfono acostado): con scroll, el riel recorta el menú
      desplegable de figuras, así que no se activa en alturas normales. */
   @media (max-height:520px){ .rail{overflow-y:auto;scrollbar-width:none;} }
@@ -395,13 +401,12 @@
     .app{grid-template-columns:52px 1fr;grid-template-areas:"top top" "rail canvas" "status status";}
     .inspect{position:fixed;right:0;top:52px;bottom:30px;width:min(312px,88vw);z-index:35;transform:translateX(100%);transition:transform .18s;box-shadow:-12px 0 32px -12px #0008;}
     .app.insp .inspect{transform:none;}
-    #btnInsp{display:inline-flex;}
     .top{overflow-x:auto;scrollbar-width:none;}
     .sendgrp,#btnTapTop{position:sticky;right:0;flex:none;}
     .statbtn .lbl{display:none;} .status{font-size:11px;gap:10px;}
   }
   /* deshacer/rehacer flotando sobre el lienzo (solo en teléfono; ver "barraMovil") */
-  #undoFloat{position:absolute;left:10px;bottom:58px;display:none;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:0 4px 14px -6px #0006;z-index:3;}
+  #undoFloat{position:absolute;left:10px;bottom:14px;display:none;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:0 4px 14px -6px #0006;z-index:3;}
   #undoFloat .icobtn{min-width:36px;width:36px;height:36px;}
   @media (max-width:520px){
     /* La barra pedía 473 px en una pantalla de 390 y "Enviar" tapaba rehacer y el botón del panel.
@@ -409,6 +414,12 @@
     .mach button{font-size:0;gap:0;padding:0 10px;} .mach button svg{width:17px;height:17px;}
     #undoFloat{display:flex;}
     #stSel{display:none;}
+    /* Abajo, UN renglón: deshacer/rehacer a la izquierda; relleno, ajustar y el % a la derecha.
+       − y + sobran (en el teléfono el zoom es con dos dedos) y el engrane del área de trabajo
+       está en el menú Archivo. Con el tamaño táctil, los cuatro de antes medían 292 de 338 px. */
+    .zoompill #zOut,.zoompill #zIn{display:none;}
+    .pillbar .wapill.wa{display:none;}
+    .zoompill span{min-width:0;padding:0 12px;line-height:38px;}
     #sendLbl{font-size:0;} #sendLbl::after{content:'Enviar';font-size:13px;}
     #btnTapTop span{font-size:0;} #btnTapTop span::after{content:'G-code';font-size:13px;}
   }
@@ -494,7 +505,7 @@
       <span>Interior</span><input id="shpInner" value="50" disabled><span>%</span>
     </div>
     <div id="undoFloat"></div>
-    <div class="pillbar"><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
+    <div class="pillbar"><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill wa"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
   </main>
 
   <aside class="inspect">
@@ -3605,7 +3616,9 @@ var PlotterMotor = (function(){
               it('Importar…  (suma a la mesa)','btnImport'),
               {sep:true},
               it('Guardar proyecto','btnSaveProject',MOD+'S'),
-              it('Exportar como…','btnExport') ], r.left, r.bottom+6); }
+              it('Exportar como…','btnExport'),
+              {sep:true},
+              {label:'Área de trabajo…', fn:openWA} ], r.left, r.bottom+6); }
   el('btnFile').addEventListener('click',function(ev){ ev.stopPropagation(); abrirArchivo(); });
   el('btnFile').addEventListener('mousedown',function(ev){ ev.stopPropagation(); });
   // Atajos de archivo: valen también escribiendo en un campo (si no, el navegador abre SU
@@ -3879,7 +3892,18 @@ var PlotterMotor = (function(){
       if(!inp.getAttribute('aria-label')) inp.setAttribute('aria-label',(f.title||l.textContent).split(' — ')[0].trim()); }); });
 
   // Cajón de propiedades en pantallas angostas (≤820 px): se abre con su botón y se cierra al tocar el lienzo.
-  el('btnInsp').addEventListener('click',function(){ document.querySelector('.app').classList.toggle('insp'); });
+  // Un botón, dos comportamientos: en pantalla chica abre/cierra el CAJÓN (.insp); en ancha pliega
+  // la columna (.noinsp) y lo recuerda. `mostrarPanel()` es para el código que necesita el panel a
+  // la vista (p. ej. "Ajustes de corte…"): lo abre sea cual sea el tamaño.
+  var APP=document.querySelector('.app');
+  function panelAngosto(){ return window.matchMedia('(max-width:820px)').matches; }
+  function pintarBtnPanel(){ el('btnInsp').classList.toggle('off', !panelAngosto() && APP.classList.contains('noinsp')); }
+  function mostrarPanel(){ APP.classList.add('insp'); if(APP.classList.contains('noinsp')){ APP.classList.remove('noinsp'); try{ localStorage.setItem('ds_noinsp','0'); }catch(e){} } pintarBtnPanel(); }
+  el('btnInsp').addEventListener('click',function(){
+    if(panelAngosto()){ APP.classList.toggle('insp'); return; }
+    var oc=APP.classList.toggle('noinsp'); try{ localStorage.setItem('ds_noinsp',oc?'1':'0'); }catch(e){} pintarBtnPanel(); });
+  try{ if(localStorage.getItem('ds_noinsp')==='1') APP.classList.add('noinsp'); }catch(e){}
+  pintarBtnPanel();
   cv.addEventListener('mousedown',function(){ document.querySelector('.app').classList.remove('insp'); },true);
 
   // ===== Menú de cuenta (riel, abajo): cuenta, estación, contraseña, salir y la huella de la versión =====
@@ -4128,7 +4152,7 @@ var PlotterMotor = (function(){
   function plotVisible(){ return state.machine==='plotter' && sideMode==='cnc'; }
   function openPlotter(){ if(state.machine!=='plotter') return;
     if(!plotVisible()) setSideMode('cnc'); else refrescarPlotter();
-    document.querySelector('.app').classList.add('insp'); }   // en pantallas chicas el panel es un cajón
+    mostrarPanel(); }   // en pantallas chicas el panel es un cajón; en anchas, si estaba plegado, se despliega
   function refrescarPlotter(){ aplicarModoConexion(); pintarEnvio();
     // el estado ANTES de llenar la lista: así el puerto de la última vez sale ya elegido
     P.status().then(function(s){ if(s&&s.ok){ setConnUI(!!s.connected,s.port);
@@ -4868,7 +4892,7 @@ var PlotterMotor = (function(){
   // que termina el trabajo siempre está en el mismo sitio. Sin trayectorias, lleva a hacerlas.
   el('btnTapTop').addEventListener('click',function(){
     if(!tpaths.length){ if(!hasDoc()){ toast('Abre o dibuja un diseño primero'); return; }
-      setSideMode('cnc'); showTab('cnccut'); document.querySelector('.app').classList.add('insp');
+      setSideMode('cnc'); showTab('cnccut'); mostrarPanel();
       toast('Primero agrega una trayectoria: Perfil, Cajeado o Taladro'); return; }
     saveTap(); });
   el('btnTpPrev').addEventListener('click',function(){

@@ -264,10 +264,19 @@ NO se deducen del código:
 - **Los avisos al pasar el ratón los dibuja la app** (`#tipBox`, bloque "avisos"): al entrar el
   ratón el `title` se muda a `data-tip` y al salir se devuelve, así que **sigue poniendo y
   leyendo `.title` como siempre** — no hay que usar otra propiedad. No actúa con el dedo (`TOQ>1`).
-- **Barra superior en teléfono (≤ 520 px)**: Plotter/CNC en icono y **deshacer/rehacer se mudan
-  al lienzo** (`#undoFloat`, bloque "barraMovil": son los MISMOS botones, movidos de padre).
-  ⚠️ Si agregas un botón a `.top`, mide a 360 px: con los textos la barra pedía 473 px en una
-  pantalla de 390 y "Enviar" tapaba al botón del panel.
+- **Teléfono (≤ 520 px)**: arriba, Plotter/CNC en icono; abajo, UN renglón sobre el lienzo —
+  **deshacer/rehacer se mudan** de la barra a `#undoFloat` (bloque "barraMovil": los MISMOS
+  botones, cambiados de padre) y a la derecha quedan relleno, ajustar y el %. **− y + se ocultan**
+  (el zoom es con dos dedos) y el engrane del área de trabajo (`.wapill.wa`) también: está en el
+  menú Archivo. ⚠️ Si agregas un botón a `.top` o a `.pillbar`, mide a 360 px.
+- ⚠️ **Lo de teléfono se prueba con puntero TÁCTIL, no con una ventana angosta.** Bajo
+  `@media (pointer:coarse)` los botones crecen para el dedo: una ventana de 390 px con ratón NO lo
+  reproduce, y así se me pasó que los botones de abajo ocupaban 292 de 338 px (12-nov-2026). En
+  Playwright: contexto con `hasTouch:true, isMobile:true`.
+- **El botón del panel (`#btnInsp`) existe en TODOS los tamaños** (pedido de Jose): en ≤ 820 px
+  abre/cierra el cajón (`.app.insp`); en pantallas anchas pliega la columna (`.app.noinsp`, se
+  recuerda en `localStorage`). El código que necesita el panel a la vista llama **`mostrarPanel()`**,
+  no `classList.add('insp')`: si la columna estaba plegada, eso solo no la despliega.
 
 ## Aspecto visual — sistema de diseño (tokens)
 
