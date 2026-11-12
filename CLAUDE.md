@@ -255,8 +255,14 @@ NO se deducen del código:
 - **Menú "Archivo"** (`#btnFile`): Abrir, Importar, Guardar y Exportar. Los cuatro botones de antes
   siguen en el HTML con `hidden` y el menú los **pulsa** (`.click()`), así su lógica y su estado
   activo/inactivo no se duplican. Atajos: Cmd/Ctrl+S guarda, Cmd/Ctrl+O abre.
+- **Transformar: un renglón por acción** (`.xrow`, opción elegida por Jose, 12-nov): **Girar**
+  (`#orgRotL` izquierda, `#orgRot` derecha, campo `#fr`), **Escalar** (campo `#fs`, `#scHalf` ½,
+  `#scDouble` ×2) y **Voltear** (`#orgFlipH`, `#orgFlipV`). ⚠️ Con Y hacia arriba, **girar a la
+  derecha (manecillas) es `rotate90(-1)`**. `#rotPreset` (el desplegable de grados) sigue en el
+  HTML, oculto. ⚠️ No uses la clase `.trow` para renglones nuevos: ya es de la biblioteca de
+  fresas y trae su propio relleno (me separó los renglones al estrenarlos).
 - **Organizar está repartido por significado** (opción elegida por Jose, 12-nov): girar y
-  voltear van en **Transformar**, junto al giro (`#orgRot`, `#orgFlipH`, `#orgFlipV`); en
+  voltear van en **Transformar** (renglón de arriba); en
   **Organizar** queda un renglón de cinco fichas con nombre (`.otile`: Agrupar, Separar, Al
   frente, Atrás, Copias); y el **candado vive en cada capa** (`lockBtn()` en `layerRow` y
   `groupHeader`) — es el único sitio visible para desbloquear UNA figura. Todo llama a las
