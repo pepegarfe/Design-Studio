@@ -65,7 +65,14 @@
   #sendMenu .mi .sdot{margin-top:4px;border-color:var(--panel);}
   #sendMenu .mi small{display:block;color:var(--muted);font-family:var(--font);font-size:11.5px;margin:1px 0 0;padding:0;}
   #sendMenu .mi.on b::after{content:' ✓';color:var(--accent);}
-  #sendMenu .sep{height:1px;background:var(--line);margin:4px 6px;}
+  #sendMenu .sep,#cuentaMenu .sep{height:1px;background:var(--line);margin:4px 6px;}
+  #cuentaMenu a.mi{text-decoration:none;}
+  #cuentaMenu .quien{padding:7px 11px 5px;color:var(--muted);font-size:12px;}
+  #cuentaMenu .quien b{color:var(--ink);}
+  /* Avisos de ERROR: se quedan hasta que los cierras (un toque) y van por ENCIMA de los
+     diálogos. Antes todos duraban 2.6 s, también "se cayó el envío". */
+  .toast.err{border-color:var(--bad);pointer-events:auto;cursor:pointer;z-index:70;max-width:min(560px,calc(100vw - 32px));}
+  .toast.err::after{content:'  ✕';color:var(--muted);}
   .cta svg{width:14px;height:14px;}
 
   .rail{grid-area:rail;background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:3px;}
@@ -381,6 +388,7 @@
     <div class="sep"></div>
     <div class="tool" id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg></div>
     <div class="grow"></div>
+    <div class="tool" id="toolCuenta" title="Tu cuenta: cerrar sesión, cambiar contraseña, estación de corte" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
     <div class="tool" id="tgl" title="Cambiar tema claro/oscuro"></div>
   </nav>
 
@@ -807,6 +815,7 @@
   </div>
 </div>
 <div class="ctxmenu" id="sendMenu"></div>
+<div class="ctxmenu" id="cuentaMenu"></div>
 <div class="ctxmenu" id="ctxMenu"></div>
 <div class="sendbar" id="sendbar">
   <div class="r"><b id="sendLabel">Enviando al plotter…</b><button class="pbtn" id="sendCancel" style="height:26px;padding:0 10px">Cancelar</button></div>
@@ -927,7 +936,7 @@
     <div id="simFoot"><span>Arrastrar = orbitar · rueda = zoom · clic derecho = mover · <b>doble clic = quitar el sobrante</b> · rojo = muerde la cama más de 0.5 mm</span><span id="simStat"></span></div>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="three.bundle.js"></script>
 <script id="motor-plotter">
@@ -1146,7 +1155,19 @@ var PlotterMotor = (function(){
 
   // ===== Toast =====
   var toastT;
-  function toast(m){var t=el('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('show');},2600);}
+  // Un aviso normal dura 2.6 s. Uno de ERROR se queda 12 s (o hasta que lo toques) y va por
+  // encima de los diálogos. Además traduce los errores crudos del navegador: a quien corta no
+  // le dice nada "TypeError: Failed to fetch".
+  document.addEventListener('click',function(ev){ var t=el('toast'); if(t&&ev.target===t) t.classList.remove('show'); });
+  var TOAST_ERR=/^\s*(error|no se pudo|no pude|⚠)|fall[oó]\b|sin conexi[oó]n|se desconect[oó]/i;
+  function limpioErr(m){ m=String(m);
+    if(/Failed to fetch|NetworkError|Load failed|network error/i.test(m)) return 'Sin conexión con el servidor. Revisa tu internet e inténtalo de nuevo.';
+    if(/SyntaxError|Unexpected token|is not valid JSON|Unexpected end of/i.test(m)) return 'El servidor tuvo un problema al responder. Inténtalo de nuevo; si se repite, recarga la página.';
+    return m.replace(/^Error:\s*(TypeError|Error|RangeError|ReferenceError):\s*/,'Error: '); }
+  function toast(m,kind){var t=el('toast'); m=limpioErr(m);
+    var err=(kind==='err')||(kind!=='ok'&&TOAST_ERR.test(m));
+    t.textContent=m; t.classList.toggle('err',err); t.classList.add('show'); clearTimeout(toastT);
+    toastT=setTimeout(function(){t.classList.remove('show');},err?12000:2600);}
 
   // ===== Tabs del panel: Propiedades / Capas / CNC (esta última solo en modo CNC) =====
   var TABS={transform:'paneTransform', layers:'paneLayers', cnccfg:'paneCncCfg', cnccut:'paneCncCut'};
@@ -3535,7 +3556,7 @@ var PlotterMotor = (function(){
     if(api()) return;
     fetch('/api/update_check').then(function(r){ return r.json(); }).then(function(r){
       // La estación de corte es de la versión web (la prueba tiene una fila chica, solo de ese navegador).
-      if(r && r.web){ window.DS_ESTACION = true; if(window.DS_envio) window.DS_envio.arrancar(); }
+      if(r && r.web){ window.DS_ESTACION = true; if(window.DS_envio) window.DS_envio.arrancar(); armarCuenta(r); }
       if(!r || !r.invitado) return;
       window.DS_INVITADO = true;
       var b = document.createElement('div');
@@ -3545,6 +3566,20 @@ var PlotterMotor = (function(){
       document.body.appendChild(b);
     }).catch(function(){});
   });
+  // ===== Menú de cuenta (riel, abajo): antes "Cerrar sesión" vivía escondido tras el n.º de versión =====
+  function armarCuenta(r){ var b=el('toolCuenta'), m=el('cuentaMenu'); b.style.display='';
+    var h='<div class="quien">'+(r.invitado?'<b>Modo de prueba</b> · nada se guarda':'Cuenta <b>'+hesc(r.usuario||'')+'</b>'+(r.dueno?' · dueño':''))+'</div><div class="sep"></div>';
+    h+='<a class="mi" href="/estacion" target="_blank">Estación de corte</a>';
+    if(!r.invitado) h+='<a class="mi" href="/clave">Cambiar contraseña</a>';
+    if(r.dueno) h+='<a class="mi" href="/cuentas">Cuentas del taller</a>';
+    h+='<div class="sep"></div><a class="mi" href="/salir">'+(r.invitado?'Salir de la prueba':'Cerrar sesión')+'</a>';
+    m.innerHTML=h;
+    b.addEventListener('click',function(ev){ ev.stopPropagation();
+      if(m.style.display==='block'){ m.style.display='none'; return; }
+      m.style.display='block'; var q=b.getBoundingClientRect();
+      m.style.left=(q.right+8)+'px'; m.style.top=Math.max(8,q.bottom-m.offsetHeight)+'px'; });
+    document.addEventListener('click',function(ev){ if(!m.contains(ev.target)) m.style.display='none'; }); }
+
   // ===== Actualización automática (versión web / app instalada) =====
   // El servidor da un `build` que cambia con cada despliegue. Si cambia mientras esta página
   // está abierta, ya es código viejo: sin diseño en la mesa se recarga sola; con diseño NO
@@ -4313,6 +4348,7 @@ var PlotterMotor = (function(){
   function askConfirm(title,msg,cb,opts){ cfOpts=opts||{}; el('cfTitle').textContent=title; el('cfMsg').innerHTML=msg; cfCb=cb;
     el('cfYes').textContent=cfOpts.yes||'Sí, continuar'; el('cfNo').textContent=cfOpts.no||'Cancelar';
     el('cfNo').style.display=cfOpts.solo?'none':''; el('cfClose').style.display=cfOpts.obligatorio?'none':'';
+    el('confirmModal').querySelector('.sheet').style.width=(cfOpts.ancho||350)+'px';
     el('confirmModal').style.display='flex'; }
   function cfDone(ok){ if(ok===null&&cfOpts.obligatorio) return;
     el('confirmModal').style.display='none'; var cb=cfCb; cfCb=null; if(cb) cb(ok); }
@@ -4419,15 +4455,37 @@ var PlotterMotor = (function(){
   // grosor cambió después de Calcular (o el proyecto es viejo) aquí es donde se nota.
   function tpWarnings(list){
     return Promise.all(list.map(function(t){ return CNCB.prev(tpPayloadOf(t)).catch(function(){ return null; }); }))
-      .then(function(rs){ var w=[]; rs.forEach(function(r,k){ if(r&&r.ok) (r.warnings||[]).forEach(function(x){ w.push(list[k].name+': '+x); }); }); return w; }); }
+      .then(function(rs){ var w=[]; rs.forEach(function(r,k){ if(r&&r.ok) (r.warnings||[]).forEach(function(x){ w.push(list[k].name+': '+x); }); }); return {ws:w, rs:rs}; }); }
+  // RESUMEN antes de guardar: todo lo que el operador necesita saber, junto y antes de que el
+  // archivo exista. Sale SIEMPRE (no solo con avisos): es la última mirada antes de la máquina.
+  function tapResumen(list, ws, rs){ var m=state.cnc.material, n1=function(v){ return Math.round(v*100)/100; };
+    var tool=tpToolOf(list[0]), secs=0, gears={}, bb=null, conPuentes=0;
+    var filas=list.map(function(t,k){ var r=rs[k]||{}, tl=tpToolOf(t), np=Math.max(1,Math.ceil(t.depth/tl.pass_depth-1e-9));
+      secs+=r.secs||0; if(r.gear) gears['S'+r.gear]=1;
+      if(r.bbox){ bb=bb?[Math.min(bb[0],r.bbox[0]),Math.min(bb[1],r.bbox[1]),Math.max(bb[2],r.bbox[2]),Math.max(bb[3],r.bbox[3])]:r.bbox.slice(); }
+      if(t.op==='profile'&&t.tabs&&t.tabs.on!==false&&(t.tabs.v||0)>0) conPuentes++;
+      return '<tr><td>'+hesc(t.name)+'</td><td>'+n1(t.depth)+' mm</td><td>'+(t.op==='drill'?'—':np+' × '+n1(t.depth/np)+' mm')+'</td><td>'+Math.round(tl.feed)+'</td></tr>'; }).join('');
+    secs=Math.max(0, secs-(list.length-1)*(m.spinup||0));     // la espera del husillo se cuenta una vez
+    var gk=Object.keys(gears), th='style="text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:2px 8px 4px 0"';
+    return (ws.length?'<div style="border:1px solid var(--bad);border-radius:8px;padding:8px 10px;margin-bottom:10px"><b>Revisa antes de cortar</b><br>'+warnList(ws)+'</div>':'')+
+      '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr><th '+th+'>Trayectoria</th><th '+th+'>Prof.</th><th '+th+'>Pasadas</th><th '+th+'>mm/min</th></tr>'+filas+'</table>'+
+      '<div style="margin-top:10px">Fresa: <b>'+hesc(tool.name||'')+'</b> (Ø '+n1(tool.dia)+' mm) · '+Math.round(tool.rpm)+' RPM'+(gk.length?' → marcha <b>'+gk.join('/')+'</b>':'')+'<br>'+
+      'Material: <b>'+n1(m.thickness)+' mm</b> · tiempo ≈ <b>'+Math.floor(secs/60)+' min '+Math.round(secs%60)+' s</b> (aprox., suele ser un poco más)'+
+      (bb?'<br>La fresa recorre de X <b>'+bb[0]+'</b> a <b>'+bb[2]+'</b> y de Y <b>'+bb[1]+'</b> a <b>'+bb[3]+'</b> mm':'')+'</div>'+
+      '<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)"><b>En la máquina, antes de correr</b><br>'+
+      '1. Fresa montada: '+hesc(tool.name||'')+'.<br>'+
+      '2. Cero de X/Y en la esquina de la placa que es el 0,0 del diseño.<br>'+
+      '3. Cero de Z en <b>'+(m.z_zero==='bed'?'la cama de la máquina':'la cara superior del material')+'</b>.<br>'+
+      '4. Material sujeto'+(conPuentes?'':' — <b>sin puentes</b>: las piezas quedan sueltas al terminar el corte')+'.</div>'; }
   function saveTap(){ if(!hasDoc()||!state.cnc) return;
     var list0=activeTps();
     if(!list0.length){ toast('No hay trayectorias que exportar — configura la operación y pulsa Calcular.'); return; }
-    tpWarnings(list0).then(function(ws){
-      paintTpWarn(ws);
-      if(!ws.length){ saveTapNow(); return; }
-      askConfirm('Revisa antes de guardar el G-code', warnList(ws)+'<br><br>¿Guardar el archivo de todos modos?',
-        function(ok){ if(ok) saveTapNow(); });
+    { var ids0={}; list0.forEach(function(t){ ids0[t.toolId||'?']=1; });
+      if(Object.keys(ids0).length>1){ toast('Las trayectorias activas usan FRESAS DISTINTAS — exporta un archivo por fresa (excluye las otras con el ojito).'); return; } }
+    tpWarnings(list0).then(function(x){
+      paintTpWarn(x.ws);
+      askConfirm('Resumen antes de guardar', tapResumen(list0, x.ws, x.rs),
+        function(ok){ if(ok) saveTapNow(); }, {yes:(x.ws.length?'Guardar de todos modos':'Guardar G-code'), ancho:470});
     }); }
   function saveTapNow(){ if(!hasDoc()||!state.cnc) return;
     var list=activeTps(), pl;

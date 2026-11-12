@@ -508,6 +508,17 @@ def _as_job(data):
     return job, op, tps, drills, skipped, tool, material, name
 
 
+def _cnc_bbox(tps, drills, dia):
+    """Hasta dónde llega la FRESA (no su centro): [x0, y0, x1, y1] en mm, o None."""
+    import cnc_gcode
+    pts = [p for t in tps for p in cnc_gcode._rpts(t)] + [tuple(p[:2]) for p in (drills or [])]
+    if not pts:
+        return None
+    r = dia / 2.0
+    return [round(min(p[0] for p in pts) - r, 1), round(min(p[1] for p in pts) - r, 1),
+            round(max(p[0] for p in pts) + r, 1), round(max(p[1] for p in pts) + r, 1)]
+
+
 def _cnc_warnings(data, job, op, tps, drills, tool, material):
     """Lo que el archivo haría y casi seguro NO se quiso: salirse de la mesa, morder la cama,
     enterrar la fresa, dejar piezas sin puente u omitir figuras. Lista de frases para la UI.
@@ -581,7 +592,7 @@ def cnc_toolpaths_preview(data):
         gear = cnc_gcode.gear_for(tool.get('rpm', 18000), (material or {}).get('gears'))
         return {'ok': True, 'op': op, 'toolpaths': flat, 'drills': drills,
                 'dia': float(tool.get('dia', 6.0)), 'skipped': skipped, 'secs': round(secs),
-                'gear': gear or None,
+                'gear': gear or None, 'bbox': _cnc_bbox(tps, drills, float(tool.get('dia', 6.0))),
                 'warnings': _cnc_warnings(data, job, op, tps, drills, tool, material)}
     except Exception as e:
         return {'ok': False, 'error': f'Trayectorias: {e}'}

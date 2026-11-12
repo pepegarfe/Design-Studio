@@ -223,10 +223,38 @@ def clave_post():
     _abrir_sesion(yo)   # cambiar la contraseña invalida las sesiones: esta sigue con una nueva
 
 
+def _pagina_error(titulo, texto):
+    return auth._marco(titulo, titulo, texto, '<p class="pie"><a href="/">Volver a Design Studio</a></p>')
+
+
 def _solo_dueno():
     if not auth.es_dueno(_yo()):
-        raise HTTPResponse(body='Solo la cuenta del dueño puede ver esto.', status=403,
-                           headers={'Content-Type': 'text/plain; charset=utf-8'})
+        raise HTTPResponse(body=_pagina_error('Solo para el dueño', 'Esta página es de la cuenta del dueño del taller.'),
+                           status=403, headers={'Content-Type': 'text/html; charset=utf-8'})
+
+
+# Errores en español y con salida. Antes salía la página genérica de bottle en inglés ("Error:
+# 404 Not Found") y, en /api, un HTML que la interfaz no sabía leer (aviso críptico o nada).
+_ERRORES = {
+    404: ('Esa página no existe', 'La dirección no lleva a ningún lado. Puede que el enlace esté mal escrito.',
+          'Esa función no existe en el servidor.'),
+    405: ('Esa página no existe', 'La dirección no se puede abrir así.', 'Esa función no admite ese tipo de pedido.'),
+    500: ('Algo falló en el servidor', 'No fue culpa tuya. Inténtalo de nuevo en un momento; si se repite, avísale a quien administra el taller.',
+          'El servidor tuvo un problema. Inténtalo de nuevo.'),
+}
+
+
+def _error(err):
+    titulo, texto, corto = _ERRORES.get(err.status_code, _ERRORES[500])
+    if request.path.startswith('/api/'):
+        response.content_type = 'application/json; charset=utf-8'
+        return json.dumps({'ok': False, 'error': corto})
+    response.content_type = 'text/html; charset=utf-8'
+    return _pagina_error(titulo, texto)
+
+
+for _cod in _ERRORES:
+    app.error(_cod)(_error)
 
 
 @app.get('/cuentas')

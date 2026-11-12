@@ -665,6 +665,19 @@ print(json.dumps(r))
     ok(b1 and len(b1) == 12 and api('/api/estacion/fila', YO)[1].get('build') == b1,
        'el servidor publica su versión (build) al editor y a la estación: es lo que dispara la actualización sola', str(b1))
 
+    # J3. ERRORES en español: página con salida para la gente, JSON para la interfaz
+    e404 = http_crudo('GET', '/no-existe', cookie=YO)
+    a404 = http_crudo('GET', '/api/no-existe', cookie=YO)
+    try:
+        ja = json.loads(a404[2])
+    except ValueError:
+        ja = {}
+    ok(e404[0] == 404 and 'Esa página no existe' in e404[2].decode('utf-8', 'replace')
+       and 'href="/"' in e404[2].decode('utf-8', 'replace') and b'Not Found' not in e404[2],
+       'una dirección que no existe: página en español con regreso (no el "404 Not Found" de fábrica)', str(e404[0]))
+    ok(a404[0] == 404 and ja.get('ok') is False and ja.get('error'),
+       'una ruta /api que no existe: JSON con mensaje, que la interfaz sí sabe leer', str(a404[2][:80]))
+
     # K. ESTACIÓN DE CORTE: cada cuenta tiene SU fila; lo que se corta es el MISMO HPGL de "Enviar"
     cuadro = {'paths': [[[0, 0], [50, 0], [50, 30], [0, 30], [0, 0]]], 'speed': 300, 'pressure': 120,
               'overcut': 0.5, 'corner': 30}
