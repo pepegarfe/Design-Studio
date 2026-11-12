@@ -65,6 +65,13 @@ Verificado contra el código y con la auditoría el 4-nov-2026. Historia en `ide
   la IP de la red local (http) el navegador descartaría la cookie y nadie podría iniciar sesión.
 - **El dueño olvidó su contraseña → `python web/rescatar_dueno.py` EN el servidor** (`railway ssh`).
   Desde la web nadie puede restablecer al dueño (`restablecer_clave` lo rechaza sin `rescate=True`).
+- **`/health`** (público, sin datos) lo consulta Railway por `railway.json` antes de dar por bueno un
+  despliegue. **Un 500 se anota en `<datos>/errores.log`** (`_anotar_error`: hora, ruta, cuenta,
+  traza; rota a los 300 KB). Los errores llegan a la gente en español: página con regreso, o JSON
+  `{ok:false,error}` en `/api` (`_ERRORES`).
+- **Parámetros de corte del plotter** (velocidad, presión, sobrecorte, esquinas): por cuenta, en la
+  llave `cut` de la config del plotter (`load_cut`/`set_cut`), con topes; van junto al área en
+  `/api/workarea`.
 - ⚠️ **Volver tras entrar (`?siguiente=`) pasa SIEMPRE por `_destino()`**: solo rutas propias por
   lista de lo PERMITIDO. Un `//otro` o `/\otro` el navegador lo lee como otro sitio: el enlace de
   entrada sería un trampolín a una página falsa que pida la contraseña. Auditoría, sección "R".

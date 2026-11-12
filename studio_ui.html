@@ -110,6 +110,9 @@
   .empty p{margin:0;color:var(--faint);font-size:15px;}
   .empty button{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 18px;border-radius:9px;background:linear-gradient(180deg,var(--accent),var(--accent-dim));color:#fff;border:0;font:inherit;font-size:13.5px;font-weight:650;cursor:pointer;box-shadow:0 3px 14px -4px var(--accent-dim);}
   .empty button svg{width:15px;height:15px;}
+  .empty .starts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;pointer-events:auto;}
+  .empty button.alt{background:var(--panel);color:var(--ink);border:1px solid var(--line-2);box-shadow:none;height:32px;padding:0 13px;font-size:12.5px;font-weight:600;}
+  .empty button.alt:hover{border-color:var(--accent);color:var(--accent);}
   /* opciones de forma (polígono/estrella) — aparece al elegir esa herramienta */
   .shapeopts{position:absolute;top:14px;left:14px;z-index:3;display:none;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:6px 10px;box-shadow:0 4px 14px -6px #0006;font-size:12.5px;color:var(--muted);}
   .shapeopts input:not([type=checkbox]){width:42px;height:24px;border:1px solid var(--line);background:var(--input);color:var(--ink);border-radius:6px;text-align:center;font:inherit;font-size:12.5px;}
@@ -396,8 +399,13 @@
     <canvas id="cv"></canvas>
     <div class="empty" id="empty">
       <svg class="ill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 13h6M12 10v6"/></svg>
-      <p>Abre un diseño para empezar</p>
+      <p>Abre un diseño, o empieza uno aquí</p>
       <button id="btnOpenEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir diseño…</button>
+      <div class="starts">
+        <button class="alt" id="startDraw" title="Elige la herramienta de figuras y dibuja sobre la mesa">Dibujar una figura</button>
+        <button class="alt" id="startText" title="Escribe un texto con cualquier tipografía instalada">Escribir texto</button>
+        <button class="alt" id="startTrace" title="Convierte una foto o un logo en trazos de corte">Calcar una imagen</button>
+      </div>
     </div>
     <div class="shapeopts" id="nestOpts" style="display:none">
       <span>Sep.</span><input id="nstGap" value="5" title="Espacio mínimo entre piezas"><span>mm</span>
@@ -606,6 +614,14 @@
 <div class="modal" id="plotterModal" style="display:none">
   <div class="sheet">
     <div class="sheet-h"><h3>Plotter</h3><button id="plotterClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="grp" id="plotterCutGrp">
+      <div class="grp-t">Corte</div>
+      <div class="mrow"><div class="field" style="flex:1" title="Velocidad del cabezal al cortar"><label>Velocidad</label><input id="cutSpeed" value="320"><span class="u">mm/s</span></div>
+        <div class="field" style="flex:1" title="Fuerza de la cuchilla sobre el material"><label>Presión</label><input id="cutPressure" value="140"><span class="u">g</span></div></div>
+      <div class="mrow"><div class="field" style="flex:1" title="Sobrecorte: cuánto sigue la cuchilla después de cerrar una figura, para que la esquina quede bien cortada"><label>Sobrecorte</label><input id="cutOvercut" value="1.0"><span class="u">mm</span></div>
+        <div class="field" style="flex:1" title="Ángulo a partir del cual la cuchilla levanta y gira en una esquina (0 = no lo hace)"><label>Esquinas</label><input id="cutCorner" value="0"><span class="u">°</span></div></div>
+      <div class="cstat" id="cutNote">Se usan en cada corte y se recuerdan para la próxima vez.</div>
+    </div>
     <div class="grp">
       <div class="grp-t">Conexión</div>
       <!-- Solo en el navegador (Web Serial): un botón y lo técnico escondido. El escritorio no lo ve. -->
@@ -647,14 +663,6 @@
       <div class="mrow" id="waSheetsRow" style="display:none"><div class="field" style="flex:1" title="Cuántas láminas iguales pones lado a lado; el nesting reparte solo y lo que no cabe pasa a la siguiente"><label>Hojas</label><input id="waSheets" value="1"></div></div>
       <div class="mrow"><button class="pbtn acc" id="waSave" style="flex:1">Guardar área</button></div>
       <div class="cstat" id="waNote">El tamaño se recuerda para la próxima vez.</div>
-    </div>
-    <div class="grp" id="plotterCutGrp">
-      <div class="grp-t">Parámetros de corte</div>
-      <div class="mrow"><div class="field" style="flex:1"><label>Veloc.</label><input id="cutSpeed" value="320"><span class="u">mm/s</span></div>
-        <div class="field" style="flex:1"><label>Presión</label><input id="cutPressure" value="140"><span class="u">g</span></div></div>
-      <div class="mrow"><div class="field" style="flex:1"><label>Sobrec.</label><input id="cutOvercut" value="1.0"><span class="u">mm</span></div>
-        <div class="field" style="flex:1"><label>Esquinas</label><input id="cutCorner" value="0"><span class="u">°</span></div></div>
-      <div class="cstat">Se aplican al generar el HPGL y al enviar el corte.</div>
     </div>
   </div>
 </div>
@@ -1254,6 +1262,15 @@ var PlotterMotor = (function(){
   var prevOn=false;   // intención del usuario: vista previa encendida (aunque momentáneamente no haya nada que pintar)
   function killPrev(){ if(cncPrev){ cncPrev=null; el('btnTpPrev').classList.remove('on'); }
     if(el('tpPrevLbl')) el('tpPrevLbl').textContent='Ver trayectorias'; }
+  // Velocidad/presión/sobrecorte/esquinas del plotter: se guardan en la cuenta al cambiarlos
+  // (antes cada sesión volvía a 320/140 y vivían escondidos en "Tamaño del área de trabajo").
+  function ponerCorte(c){ if(!c) return; var m={cutSpeed:c.speed,cutPressure:c.pressure,cutOvercut:c.overcut,cutCorner:c.corner};
+    for(var k in m) if(m[k]!=null&&!isNaN(m[k])) el(k).value=m[k]; }
+  function guardarCorte(){ if(api()) return;
+    fetch('/api/set_cut',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cutParams())})
+      .then(function(r){ return r.json(); }).then(function(r){ el('cutNote').textContent=(r&&r.ok)?'Guardado ✓ — se usa en cada corte.':((r&&r.error)||'No se pudo guardar.'); })
+      .catch(function(){ el('cutNote').textContent='No se pudo guardar (sin conexión).'; }); }
+  ['cutSpeed','cutPressure','cutOvercut','cutCorner'].forEach(function(id){ el(id).addEventListener('change',guardarCorte); });
   function cutParams(){ return { speed: parseFloat(el('cutSpeed').value)||320, pressure: parseFloat(el('cutPressure').value)||140, overcut: parseFloat(el('cutOvercut').value)||0, corner: parseFloat(el('cutCorner').value)||0 }; }
   function effAll(){ var r=[]; for(var i=0;i<doc.paths.length;i++){ r.push(effPts(i)); } return r; }
   function pathLen(){ var L=0; for(var i=0;i<doc.paths.length;i++){ var e=effPts(i); for(var k=1;k<e.length;k++){ L+=Math.hypot(e[k][0]-e[k-1][0], e[k][1]-e[k-1][1]); } } return L; }
@@ -3337,6 +3354,10 @@ var PlotterMotor = (function(){
     fetch('/api/parse',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(res){ if(!res||!res.ok){toast(res&&res.error?res.error:'No se pudo leer');return;} loadDoc(res); }).catch(function(e){toast('Error: '+e);}); this.value=''; });
   el('btnOpen').addEventListener('click',openDesign);
   el('btnOpenEmpty').addEventListener('click',openDesign);
+  // Las otras tres formas de empezar sin tener un archivo (antes la pantalla vacía solo decía "Abrir").
+  el('startDraw').addEventListener('click',function(){ setTool('rect'); toast('Arrastra sobre la mesa para dibujar un rectángulo. Para otras figuras, usa el botón de figuras del riel izquierdo.'); });
+  el('startText').addEventListener('click',function(){ el('toolText').click(); });
+  el('startTrace').addEventListener('click',function(){ el('imgInput').click(); });
   el('btnSaveProject').addEventListener('click',saveProject);
 
   // ===== Importar: SUMA otro archivo a la mesa (no reemplaza) =====
@@ -3540,7 +3561,9 @@ var PlotterMotor = (function(){
   // ===== Área de trabajo (dual) + arranque =====
   function loadWork(){
     checkAutosave();
-    var got=function(r){ if(r&&r.work){ state.plotterWork=r.work; if(state.machine==='plotter') state.work=r.work; } view.ready=false; fitView(); };
+    var got=function(r){ if(r&&r.work){ state.plotterWork=r.work; if(state.machine==='plotter') state.work=r.work; }
+      if(r&&r.cut) ponerCorte(r.cut);
+      view.ready=false; fitView(); };
     if(api()){ api().get_workarea().then(got).catch(function(){fitView();}); }
     else { fetch('/api/workarea').then(function(r){return r.json();}).then(got).catch(function(){fitView();}); }
     // Config del CNC + máquina activa de la sesión pasada (idempotente: se puede re-llamar)
@@ -3913,7 +3936,7 @@ var PlotterMotor = (function(){
     if(puedeDirecto()){ var ed=estadoDirecto(); h+=item('directo',ed[0],'Enviar Directo',ed[1],d==='directo'); }
     else h+='<div class="mi" style="cursor:default;opacity:.6"><span class="sdot"></span><span><b>Enviar Directo</b><small>este navegador no puede usar el cable: abre Design Studio en Chrome o Edge</small></span></div>';
     if(puedeRemoto()){ var er=estadoRemoto(); h+=item('remoto',er[0],'Enviar Remoto',er[1],d==='remoto'); }
-    h+='<div class="sep"></div>'+item('ajustes',null,'Ajustes del plotter…','conexión, mover el cabezal, corte de prueba',false);
+    h+='<div class="sep"></div>'+item('ajustes',null,'Ajustes del plotter…','velocidad y presión, conexión, mover el cabezal',false);
     if(puedeRemoto()) h+=item('fila',null,'Ver la fila de la estación','se abre en otra pestaña',false);
     m.innerHTML=h; m.style.display='block';
     var r=el('sendGrp').getBoundingClientRect(); m.style.top=(r.bottom+6)+'px';
@@ -3953,7 +3976,6 @@ var PlotterMotor = (function(){
     el('waW').value=Math.round(wk[0]); el('waH').value=Math.round(wk[1]);
     el('waMachLbl').textContent='Área de trabajo · '+(cncMode?'CNC':'Plotter');
     el('waNote').textContent=cncMode?'La cama de tu CNC se recuerda para la próxima vez.':'El tamaño del plotter se recuerda para la próxima vez.';
-    el('plotterCutGrp').style.display=cncMode?'none':'';
     el('waModal').style.display='flex'; }
   el('btnSettings').addEventListener('click',openWA);
   el('waClose').addEventListener('click',function(){ el('waModal').style.display='none'; });

@@ -64,6 +64,50 @@ def set_workarea(w, h):
         return {'ok': False, 'error': str(e)}
 
 
+CUT_DEFAULTS = {'speed': 320.0, 'pressure': 140.0, 'overcut': 1.0, 'corner': 0.0}
+_CUT_TOPES = {'speed': (10, 1000), 'pressure': (1, 600), 'overcut': (0, 10), 'corner': (0, 180)}
+
+
+def load_cut():
+    """Velocidad, presión, sobrecorte y esquinas del plotter guardados en la cuenta."""
+    out = dict(CUT_DEFAULTS)
+    try:
+        p = core._config_path()
+        if p.exists():
+            d = json.loads(p.read_text(encoding='utf-8')).get('cut') or {}
+            for k in out:
+                if k in d:
+                    out[k] = float(d[k])
+    except Exception:
+        pass
+    return out
+
+
+def set_cut(d):
+    """Guarda los parámetros de corte del plotter (misma config que el área de trabajo)."""
+    try:
+        cut = {}
+        for k, (lo, hi) in _CUT_TOPES.items():
+            v = float((d or {}).get(k, CUT_DEFAULTS[k]))
+            if not (lo <= v <= hi):
+                return {'ok': False, 'error': f'Valor fuera de rango ({lo}–{hi}).'}
+            cut[k] = v
+        p = core._config_path()
+        data = {}
+        if p.exists():
+            try:
+                data = json.loads(p.read_text(encoding='utf-8'))
+            except Exception:
+                data = {}
+        data['cut'] = cut
+        _escribir(p, json.dumps(data))
+        return {'ok': True, 'cut': cut}
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'Escribe un número.'}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
 def flip_paths_y(paths):
     """Voltea verticalmente (sobre el centro del conjunto) una lista de {'pts':[[x,y],..]}.
 

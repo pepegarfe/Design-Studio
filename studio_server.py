@@ -23,7 +23,7 @@ from bottle import Bottle, BaseRequest, static_file, request, response, HTTPResp
 
 from studio_backend import (SERVICE, set_workarea as _set_workarea,
                             cnc_get as _cnc_get, cnc_set as _cnc_set,
-                            load_workarea, load_vector, build_hpgl, test_square_hpgl,
+                            load_workarea, load_cut, set_cut, load_vector, build_hpgl, test_square_hpgl,
                             cnc_toolpaths_preview as _cnc_preview, cnc_build_tap as _cnc_tap)
 import img_trace as tracer
 import text_vector as texter
@@ -244,8 +244,26 @@ _ERRORES = {
 }
 
 
+def _anotar_error(err):
+    """Un 500 deja rastro en <datos>/errores.log (hora, ruta, cuenta y la traza). Sin esto solo
+    quedaba lo que Railway guarde en sus registros, y ahí nadie mira hasta que un cliente se queja."""
+    try:
+        p = os.path.join(auth.DATOS, 'errores.log')
+        if os.path.exists(p) and os.path.getsize(p) > 300_000:      # que no crezca sin fin
+            os.replace(p, p + '.viejo')
+        with open(p, 'a', encoding='utf-8') as f:
+            f.write('\n=== %s  %s %s  cuenta=%s  build=%s\n%s\n' % (
+                time.strftime('%Y-%m-%d %H:%M:%S'), request.method, request.path,
+                'invitado' if auth.es_invitado(_yo()) else (_yo() or '-'), BUILD,
+                (getattr(err, 'traceback', None) or str(getattr(err, 'exception', '') or err.body))[:6000]))
+    except Exception:
+        pass
+
+
 def _error(err):
     titulo, texto, corto = _ERRORES.get(err.status_code, _ERRORES[500])
+    if err.status_code >= 500:
+        _anotar_error(err)
     if request.path.startswith('/api/'):
         response.content_type = 'application/json; charset=utf-8'
         return json.dumps({'ok': False, 'error': corto})
@@ -336,6 +354,12 @@ def icono(nombre):
     return static_file(nombre, root=os.path.join(HERE, 'iconos'))
 
 
+@app.get('/health')
+def health():
+    """Para Railway (railway.json): ¿el servidor contesta? Público y sin datos de nadie."""
+    return _json({'ok': True, 'build': BUILD})
+
+
 @app.get('/favicon.ico')
 def favicon():
     return static_file('studio.ico', root=os.path.join(HERE, 'iconos'))
@@ -355,7 +379,12 @@ def three_bundle():
 
 @app.get('/api/workarea')
 def api_workarea():
-    return _json({'work': _workarea()})
+    return _json({'work': _workarea(), 'cut': load_cut()})
+
+
+@app.post('/api/set_cut')
+def api_set_cut():
+    return _json(set_cut(request.json or {}))
 
 
 @app.post('/api/set_workarea')
@@ -810,7 +839,7 @@ def _lan_ip():
 
 PUBLICAS = ('/entrar', '/crear', '/salir', '/invitado',
             # el manifiesto y los iconos los pide el navegador SIN cookie (y antes de entrar)
-            '/manifest.webmanifest', '/estacion.webmanifest', '/favicon.ico')
+            '/manifest.webmanifest', '/estacion.webmanifest', '/favicon.ico', '/health')
 # Lo que la cuenta del dueño hereda de cuando no había cuentas (se copia, no se mueve).
 HEREDA_EL_DUENO = ('plotter_config.json', 'cnc_config.json', 'autosave.dstudio')
 SEGURIDAD = [('X-Content-Type-Options', 'nosniff'),   # el navegador no "adivina" tipos de archivo

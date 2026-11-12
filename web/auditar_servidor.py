@@ -678,6 +678,21 @@ print(json.dumps(r))
     ok(a404[0] == 404 and ja.get('ok') is False and ja.get('error'),
        'una ruta /api que no existe: JSON con mensaje, que la interfaz sí sabe leer', str(a404[2][:80]))
 
+    # J4. SALUD y parámetros de corte del plotter (por cuenta, recordados)
+    hs = http_crudo('GET', '/health')
+    ok(hs[0] == 200 and json.loads(hs[2]).get('ok') is True and b'usuario' not in hs[2],
+       '/health responde sin sesión y sin datos de nadie (lo usa Railway para saber si el servidor vive)', str(hs[0]))
+    c0 = api('/api/workarea', YO)[1].get('cut')
+    g = api('/api/set_cut', YO, {'speed': 250, 'pressure': 90, 'overcut': 0.5, 'corner': 30})[1]
+    c1 = api('/api/workarea', YO)[1].get('cut')
+    ca = api('/api/workarea', ANA)[1].get('cut')
+    ok(c0 == {'speed': 320.0, 'pressure': 140.0, 'overcut': 1.0, 'corner': 0.0} and g.get('ok')
+       and c1 == {'speed': 250.0, 'pressure': 90.0, 'overcut': 0.5, 'corner': 30.0} and ca == c0,
+       'velocidad/presión del plotter: se guardan en la cuenta, se recuerdan, y otra cuenta no las ve', str((c1, ca)))
+    ok(api('/api/set_cut', YO, {'speed': 99999})[1].get('ok') is False and api('/api/set_cut', YO, {'speed': 'abc'})[1].get('ok') is False
+       and api('/api/workarea', YO)[1].get('cut') == c1 and api('/api/workarea', YO)[1].get('work'),
+       'un valor disparatado o que no es número se rechaza sin tocar lo guardado (ni el área)')
+
     # K. ESTACIÓN DE CORTE: cada cuenta tiene SU fila; lo que se corta es el MISMO HPGL de "Enviar"
     cuadro = {'paths': [[[0, 0], [50, 0], [50, 30], [0, 30], [0, 0]]], 'speed': 300, 'pressure': 120,
               'overcut': 0.5, 'corner': 30}
