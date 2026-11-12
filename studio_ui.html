@@ -290,16 +290,7 @@
   .statbtn:hover:not(:disabled){border-color:var(--line);color:var(--accent);}
   .statbtn:disabled{opacity:.3;cursor:default;}
   .statbtn svg{width:14px;height:14px;display:block;}
-  /* Chip de versión: discreto, y se pone en acento cuando hay actualización. */
-  .verbtn{margin-left:12px;background:none;border:1px solid transparent;border-radius:5px;
-          color:var(--faint);font-family:var(--mono);font-size:11px;padding:2px 6px;cursor:pointer;}
-  .verbtn:hover{border-color:var(--line);color:var(--ink);}
-  .verbtn.new{color:var(--accent);border-color:var(--accent);}
-  #upBar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:10px;}
-  #upFill{height:100%;width:0;background:var(--accent);transition:width .18s;}
-  #upNotes{max-height:150px;overflow:auto;white-space:pre-wrap;font-size:12px;line-height:1.5;
-           color:var(--muted);background:var(--rail);border:1px solid var(--line);
-           border-radius:6px;padding:8px 10px;margin-top:10px;}
+
 
   /* --- Vista 3D (simulación del corte sobre el bloque de material) --- */
   .sheet.simsheet{width:min(94vw,1240px);max-width:94vw;height:min(90vh,880px);display:flex;flex-direction:column;}
@@ -634,7 +625,7 @@
   <footer class="status">
     <span class="s" id="fileName" title="Archivo abierto">sin diseño</span>
     <span class="s" id="stSel"></span>
-    <span class="r"><span id="metaSize">—</span><span style="opacity:.45;margin:0 8px">·</span><span id="metaTime">—</span><button class="statbtn" id="btnQuote" disabled title="Cotizar este trabajo: material + tiempo de máquina + margen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg></button><button class="verbtn" id="verBtn" title="Versión de Design Studio · clic para buscar actualizaciones">v —</button></span>
+    <span class="r"><span id="metaSize">—</span><span style="opacity:.45;margin:0 8px">·</span><span id="metaTime">—</span><button class="statbtn" id="btnQuote" disabled title="Cotizar este trabajo: material + tiempo de máquina + margen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg></button></span>
   </footer>
 </div>
 <input type="file" id="fileInput" accept=".svg,.dxf,.ai,.dstudio,.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff" style="display:none">
@@ -932,23 +923,6 @@
     <div class="grp">
       <div id="exHint" style="font-size:12px;color:var(--muted);line-height:1.5"></div>
       <button class="pbtn acc" id="exGo" style="width:100%;margin-top:10px">Exportar</button>
-    </div>
-  </div>
-</div>
-<div class="modal" id="updModal" style="display:none">
-  <div class="sheet" style="width:420px">
-    <div class="sheet-h"><h3>Actualizaciones</h3><button id="updClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-    <div class="grp">
-      <div class="mrow" style="justify-content:space-between;font-size:12px;color:var(--muted)">
-        <span>Versión instalada</span><b id="upCur" style="color:var(--ink);font-family:var(--mono)">—</b>
-      </div>
-      <div id="upMsg" style="font-size:13px;line-height:1.55;color:var(--ink);margin-top:10px">Buscando…</div>
-      <div id="upNotes" style="display:none"></div>
-      <div id="upBar" style="display:none"><div id="upFill"></div></div>
-      <div class="mrow" style="margin-top:14px">
-        <button class="pbtn" id="upAgain" style="flex:1">Buscar de nuevo</button>
-        <button class="pbtn acc" id="upGo" style="flex:1;display:none">Descargar e instalar</button>
-      </div>
     </div>
   </div>
 </div>
@@ -3697,13 +3671,16 @@ var PlotterMotor = (function(){
   el('btnInsp').addEventListener('click',function(){ document.querySelector('.app').classList.toggle('insp'); });
   cv.addEventListener('mousedown',function(){ document.querySelector('.app').classList.remove('insp'); },true);
 
-  // ===== Menú de cuenta (riel, abajo): antes "Cerrar sesión" vivía escondido tras el n.º de versión =====
+  // ===== Menú de cuenta (riel, abajo): cuenta, estación, contraseña, salir y la huella de la versión =====
   function armarCuenta(r){ var b=el('toolCuenta'), m=el('cuentaMenu'); b.style.display='';
     var h='<div class="quien">'+(r.invitado?'<b>Modo de prueba</b> · nada se guarda':'Cuenta <b>'+hesc(r.usuario||'')+'</b>'+(r.dueno?' · dueño':''))+'</div><div class="sep"></div>';
     h+='<a class="mi" href="/estacion" target="_blank">Estación de corte</a>';
     if(!r.invitado) h+='<a class="mi" href="/clave">Cambiar contraseña</a>';
     if(r.dueno) h+='<a class="mi" href="/cuentas">Cuentas del taller</a>';
     h+='<div class="sep"></div><a class="mi" href="/salir">'+(r.invitado?'Salir de la prueba':'Cerrar sesión')+'</a>';
+    // La huella del despliegue (cambia cada vez que se publica): sirve para saber si dos pantallas
+    // corren el mismo programa. Sustituye al chip "v dev" del escritorio, que ya no decía nada.
+    if(r.build) h+='<div class="sep"></div><div class="quien" id="cuentaBuild" title="Huella de esta versión: cambia con cada actualización. Si dos pantallas muestran la misma, corren el mismo programa." style="font-family:var(--mono);font-size:11px;padding-bottom:7px">versión '+hesc(r.build)+'</div>';
     m.innerHTML=h;
     b.addEventListener('click',function(ev){ ev.stopPropagation();
       if(m.style.display==='block'){ m.style.display='none'; return; }
@@ -5611,81 +5588,8 @@ var PlotterMotor = (function(){
   el('exClose').addEventListener('click',function(){ el('exModal').style.display='none'; });
   el('exModal').addEventListener('click',function(e){ if(e.target===el('exModal')) el('exModal').style.display='none'; });
 
-  // ===== Actualizaciones (GitHub Releases) =====
-  // Tres pasos: consultar → descargar (con avance) → instalar. El último cierra la app:
-  // un programa no puede sobrescribirse a sí mismo mientras corre (ver updater.py).
-  var UPD = {
-    check:  function(){ return api()? api().update_check() : fetch('/api/update_check').then(function(r){return r.json();}); },
-    start:  function(url){ return api()? api().update_start({url:url}) : postJSON('/api/update_start',{url:url}); },
-    status: function(job){ return api()? api().update_status({job:job}) : postJSON('/api/update_status',{job:job}); },
-    apply:  function(job){ return api()? api().update_apply({job:job}) : postJSON('/api/update_apply',{job:job}); }
-  };
-  var upInfo=null, upJob=null, upTimer=null;
-
-  function upChip(r){
-    if(!r) return;
-    el('verBtn').textContent = 'v '+(r.current||'—');
-    el('verBtn').classList.toggle('new', !!(r.newer && !r.dev));
-    if(r.newer && !r.dev) el('verBtn').title='Hay una versión nueva ('+r.latest+') — clic para instalarla';
-  }
-  function upFail(r){
-    clearTimeout(upTimer);
-    el('upBar').style.display='none';
-    el('upGo').disabled=false; el('upGo').textContent='Descargar e instalar';
-    el('upMsg').textContent = (r && r.error) ? r.error : 'No se pudo actualizar.';
-  }
-  function upCheck(){
-    el('upMsg').textContent='Buscando…';
-    el('upNotes').style.display='none'; el('upBar').style.display='none';
-    el('upGo').style.display='none'; el('upAgain').disabled=true;
-    UPD.check().then(function(r){
-      el('upAgain').disabled=false; upInfo=r||{};
-      el('upCur').textContent='v '+((r&&r.current)||'—');
-      upChip(r);
-      if(!r||!r.ok){ el('upMsg').textContent=(r&&r.error)||'No se pudo consultar GitHub.'; return; }
-      if(r.web){ el('upMsg').innerHTML='Estás usando la <b>versión web</b>: siempre es la más reciente, no hay nada que instalar.<br><br>Cuenta: <b>'+(r.invitado?'prueba':(r.usuario||''))+'</b><br>'+(r.invitado?'Modo de prueba: lo que cambies no se guarda':'<a href="/clave">Cambiar contraseña</a>')+(r.dueno?' · <a href="/cuentas">Cuentas</a>':'')+' · <a href="/salir">Cerrar sesión</a>'; return; }
-      if(r.dev){ el('upMsg').innerHTML='Estás corriendo Design Studio <b>desde el código</b> (modo desarrollo): aquí se actualiza con <b>git pull</b>, no con el instalador.<br><br>Última publicada: <b>'+(r.latest||'—')+'</b>'; return; }
-      if(!r.newer){ el('upMsg').innerHTML='Ya tienes la versión más reciente (<b>'+r.current+'</b>).'; return; }
-      var mb = r.size? ' · '+Math.round(r.size/1048576)+' MB' : '';
-      el('upMsg').innerHTML='Hay una versión nueva: <b>'+r.latest+'</b>'+mb+'.';
-      if(r.notes){ el('upNotes').textContent=r.notes; el('upNotes').style.display='block'; }
-      if(r.has_asset){ el('upGo').style.display='block'; el('upGo').disabled=false; el('upGo').textContent='Descargar e instalar'; }
-      else el('upMsg').innerHTML+='<br><br>Pero ese release <b>no trae paquete para este sistema</b>.';
-    }).catch(function(e){ el('upAgain').disabled=false; el('upMsg').textContent='Error: '+e; });
-  }
-  function upPoll(){
-    clearTimeout(upTimer);
-    UPD.status(upJob).then(function(r){
-      if(!r||!r.ok){ upFail(r); return; }
-      el('upFill').style.width=(r.pct||0)+'%';
-      if(!r.done){ upTimer=setTimeout(upPoll,400); return; }
-      el('upMsg').textContent='Instalando… Design Studio se cerrará y volverá a abrirse solo.';
-      UPD.apply(upJob).then(function(a){ if(!a||!a.ok){ upFail(a); return; } el('upGo').style.display='none'; })
-                      .catch(function(e){ upFail({error:'Error al instalar: '+e}); });
-    }).catch(function(e){ upFail({error:'Error: '+e}); });
-  }
-  function upDownload(){
-    if(!upInfo||!upInfo.url) return;
-    el('upGo').disabled=true; el('upGo').textContent='Descargando…';
-    el('upBar').style.display='block'; el('upFill').style.width='0';
-    UPD.start(upInfo.url).then(function(r){ if(!r||!r.ok){ upFail(r); return; } upJob=r.job; upPoll(); })
-                         .catch(function(e){ upFail({error:'Error: '+e}); });
-  }
-  function openUpd(){ el('updModal').style.display='flex'; upCheck(); }
-  el('verBtn').addEventListener('click',openUpd);
-  el('upAgain').addEventListener('click',upCheck);
-  el('upGo').addEventListener('click',upDownload);
-  el('updClose').addEventListener('click',function(){ el('updModal').style.display='none'; });
-  el('updModal').addEventListener('click',function(e){ if(e.target===el('updModal')) el('updModal').style.display='none'; });
-  // Al arrancar: pone la versión en la barra y avisa (una vez, sin estorbar) si hay una nueva.
-  setTimeout(function(){
-    UPD.check().then(function(r){ upChip(r);
-      if(r && r.ok && r.newer && !r.dev) toast('Versión nueva disponible: '+r.latest+' — clic en la versión, abajo a la derecha');
-    }).catch(function(){});
-  }, 4000);
-
   // Gancho de depuración (inofensivo): permite inyectar/leer estado durante pruebas.
-  window.__DS={ load:loadDoc, add:addDoc, addProject:addProject, get doc(){return doc;}, get sel(){return sel;}, effPts:effPts, bboxOf:bboxOf, mode:mode, activeIdx:activeIdx, refreshUI:refreshUI, tp:tp, get view(){return view;}, projectData:projectData, loadProject:loadProject, get nedit(){return nedit;}, get pen(){return pen;}, get guides(){return guides;}, get refImg(){return refImg;}, get snapGuides(){return snapGuides;}, get nestAnim(){return nestAnim;}, autosaveTick:autosaveTick, get dirty(){return dirtySince;}, get state(){return state;}, setUnits:setUnits, upd:{check:upCheck, open:openUpd, download:upDownload, chip:upChip, get info(){return upInfo;}},
+  window.__DS={ load:loadDoc, add:addDoc, addProject:addProject, get doc(){return doc;}, get sel(){return sel;}, effPts:effPts, bboxOf:bboxOf, mode:mode, activeIdx:activeIdx, refreshUI:refreshUI, tp:tp, get view(){return view;}, projectData:projectData, loadProject:loadProject, get nedit(){return nedit;}, get pen(){return pen;}, get guides(){return guides;}, get refImg(){return refImg;}, get snapGuides(){return snapGuides;}, get nestAnim(){return nestAnim;}, autosaveTick:autosaveTick, get dirty(){return dirtySince;}, get state(){return state;}, setUnits:setUnits,
     allUnits:allUnits, setFillView:setFillView, get fillView(){return fillView;}, get outlineMode(){return outlineMode;}, draw:draw,
     ex:{open:exOpen, payload:exPayload, go:exGo, paint:exPaint, setFmt:exSetFmt, set fmt(f){exFmt=f;}, get fmt(){return exFmt;}},
     hpglPayload:hpglPayload,

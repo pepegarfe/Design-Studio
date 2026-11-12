@@ -562,38 +562,13 @@ def api_export():
         'Content-Disposition': f'attachment; filename="{name}"'})
 
 
-# La versión web no se instala ni se actualiza sola: siempre es la que corre el servidor.
-# Antes, update_start descargaba CUALQUIER dirección que se le pasara.
-def _version():
-    try:   # 'utf-8-sig': se come el BOM si el archivo lo trae
-        with open(os.path.join(HERE, 'version.txt'), encoding='utf-8-sig') as f:
-            return f.read().strip() or 'dev'
-    except OSError:
-        return 'dev'
-
-
-_SIN_UPDATE = {'ok': False, 'error': 'La versión web no se instala: siempre es la más reciente.'}
-
-
+# La versión web no se instala: siempre es la que corre el servidor. De aquí salen la huella
+# `build` (con la que cada página sabe si quedó vieja y debe recargarse) y los datos del menú de
+# cuenta. Las rutas update_start/status/apply del escritorio se borraron el 12-nov-2026.
 @app.get('/api/update_check')
 def api_update_check():
-    return _json({'ok': True, 'web': True, 'newer': False, 'current': _version(), 'build': BUILD,
+    return _json({'ok': True, 'web': True, 'newer': False, 'build': BUILD,
                   'usuario': _yo(), 'dueno': auth.es_dueno(_yo()), 'invitado': auth.es_invitado(_yo())})
-
-
-@app.post('/api/update_start')
-def api_update_start():
-    return _json(_SIN_UPDATE)
-
-
-@app.post('/api/update_status')
-def api_update_status():
-    return _json(_SIN_UPDATE)
-
-
-@app.post('/api/update_apply')
-def api_update_apply():
-    return _json(_SIN_UPDATE)
 
 
 @app.post('/api/autosave_save')

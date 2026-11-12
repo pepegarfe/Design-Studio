@@ -194,11 +194,12 @@ try:
     # huecos cerrados
     r = pedir('/api/text', {'text': 'Hola', 'path': '/etc/passwd', 'size': 20})
     ok(r.get('ok') is False and 'lista de fuentes' in (r.get('error') or ''), 'texto con un archivo cualquiera como "fuente" → rechazado sin leerlo', r.get('error'))
-    r = pedir('/api/update_start', {'url': 'https://example.com/lo-que-sea.zip'})
-    ok(r.get('ok') is False and 'versión web' in (r.get('error') or ''), 'descargar una actualización de cualquier dirección → rechazado', r.get('error'))
-    ok(pedir('/api/update_apply', {'job': 'x'}).get('ok') is False, 'instalar una actualización (reemplazar el programa) → rechazado')
+    # las rutas que descargaban e instalaban el programa (escritorio) ya no existen
+    for _ruta in ('/api/update_start', '/api/update_status', '/api/update_apply'):
+        r = pedir(_ruta, {'url': 'https://example.com/lo-que-sea.zip', 'job': 'x'})
+        ok(r.get('ok') is False and 'HTTP 40' in (r.get('error') or ''), f'{_ruta} ya no existe (no se descarga ni instala nada)', r.get('error'))
     r = pedir('/api/update_check')
-    ok(r.get('web') and r.get('newer') is False, 'buscar actualizaciones → "versión web, siempre la más reciente"')
+    ok(r.get('web') and r.get('newer') is False and re.fullmatch(r'[0-9a-f]{12}', r.get('build') or ''), 'update_check → versión web, con la huella del despliegue', r.get('build'))
     r = pedir('/api/connect', {'port': '/dev/cu.usbserial-AO004NFH', 'baud': 9600})
     ok(r.get('ok') is False and 'Chrome o Edge' in (r.get('error') or ''), 'el servidor ya NO abre puertos serie (plotter solo por el navegador)', r.get('error'))
     s = pedir('/api/status')

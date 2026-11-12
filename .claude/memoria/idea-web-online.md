@@ -307,8 +307,12 @@ teléfono (está hecha para computadora).
   trabajos de `angel` (11-nov); push hecho, despliegue desde GitHub `f51f36b` con
   `DS_IP_CABECERA=X-Real-IP` comprobado dentro del contenedor. **Fase C cerrada.** ✅ **Fase D HECHA (11-nov, 16:30)**: `https://studio.builtbyjose.tech` sirve desde Railway con certificado Let's Encrypt propio (vence feb-2027, Railway lo renueva). Historia: el primer dominio (id `02200809-…`) se quedó >2 h en `ISSUING / POLLING_AUTHORIZATIONS` con el sitio CAÍDO (`railway domain certificate retry` se niega mientras está en ISSUING). Arreglo: **borrar el dominio y volver a agregarlo** cuando el CNAME ya apuntaba a Railway → VALID en <1 min (id nuevo `efadcd0d-a5b6-4e81-96fb-10f83991f435`; el TXT no cambió). Lección: **mover el CNAME ANTES de agregar el dominio**; si se atora, borrar y re-agregar. CNAME `studio` → `hwdu091q.up.railway.app` (nube GRIS), cambiado por Jose y comprobado 11-nov. ⚠️ **Tras la caída, el Chrome de Jose seguía diciendo "no seguro"** aunque desde fuera el certificado estaba bien (las dos IP de Railway, .92 y .74, lo daban correcto): en incógnito salía seguro → era lo que Chrome guardó durante la caída. Remedio: ⌘Q y reabrir; si insiste, borrar los datos del sitio en `chrome://settings/content/all` (`chrome://net-internals/#sockets` ya no carga en su Chrome). Señal: **fuera bien + incógnito bien = caché del navegador, no el servidor**. Servidor de la Mac APAGADO; el volumen es la única fuente de datos. Regreso de emergencia al túnel: CNAME `studio` → `d37c7f4e-ab94-4f38-845d-d6d022cd318b.cfargotunnel.com` nube NARANJA + servidor de la Mac + `cloudflared tunnel run design-studio` (antes copiar el volumen a la Mac).
 - ⏳ **Cada push a `master` reinicia el servidor de Railway** aunque solo cambien notas (medido 11-nov: ~30 s sin respuesta al cambiar de contenedor; además se borran los bloqueos por contraseña, que viven en memoria). Ofrecido a Jose: configurar "Watch Paths" en Railway para que solo reconstruya cuando cambie código. Sin respuesta.
-- ⏳ **Cerrar sesión visible**: hoy está escondido en el botón de versión ("v —", abajo a la
-  derecha) y la estación NO tiene salida (solo `/salir` a mano). Ofrecido, sin respuesta.
+- ✅ **Cerrar sesión visible** (comprobado en el código el 12-nov-2026): el editor lo tiene en el
+  menú de cuenta del riel (`armarCuenta`) y la estación en su pie. Esta nota lo daba por pendiente
+  cuando ya estaba hecho. Ese día se **quitó el botón "v dev"** y su ventana "Actualizaciones"
+  (resto del escritorio: `version.txt` dice `dev` desde que se borró la CI) y las rutas
+  `update_start/status/apply`; el menú de cuenta muestra al pie la **huella `BUILD`** del
+  despliegue, para saber si dos pantallas corren el mismo programa.
 - ⏳ Que Jose pruebe: entrar por el túnel con su cuenta (vuelve a /estacion), y que `angel` mande
   a la estación compartida.
 - ⏳ Servidor y túnel corren A MANO desde la sesión (se caen si la Mac duerme); con Railway ya no
