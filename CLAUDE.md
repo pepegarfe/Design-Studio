@@ -92,6 +92,16 @@ NO se deducen del código:
   Una cadena es un trayecto **ABIERTO**: entra con `_open_pass` (no `_ring_pass`, que da la
   vuelta con `s % perim`) y **entre pasadas de profundidad DEBE subir y volver al inicio por
   el aire** — sin eso cortaría en línea recta del extremo lejano al principio.
+- ⚠️ **Rendimiento del Corte (12-nov-2026).** Tres causas de "calcular tarda segundos", y su arreglo:
+  (1) `_point_at()` va por **búsqueda binaria** (`bisect`): se llama una vez POR VÉRTICE de cada
+  pasada y de corrido era cuadrática — un cajeado con rampa tardaba 8× (1.06 s → 0.17 s; G-code
+  idéntico). ⚠️ Cualquier función nueva que se llame por vértice NO puede recorrer la polilínea.
+  (2) **Memoria de recorridos en la UI** (`memoPrev`, `memoTap`): cada Calcular, Revisar y la vista
+  3D pedían de nuevo TODOS los cortes; la llave es el pedido entero, así que se invalida sola.
+  (3) **Vista 3D**: los `.tap` se piden A LA VEZ (antes en fila) y, mientras llegan, **se oculta el
+  resultado anterior y Reproducir queda apagado** (`S3.tok`): si no, parecía que "no actualizaba" y
+  animaba el corte VIEJO hasta saltar al nuevo. Señal para la próxima: en la Mac todo esto tarda
+  décimas; **Railway es varias veces más lento**, así que lo que aquí es 1 s allá se siente roto.
 - ⚠️ **CNC, cajeado (12-nov-2026):** tres cosas sobre los anillos de siempre.
   (1) **Pasada de acabado en la pared** (`make_pocket(last_pass=…)`, mismo campo que la "última
   pasada separada" del perfil): el vaciado deja esa cáscara y al final va un anillo a la medida,
