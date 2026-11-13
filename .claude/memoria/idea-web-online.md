@@ -216,7 +216,7 @@ teléfono (está hecha para computadora).
   sobre especificaciones.
 
 ## "Estación de corte" con un Android viejo (5-nov-2026) — ✅ CONSTRUIDA, ⏳ falta la prueba de Jose
-- **11-nov-2026, dicho por Jose (no lo vi yo)**: la **tablet Fire HD 8** (proyecto `~/fire-kiosco`)
+- **11-nov-2026, dicho por Jose (no lo vi yo)**: la **tablet Fire HD 8** (proyecto `~/servidor-tablet`)
   **acepta el plotter** por USB-C y su **Chrome sí hace WebUSB**. Esa tablet es también el servidor
   de `~/vigia-precios`. ⚠️ Desde el 10-nov tiene los **Servicios de Google Play apagados** (fallaban
   en bucle): Chrome avisa "habilitar servicios de Google Play" al abrir; se ignora. No se ha
