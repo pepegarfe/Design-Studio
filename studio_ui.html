@@ -223,9 +223,13 @@
   .swchip:not(.on){text-decoration:line-through;opacity:.7;}
   .layer .coldot{width:9px;height:9px;border-radius:50%;flex:none;border:1px solid var(--line-2);}
   .proylist{display:flex;flex-direction:column;gap:5px;max-height:52vh;overflow:auto;}
-  .proyrow{display:flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;cursor:pointer;}
+  .proyrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line-2);border-radius:8px;padding:7px 10px 7px 7px;cursor:pointer;}
   .proyrow:hover{border-color:var(--accent);}
-  .proyrow b{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .proyrow.on{border-color:var(--ink);}
+  /* miniatura: SIEMPRE sobre blanco (también en modo oscuro), como una hoja: los colores de vinil se juzgan así */
+  .proyrow .mini{width:88px;height:62px;flex:none;border-radius:6px;border:1px solid var(--line-2);background:#fff;object-fit:contain;display:block;}
+  .proyrow .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .proyrow b{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .proyrow small{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap;}
   .asep{width:1px;height:20px;background:var(--line);margin:0 3px;flex:none;}
   .fliprow{display:flex;align-items:center;gap:6px;}
@@ -3848,9 +3852,33 @@ var PlotterMotor = (function(){
   var MAC=/Mac|iPhone|iPad/.test(navigator.platform||''), MOD=MAC?'⌘':'Ctrl+';
   // ===== "Mis proyectos": guardados en la cuenta, para abrirlos desde cualquier equipo =====
   var projId=null;        // id en la biblioteca del proyecto abierto (null = aún no está guardado ahí)
+  // MINIATURA de un proyecto: sus figuras ya colocadas (misma cuenta que effPts), con su color,
+  // sobre blanco. Se dibuja al guardar y viaja dentro del proyecto (`thumb`); para los guardados
+  // antes de que existiera, la lista la dibuja al vuelo pidiendo el proyecto.
+  function miniatura(objs){ try{
+    var W=176, H=124, pad=8, polys=[], b=[1/0,1/0,-1/0,-1/0];
+    (objs||[]).forEach(function(o){ if(!o||!o.pts||o.pts.length<2) return;
+      var bb=bboxOfPts(o.pts), cx=(bb[0]+bb[2])/2, cy=(bb[1]+bb[3])/2, sx=o.sx!=null?o.sx:1, sy=o.sy!=null?o.sy:1,
+          r=(o.rot||0)*Math.PI/180, cos=Math.cos(r), sin=Math.sin(r), off=o.off||[0,0];
+      var salto=Math.max(1,Math.floor(o.pts.length/400)), q=[];          // un trazo de miles de puntos no los necesita todos a este tamaño
+      for(var k=0;k<o.pts.length;k+=salto){ var dx=(o.pts[k][0]-cx)*sx, dy=(o.pts[k][1]-cy)*sy, x=dx*cos-dy*sin+cx+off[0], y=dx*sin+dy*cos+cy+off[1];
+        q.push([x,y]); if(x<b[0])b[0]=x; if(y<b[1])b[1]=y; if(x>b[2])b[2]=x; if(y>b[3])b[3]=y; }
+      var u=o.pts[o.pts.length-1], dx2=(u[0]-cx)*sx, dy2=(u[1]-cy)*sy; q.push([dx2*cos-dy2*sin+cx+off[0], dx2*sin+dy2*cos+cy+off[1]]);
+      polys.push({q:q, col:o.col||'#1A1D23'}); });
+    if(!polys.length) return null;
+    var c=document.createElement('canvas'); c.width=W; c.height=H; var g=c.getContext('2d');
+    g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+    var bw=Math.max(1e-6,b[2]-b[0]), bh=Math.max(1e-6,b[3]-b[1]), e=Math.min((W-2*pad)/bw,(H-2*pad)/bh);
+    var ox=(W-bw*e)/2-b[0]*e, oy=(H+bh*e)/2+b[1]*e;                       // Y hacia arriba, como el lienzo
+    g.lineWidth=2.6; g.lineJoin='round'; g.lineCap='round';     // se dibuja al doble del tamaño en que se ve: 2.6 aquí ≈ 1.3 en pantalla
+    polys.forEach(function(pl){ g.strokeStyle=pl.col; g.beginPath(); g.moveTo(pl.q[0][0]*e+ox, oy-pl.q[0][1]*e);
+      for(var k=1;k<pl.q.length;k++) g.lineTo(pl.q[k][0]*e+ox, oy-pl.q[k][1]*e); g.stroke(); });
+    var url=c.toDataURL('image/png'); return (url.length<=40000 && /^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(url))?url:null;
+  }catch(e){ return null; } }
   function guardarEnCuenta(comoNuevo){ if(!hasDoc()) return;
     if(window.DS_INVITADO){ toast('La prueba sin cuenta no guarda proyectos: se descarga como archivo'); el('btnSaveProject').click(); return; }
     function mandar(nombre,id){ var data=projectData(); data.name=nombre;
+      var mini=miniatura(data.objects); if(mini) data.thumb=mini;
       postJSON('/api/proyecto_guardar',{project:data, id:id||null}).then(function(r){
         if(!r||!r.ok){ toast((r&&r.error)||'No se pudo guardar el proyecto'); return; }
         projId=r.id; state.name=r.name; sinGuardar=false; autosaveClear(); refreshInspector();
@@ -3867,9 +3895,15 @@ var PlotterMotor = (function(){
       if(r&&r.invitado){ L.innerHTML='<div class="muted-note">La prueba sin cuenta no guarda proyectos. Entra con una cuenta para tener tu lista.</div>'; return; }
       if(!r||!r.ok){ L.innerHTML='<div class="muted-note">'+hesc((r&&r.error)||'No se pudo leer la lista')+'</div>'; return; }
       if(!r.projects.length){ L.innerHTML='<div class="muted-note">Aún no hay proyectos guardados. Usa Archivo → Guardar en mis proyectos.</div>'; return; }
+      var sinMini=[];
       r.projects.forEach(function(pr){ var row=document.createElement('div'); row.className='proyrow'+(pr.id===projId?' on':'');
-        var b=document.createElement('b'); b.textContent=pr.name; row.appendChild(b);
-        var sm=document.createElement('small'); sm.textContent=pr.n+' fig. · '+fechaCorta(pr.saved); row.appendChild(sm);
+        var im=document.createElement('img'); im.className='mini'; im.alt='';
+        if(pr.thumb && /^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(pr.thumb)) im.src=pr.thumb; else sinMini.push([pr.id,im]);
+        row.appendChild(im);
+        var inf=document.createElement('div'); inf.className='pinfo';
+        var b=document.createElement('b'); b.textContent=pr.name; inf.appendChild(b);
+        var sm=document.createElement('small'); sm.textContent=pr.n+(pr.n===1?' figura':' figuras')+' · '+fechaCorta(pr.saved); inf.appendChild(sm);
+        row.appendChild(inf);
         var del=document.createElement('button'); del.className='tpbtn'; del.title='Borrar este proyecto de tu cuenta'; del.innerHTML=TP_TRASH; row.appendChild(del);
         del.addEventListener('click',function(ev){ ev.stopPropagation();
           askConfirm('Borrar proyecto','Se borra <b>'+hesc(pr.name)+'</b> de tu cuenta. No se puede deshacer.',function(ok){ if(!ok) return;
@@ -3878,7 +3912,11 @@ var PlotterMotor = (function(){
             postJSON('/api/proyecto_abrir',{id:pr.id}).then(function(x){ if(!x||!x.ok){ toast((x&&x.error)||'No se pudo abrir'); return; }
               el('proyModal').style.display='none'; loadProject(x.project); projId=x.id; }); };
           if(hasDoc()&&sinGuardar) askConfirm('Tienes cambios sin guardar','Abrir <b>'+hesc(pr.name)+'</b> reemplaza lo que hay en la mesa.',function(ok){ if(ok) abrir(); },{yes:'Abrir de todos modos'}); else abrir(); });
-        L.appendChild(row); }); }).catch(function(e){ el('proyList').innerHTML='<div class="muted-note">No se pudo leer la lista: '+hesc(String(e))+'</div>'; }); }
+        L.appendChild(row); });
+      // Proyectos guardados antes de que hubiera miniatura: se dibuja al vuelo, de uno en uno
+      (function sig(){ var x=sinMini.shift(); if(!x||el('proyModal').style.display==='none') return;
+        postJSON('/api/proyecto_abrir',{id:x[0]}).then(function(y){ if(y&&y.ok){ var u=miniatura(y.project.objects); if(u) x[1].src=u; } sig(); }).catch(sig); })();
+    }).catch(function(e){ el('proyList').innerHTML='<div class="muted-note">No se pudo leer la lista: '+hesc(String(e))+'</div>'; }); }
   el('proyClose').addEventListener('click',function(){ el('proyModal').style.display='none'; });
   el('proyModal').addEventListener('click',function(e){ if(e.target===el('proyModal')) el('proyModal').style.display='none'; });
   function abrirArchivo(){ var r=el('btnFile').getBoundingClientRect();

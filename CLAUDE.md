@@ -365,6 +365,9 @@ NO se deducen del código:
   (`p` + 12 hex, validado con `_PROY_ID`), nunca por nombre ni ruta. La prueba sin cuenta no
   guarda. `projId` = el abierto; Cmd/Ctrl+S guarda ahí (pide nombre la primera vez); la descarga
   del `.dstudio` sigue en Archivo.
+  Cada proyecto lleva su **miniatura** (`thumb`): la dibuja el navegador al guardar (`miniatura()`,
+  mismas cuentas que `effPts`) y el servidor SOLO acepta un PNG incrustado y chico (`_mini_ok`),
+  porque va directo al `src` de una imagen. Los guardados sin ella se dibujan al vuelo en la lista.
 - **PDF se abre con el lector de `.ai`** (`AIParser`, PyMuPDF). **EPS y CDR NO**: necesitan
   programas del sistema (Ghostscript, libcdr) que no se pudieron probar en la Mac, y de CDR no hay
   archivo de muestra. No los prometas sin probarlos en la imagen de Railway.

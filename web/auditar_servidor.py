@@ -229,6 +229,12 @@ try:
         ok(r.get('ok') is False and 'project' not in r, f'abrir proyecto con id inválido ({_malo!r}) → rechazado sin leer nada', str(r)[:80])
         ok(pedir('/api/proyecto_borrar', {'id': _malo}).get('ok') is False, f'borrar con id inválido ({_malo!r}) → rechazado')
     ok(pedir('/api/proyecto_guardar', {'project': {'format': 'otra-cosa', 'objects': [1]}}).get('ok') is False, 'guardar algo que no es un proyecto → rechazado')
+    _png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    r = pedir('/api/proyecto_guardar', {'project': dict(_proy, thumb=_png), 'id': _pid})
+    ok(r.get('ok') and [x for x in pedir('/api/proyectos')['projects'] if x['id'] == _pid][0].get('thumb') == _png, 'la miniatura (PNG incrustado) se guarda y vuelve en la lista')
+    for _mala in ('javascript:alert(1)', 'https://example.com/x.png', 'data:image/svg+xml;base64,AAAA', 'data:image/png;base64,' + 'A' * 50000, 123):
+        pedir('/api/proyecto_guardar', {'project': dict(_proy, thumb=_mala), 'id': _pid})
+        ok('thumb' not in [x for x in pedir('/api/proyectos')['projects'] if x['id'] == _pid][0], f'miniatura que no es un PNG chico ({str(_mala)[:28]!r}) → se descarta')
     ok(pedir('/api/proyecto_borrar', {'id': _pid}).get('ok') and not any(x['id'] == _pid for x in pedir('/api/proyectos')['projects']), 'borrar el proyecto lo quita de la lista')
     st, h, cuerpo = http_crudo('GET', '/api/proyectos')
     ok(st in (302, 303, 401, 403), 'la lista de proyectos sin sesión → no se entrega', str(st))

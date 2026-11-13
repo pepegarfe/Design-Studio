@@ -1035,6 +1035,15 @@ _PROY_BYTES = 12 * 1024 * 1024  # tamaño máximo de uno
 _PROY_ID = re.compile(r'^p[0-9a-f]{12}$')
 
 
+_MINI = re.compile(r'^data:image/png;base64,[A-Za-z0-9+/=]+$')
+
+
+def _mini_ok(t):
+    """La miniatura del proyecto: SOLO un PNG incrustado y chico. Va directo al `src` de una imagen
+    en la lista, así que no se acepta nada más (ni otra clase de dirección, ni algo enorme)."""
+    return isinstance(t, str) and len(t) <= 40000 and bool(_MINI.match(t))
+
+
 def _proy_dir():
     d = _cnc_path().parent / 'proyectos'
     d.mkdir(parents=True, exist_ok=True)
@@ -1044,9 +1053,12 @@ def _proy_dir():
 def _proy_meta(p):
     try:
         d = json.loads(p.read_text(encoding='utf-8'))
-        return {'id': p.stem, 'name': str(d.get('name') or 'proyecto')[:80],
-                'n': len(d.get('objects') or []), 'saved': int(p.stat().st_mtime),
-                'bytes': p.stat().st_size}
+        m = {'id': p.stem, 'name': str(d.get('name') or 'proyecto')[:80],
+             'n': len(d.get('objects') or []), 'saved': int(p.stat().st_mtime),
+             'bytes': p.stat().st_size}
+        if _mini_ok(d.get('thumb')):
+            m['thumb'] = d['thumb']         # miniatura que dibujó el navegador al guardar
+        return m
     except Exception:
         return None
 
@@ -1069,6 +1081,8 @@ def project_save(data):
             return {'ok': False, 'error': 'No hay un proyecto que guardar.'}
         nombre = re.sub(r'[\x00-\x1f]+', ' ', str(proj.get('name') or 'proyecto')).strip()[:80] or 'proyecto'
         proj['name'] = nombre
+        if not _mini_ok(proj.get('thumb')):
+            proj.pop('thumb', None)
         texto = json.dumps(proj, ensure_ascii=False)
         if len(texto.encode('utf-8')) > _PROY_BYTES:
             return {'ok': False, 'error': 'El proyecto pesa más de 12 MB: simplifica el diseño o descárgalo como archivo.'}
