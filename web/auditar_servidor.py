@@ -208,6 +208,30 @@ try:
         ok(r.get('ok') is False and 'HTTP 404' in (r.get('error') or ''), f'tipografía con índice inválido ({_malo!r}) → 404, sin leer nada', r.get('error'))
     st, h, cuerpo = http_crudo('GET', '/api/font_archivo?i=0')
     ok(st in (302, 303, 401, 403), 'tipografías sin sesión → no se entregan', str(st))
+    # ---- funciones del 12-nov-2026: PDF, descarte, alivio de esquinas y "Mis proyectos" ----
+    _sq = [[0, 0], [60, 0], [60, 40], [0, 40], [0, 0]]
+    r = pedir('/api/weed', {'paths': [_sq, [[80, 0], [120, 0], [120, 40], [80, 40], [80, 0]]], 'margin': 5, 'step_h': 10})
+    ok(r.get('ok') and len(r.get('box') or []) == 5 and len(r.get('lines') or []) >= 3, 'descarte: recuadro y tiras', str(r)[:120])
+    r = pedir('/api/dogbone', {'items': [_sq], 'dia': 6, 'mode': 'hueco'})
+    ok(r.get('ok') and r.get('total') == 4, 'alivio de esquinas: 4 en un rectángulo', str(r)[:120])
+    _proy = {'format': 'design-studio-project', 'version': 3, 'name': 'Prueba / de ../auditoría', 'objects': [{'pts': _sq, 'col': '#d62828'}]}
+    r = pedir('/api/proyecto_guardar', {'project': _proy})
+    _pid = r.get('id') or ''
+    ok(r.get('ok') and re.fullmatch(r'p[0-9a-f]{12}', _pid), 'guardar proyecto en la cuenta → id del servidor', str(r)[:120])
+    r = pedir('/api/proyectos')
+    ok(r.get('ok') and any(x['id'] == _pid and x['n'] == 1 for x in r.get('projects') or []), 'el proyecto aparece en la lista')
+    r = pedir('/api/proyecto_abrir', {'id': _pid})
+    ok(r.get('ok') and r['project']['objects'][0].get('col') == '#d62828', 'abrirlo devuelve el proyecto, con su color')
+    r2 = pedir('/api/proyecto_guardar', {'project': _proy, 'id': _pid})
+    ok(r2.get('id') == _pid and len([x for x in pedir('/api/proyectos')['projects'] if x['id'] == _pid]) == 1, 'guardar con su id lo REEMPLAZA (no duplica)')
+    for _malo in ('../../cnc_config', '/etc/passwd', 'p' + 'g' * 12, '', None, 'p123'):
+        r = pedir('/api/proyecto_abrir', {'id': _malo})
+        ok(r.get('ok') is False and 'project' not in r, f'abrir proyecto con id inválido ({_malo!r}) → rechazado sin leer nada', str(r)[:80])
+        ok(pedir('/api/proyecto_borrar', {'id': _malo}).get('ok') is False, f'borrar con id inválido ({_malo!r}) → rechazado')
+    ok(pedir('/api/proyecto_guardar', {'project': {'format': 'otra-cosa', 'objects': [1]}}).get('ok') is False, 'guardar algo que no es un proyecto → rechazado')
+    ok(pedir('/api/proyecto_borrar', {'id': _pid}).get('ok') and not any(x['id'] == _pid for x in pedir('/api/proyectos')['projects']), 'borrar el proyecto lo quita de la lista')
+    st, h, cuerpo = http_crudo('GET', '/api/proyectos')
+    ok(st in (302, 303, 401, 403), 'la lista de proyectos sin sesión → no se entrega', str(st))
     r = pedir('/api/update_check')
     ok(r.get('web') and r.get('newer') is False and re.fullmatch(r'[0-9a-f]{12}', r.get('build') or ''), 'update_check → versión web, con la huella del despliegue', r.get('build'))
     r = pedir('/api/connect', {'port': '/dev/cu.usbserial-AO004NFH', 'baud': 9600})

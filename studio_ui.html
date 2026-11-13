@@ -211,6 +211,22 @@
   .xbtn svg{width:15px;height:15px;flex:none;color:var(--muted);}
   .xbtn:hover:not(:disabled){border-color:var(--accent);} .xbtn:hover:not(:disabled) svg{color:var(--accent);}
   .xbtn:disabled{opacity:.45;cursor:default;}
+  /* muestras de color (figura y corte por color) */
+  .swrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .sw{width:24px;height:24px;border-radius:50%;border:1px solid var(--line-2);cursor:pointer;padding:0;flex:none;position:relative;background:var(--input);}
+  .sw.on{box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--ink);}
+  .sw.none::after{content:'';position:absolute;left:3px;right:3px;top:50%;height:1.5px;background:var(--bad);transform:rotate(-45deg);}
+  .sw:disabled{opacity:.4;cursor:default;}
+  .swchip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 9px 0 5px;border-radius:14px;border:1px solid var(--line-2);background:var(--input);color:var(--muted);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+  .swchip i{width:16px;height:16px;border-radius:50%;border:1px solid var(--line-2);display:block;}
+  .swchip.on{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--ink);}
+  .swchip:not(.on){text-decoration:line-through;opacity:.7;}
+  .layer .coldot{width:9px;height:9px;border-radius:50%;flex:none;border:1px solid var(--line-2);}
+  .proylist{display:flex;flex-direction:column;gap:5px;max-height:52vh;overflow:auto;}
+  .proyrow{display:flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;cursor:pointer;}
+  .proyrow:hover{border-color:var(--accent);}
+  .proyrow b{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .proyrow small{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap;}
   .asep{width:1px;height:20px;background:var(--line);margin:0 3px;flex:none;}
   .fliprow{display:flex;align-items:center;gap:6px;}
   .flip-lbl{font-size:11px;color:var(--faint);margin-right:auto;}
@@ -616,6 +632,8 @@
         <button class="xbtn" id="orgFlipV" disabled style="flex:1" title="Voltear vertical (espejo arriba-abajo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18" stroke-dasharray="2 3"/><path d="M7 9 17 4v5zM7 15l10 5v-5z"/></svg>Vertical</button>
       </div>
 
+      <div class="grp-t sec">Color</div>
+      <div class="swrow" id="colRow" title="Color de la figura: sirve para separar el corte por color de vinil y para mandarle una prueba al cliente. No cambia el corte."></div>
       <div class="grp-t sec">Alinear<span class="opname" id="alignToLbl" style="display:none"></span></div>
       <div class="seg" id="alignTo" style="margin-top:0;margin-bottom:9px">
         <button data-to="workarea" title="Alinear respecto al área de trabajo"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="14" width="7" height="3.5" rx="1" fill="currentColor"/></svg>A la hoja</button>
@@ -637,6 +655,17 @@
 
       <div class="grp-t sec">Organizar</div>
       <div class="otiles"><button class="otile" id="orgGroup" disabled title="Agrupar (Cmd+G): las figuras elegidas se mueven juntas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke-dasharray="3 3"/><rect x="7" y="7" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/></svg><span>Agrupar</span></button><button class="otile" id="orgUngroup" disabled title="Desagrupar (Cmd+Shift+G): cada figura vuelve a moverse sola"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/><path d="M14 6h4M6 14v4"/></svg><span>Separar</span></button><button class="otile" id="orgFront" disabled title="Traer al frente: queda encima de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4h-8A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9" fill="currentColor" fill-opacity=".3"/></svg><span>Al frente</span></button><button class="otile" id="orgBack" disabled title="Enviar atrás: queda debajo de las demás"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="1.5"/><path d="M15 9h3.5A1.5 1.5 0 0 1 20 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 9 18.5V15" fill="currentColor" fill-opacity=".3"/></svg><span>Atrás</span></button><button class="otile" id="orgCopies" disabled title="Copias… en rejilla o en círculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg><span>Copias</span></button></div>
+      <div id="ensWrap" style="display:none">
+      <div class="grp-t sec">Ensamble</div>
+      <div class="xrow" style="margin-top:0"><label>Fresa</label>
+        <div class="field" style="flex:1" title="Diámetro de la fresa con la que vas a cortar: el alivio se hace de ese tamaño"><label>Ø</label><input id="dbDia" value="6"><span class="u">mm</span></div>
+      </div>
+      <div class="seg" id="dbMode">
+        <button class="on" data-db="hueco" title="La figura es un HUECO (se corta por dentro o se cajea): se alivian sus esquinas para que entre una pieza a escuadra">Es un hueco</button>
+        <button data-db="pieza" title="La figura es una PIEZA (se corta por fuera): se alivian sus esquinas entrantes">Es una pieza</button>
+      </div>
+      <button class="gbtn" id="btnDogbone" disabled style="width:100%;margin-top:8px" title="Añade en cada esquina un mordisco redondo del tamaño de la fresa: una fresa redonda no deja esquinas interiores a escuadra, y sin esto las piezas no encajan">Aliviar esquinas</button>
+      </div>
       <div class="grp-t sec">Combinar</div>
       <div class="alignrow">
         <button class="abtn" id="boolU" disabled title="Unir (soldar): las figuras seleccionadas se funden en una sola"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 9.5A1.5 1.5 0 0 1 5.5 8H10V5.5A1.5 1.5 0 0 1 11.5 4h7A1.5 1.5 0 0 1 20 5.5v7a1.5 1.5 0 0 1-1.5 1.5H14v4.5a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 18.5z"/></svg></button>
@@ -683,6 +712,17 @@
       </div>
       <div class="cstat" id="destStat" style="margin-top:8px"></div>
       <div class="mrow" style="margin:6px 0 0"><button class="lnk" id="destFila">Ver la fila de la estación</button></div>
+    </div>
+    <div class="grp" id="colCutGrp" style="display:none">
+      <div class="grp-t">Qué colores se cortan</div>
+      <div class="swrow" id="colCutRow"></div>
+      <div class="cstat" id="colCutNote" style="margin-top:8px"></div>
+    </div>
+    <div class="grp">
+      <div class="grp-t">Descarte</div>
+      <div class="mrow"><div class="field" style="flex:1" title="Distancia del recuadro al diseño"><label>Margen</label><input id="wdMar" value="5"><span class="u">mm</span></div>
+        <div class="field" style="flex:1" title="Una línea horizontal cada tantos mm para partir el sobrante en tiras (0 = solo el recuadro)"><label>Tiras</label><input id="wdStep" value="0"><span class="u">mm</span></div></div>
+      <div class="mrow" style="margin-bottom:0"><button class="pbtn" id="btnWeed" style="flex:1" title="Añade al diseño un recuadro alrededor (y las tiras, si pusiste medida) para pelar el vinil sobrante más rápido. Las tiras nunca cruzan una figura.">Agregar recuadro de descarte</button></div>
     </div>
     <div class="grp">
       <div class="grp-t">Plotter</div>
@@ -855,9 +895,9 @@
     <span class="r"><span id="metaSize">—</span><span style="opacity:.45;margin:0 8px">·</span><span id="metaTime">—</span><button class="statbtn" id="btnQuote" disabled title="Cotizar este trabajo: material + tiempo de máquina + margen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/></svg><span class="lbl">Cotizar</span></button></span>
   </footer>
 </div>
-<input type="file" id="fileInput" accept=".svg,.dxf,.ai,.dstudio,.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff" style="display:none">
+<input type="file" id="fileInput" accept=".svg,.dxf,.ai,.pdf,.dstudio,.png,.jpg,.jpeg,.bmp,.gif,.webp,.tif,.tiff" style="display:none">
 <input type="file" id="refInput" accept=".png,.jpg,.jpeg,.bmp,.gif,.webp" style="display:none">
-<input type="file" id="importInput" accept=".svg,.dxf,.ai,.dstudio" style="display:none">
+<input type="file" id="importInput" accept=".svg,.dxf,.ai,.pdf,.dstudio" style="display:none">
 <div class="modal" id="waModal" style="display:none">
   <div class="sheet" style="width:322px">
     <div class="sheet-h"><h3>Área de trabajo</h3><button id="waClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
@@ -1062,7 +1102,7 @@
     </div>
   </div>
 </div>
-<div class="modal" id="confirmModal" style="display:none">
+<div class="modal" id="confirmModal" style="display:none;z-index:90">
   <div class="sheet" style="width:350px">
     <div class="sheet-h"><h3 id="cfTitle">Confirmar</h3><button id="cfClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
     <div class="grp">
@@ -1134,6 +1174,15 @@
     </div>
     <div id="simView"><div id="simWait" style="display:none"></div></div>
     <div id="simFoot"><span>Arrastrar = orbitar · rueda = zoom · clic derecho = mover · <b>doble clic = quitar el sobrante</b> · rojo = muerde la cama más de 0.5 mm</span><span id="simStat"></span></div>
+  </div>
+</div>
+<div class="modal" id="proyModal" style="display:none">
+  <div class="sheet" style="width:440px">
+    <div class="sheet-h"><h3>Mis proyectos</h3><button id="proyClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+    <div class="grp">
+      <div class="proylist" id="proyList"></div>
+      <div class="cstat" id="proyNote" style="margin-top:8px">Se guardan en tu cuenta: los ves desde cualquier equipo.</div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1330,6 +1379,13 @@ var PlotterMotor = (function(){
   var doc={paths:[], off:[], sx:[], sy:[], rot:[], oc:[], grp:[], uid:[]};   // por trazado: puntos crudos + transform + centro original + id estable
   var uidSeq=0;   // los uid sobreviven a borrar/pegar: las trayectorias CNC referencian por uid
   var sel={idx:-1, set:new Set()};                     // idx = individual ; set = grupo (rubber-band)
+  // COLOR por figura (12-nov-2026): un mapa uid → '#rrggbb'. Va por uid (como los candados) y no en un
+  // arreglo paralelo a doc.paths: así ninguna operación que mueve, borra o reordena figuras tiene que
+  // acordarse de él. Sin entrada = "sin color" (la tinta normal). El color NO cambia el corte.
+  var colores={};
+  var VINILES=[['#111111','Negro'],['#f5f5f5','Blanco'],['#d62828','Rojo'],['#f08c1a','Naranja'],['#f2c211','Amarillo'],['#2a9d4a','Verde'],['#1f78c8','Azul'],['#5b3fa8','Morado'],['#e0589a','Rosa'],['#8a8f98','Gris'],['#c9a227','Oro'],['#b8bcc4','Plata']];
+  function colOf(i){ return colores[doc.uid[i]]||''; }
+  function nombreCol(c){ if(!c) return 'Sin color'; for(var k=0;k<VINILES.length;k++) if(VINILES[k][0]===c) return VINILES[k][1]; return c; }
   var lockedUids=new Set();                            // trazados BLOQUEADOS (por uid: sobreviven al reordenar)
   function isLocked(i){ return lockedUids.has(doc.uid[i]); }
   var undoStack=[], redoStack=[], UNDO_MAX=50, clip=[];
@@ -1422,9 +1478,9 @@ var PlotterMotor = (function(){
     off: doc.off.map(function(o){return [o[0],o[1]];}),
     sx: doc.sx.slice(), sy: doc.sy.slice(), rot: doc.rot.slice(), grp: doc.grp.slice(),
     oc: doc.oc.map(function(o){return [o[0],o[1]];}), uid: doc.uid.slice(),
-    tmeta: JSON.parse(JSON.stringify(textMeta)), locked: Array.from(lockedUids)
+    tmeta: JSON.parse(JSON.stringify(textMeta)), locked: Array.from(lockedUids), cols: JSON.parse(JSON.stringify(colores))
   };}
-  function restore(s){ doc.paths=s.paths; doc.off=s.off; doc.sx=s.sx; doc.sy=s.sy; doc.rot=s.rot; doc.oc=s.oc; doc.grp=s.grp||[]; doc.uid=s.uid||doc.paths.map(function(){return ++uidSeq;}); textMeta=s.tmeta||{}; lockedUids=new Set(s.locked||[]); sel.idx=-1; sel.set=new Set(); killPrev(); paintTps(); }
+  function restore(s){ doc.paths=s.paths; doc.off=s.off; doc.sx=s.sx; doc.sy=s.sy; doc.rot=s.rot; doc.oc=s.oc; doc.grp=s.grp||[]; doc.uid=s.uid||doc.paths.map(function(){return ++uidSeq;}); textMeta=s.tmeta||{}; lockedUids=new Set(s.locked||[]); colores=s.cols||{}; sel.idx=-1; sel.set=new Set(); killPrev(); paintTps(); }
   function pushUndo(){ redoStack.length=0; undoStack.push(snapshot()); if(undoStack.length>UNDO_MAX) undoStack.shift(); updateUndoBtns(); killPrev(); dirtySince=true; sinGuardar=true; }
   function undo(){ if(!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); refreshUI(); toast('Deshecho'); }
   function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); refreshUI(); toast('Rehecho'); }
@@ -1504,6 +1560,7 @@ var PlotterMotor = (function(){
   // ofrecer "solo lo seleccionado" sin duplicar el generador de HPGL, que es el que
   // acaba en la máquina y debe existir UNA sola vez.
   function hpglPayload(idxs){ var cp=cutParams();
+    idxs=idxs||idxCorte();          // sin lista explícita: lo que deje pasar el filtro de color del paso Corte
     return {paths:(idxs?idxs.map(function(i){return effPts(i);}):effAll()), name:state.name,
             speed:cp.speed, pressure:cp.pressure, overcut:cp.overcut, corner:cp.corner}; }
   function saveHpgl(payload, done){
@@ -1515,7 +1572,7 @@ var PlotterMotor = (function(){
   }
 
   // ===== Mejoras: duplicar · rotar 90 · alinear · rejilla · zoom a selección =====
-  function pushCopy(i, dx, dy){ var idx=doc.paths.length; doc.paths.push({pts:doc.paths[i].pts.map(function(q){return [q[0],q[1]];})}); doc.off.push([doc.off[i][0]+dx, doc.off[i][1]+dy]); doc.sx.push(doc.sx[i]); doc.sy.push(doc.sy[i]); doc.rot.push(doc.rot[i]); doc.oc.push([doc.oc[i][0],doc.oc[i][1]]); doc.grp.push(0); doc.uid.push(++uidSeq); return idx; }
+  function pushCopy(i, dx, dy){ var idx=doc.paths.length; doc.paths.push({pts:doc.paths[i].pts.map(function(q){return [q[0],q[1]];})}); doc.off.push([doc.off[i][0]+dx, doc.off[i][1]+dy]); doc.sx.push(doc.sx[i]); doc.sy.push(doc.sy[i]); doc.rot.push(doc.rot[i]); doc.oc.push([doc.oc[i][0],doc.oc[i][1]]); doc.grp.push(0); doc.uid.push(++uidSeq); if(colores[doc.uid[i]]) colores[uidSeq]=colores[doc.uid[i]]; return idx; }
   // ----- Grupos -----
   function groupMembers(i){ var g=doc.grp[i]; if(!g) return [i]; var m=[]; for(var j=0;j<doc.grp.length;j++) if(doc.grp[j]===g) m.push(j); return m; }
   function expandGroups(set){ var out=new Set(); set.forEach(function(i){ groupMembers(i).forEach(function(j){out.add(j);}); }); return out; }
@@ -1619,7 +1676,7 @@ var PlotterMotor = (function(){
       // MISMO color que su contorno y SIN transparencia: figura y línea se funden en una
       // sola silueta maciza (pedido de Jose). Los huecos dejan ver el lienzo, que es
       // justo lo que los delata. Las unidades encimadas se tapan por orden de dibujo.
-      ctx.fillStyle = isSel ? (m==='grp'?grpC:selC) : (isLocked(u[0])?faint:base);
+      ctx.fillStyle = isSel ? (m==='grp'?grpC:selC) : (isLocked(u[0])?faint:(colOf(u[0])||base));
       ctx.fill('evenodd');
     }
   }
@@ -1687,7 +1744,7 @@ var PlotterMotor = (function(){
     for(var i=0;i<doc.paths.length;i++){
       if(i===neI) continue;
       var e=effPts(i), isSel=selSet.has(i);
-      ctx.strokeStyle=isSel?(m==='grp'?grpC:selC):(isLocked(i)?cvar('--faint'):cutC); ctx.lineWidth=outlineMode?1:(isSel?2:1.3);
+      ctx.strokeStyle=isSel?(m==='grp'?grpC:selC):(isLocked(i)?cvar('--faint'):(colOf(i)||cutC)); ctx.lineWidth=outlineMode?1:(isSel?2:(colOf(i)?1.8:1.3));
       ctx.beginPath(); var a=tp(e[0][0],e[0][1]); ctx.moveTo(a[0],a[1]);
       for(var j=1;j<e.length;j++){var b2=tp(e[j][0],e[j][1]); ctx.lineTo(b2[0],b2[1]);}
       ctx.stroke();
@@ -1957,7 +2014,9 @@ var PlotterMotor = (function(){
     sideSegRefresh();
     var has=hasDoc();
     ['fx','fy','fw','fh','fr','fs'].forEach(function(id){el(id).disabled=!has;});
-    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgRotL','scHalf','scDouble','orgFront','orgBack','orgCopies'].forEach(function(id){el(id).disabled=!has;});
+    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgRotL','scHalf','scDouble','orgFront','orgBack','orgCopies','btnDogbone'].forEach(function(id){el(id).disabled=!has;});
+    pintarColores(has && mode()!=='all'); el('ensWrap').style.display=(state.machine==='cnc')?'':'none';
+    if(!dbTocado && state.cnc && typeof cncTool==='function' && cncTool()) el('dbDia').value=cncTool().dia;
     el('alignTo').querySelectorAll('button').forEach(function(b){b.disabled=!has;});   // segmentado: apagar sus botones
     if(has){ var actIdx=activeIdx(); var nUnits=activeUnits().length; el('disH').disabled = nUnits<3; el('disV').disabled = nUnits<3;
       ['boolU','boolD','boolI','boolX','boolDiv'].forEach(function(id){ el(id).disabled = nUnits<2; });   // combinar pide 2+ figuras
@@ -2059,7 +2118,8 @@ var PlotterMotor = (function(){
     var info=document.createElement('div'); info.innerHTML='<div class="nm">Objeto '+(i+1)+'</div><div class="mt">'+doc.paths[i].pts.length+' pts</div>';
     var dot=document.createElement('span'); dot.className='on-dot';
     if(isLocked(i)) row.className+=' lk';
-    row.appendChild(th); row.appendChild(info); row.appendChild(lockBtn([i])); row.appendChild(dot);
+    row.appendChild(th); row.appendChild(info);
+    if(colOf(i)){ var cd=document.createElement('span'); cd.className='coldot'; cd.style.background=colOf(i); cd.title=nombreCol(colOf(i)); row.appendChild(cd); } row.appendChild(lockBtn([i])); row.appendChild(dot);
     row.addEventListener('click',function(e){ e.stopPropagation();
       if(e.shiftKey){ sel.idx=-1; if(sel.set.has(i)) sel.set.delete(i); else sel.set.add(i); }   // hijo: sumar/quitar 1
       else if(isChild){ sel.set=new Set(); sel.idx=(sel.idx===i?-1:i); }                          // hijo: seleccionar ESE objeto (entrar al grupo)
@@ -2579,8 +2639,8 @@ var PlotterMotor = (function(){
     else { sel.idx=-1; sel.set=new Set(sa); }
     refreshUI();
   }
-  function doCopy(){ if(!hasDoc()||mode()==='all') return; var A=activeIdx(); clip=A.map(function(i){return {pts:doc.paths[i].pts.map(function(q){return [q[0],q[1]];}), off:[doc.off[i][0],doc.off[i][1]], sx:doc.sx[i], sy:doc.sy[i], rot:doc.rot[i], oc:[doc.oc[i][0],doc.oc[i][1]], grp:doc.grp[i]};}); toast(clip.length+' copiado(s)'); }
-  function doPaste(){ if(!clip.length||cncLock()) return; pushUndo(); var newSet=new Set(), map={}; for(var n=0;n<clip.length;n++){ var c=clip[n]; var idx=doc.paths.length; doc.paths.push({pts:c.pts.map(function(q){return [q[0],q[1]];})}); doc.off.push([c.off[0]+5,c.off[1]+5]); doc.sx.push(c.sx); doc.sy.push(c.sy); doc.rot.push(c.rot); doc.oc.push([c.oc[0],c.oc[1]]); var g=c.grp||0; doc.grp.push(g?(map[g]||(map[g]=++groupSeq)):0); doc.uid.push(++uidSeq); newSet.add(idx);} sel.idx=-1; sel.set=newSet; refreshUI(); toast('Pegado'); }
+  function doCopy(){ if(!hasDoc()||mode()==='all') return; var A=activeIdx(); clip=A.map(function(i){return {pts:doc.paths[i].pts.map(function(q){return [q[0],q[1]];}), off:[doc.off[i][0],doc.off[i][1]], sx:doc.sx[i], sy:doc.sy[i], rot:doc.rot[i], oc:[doc.oc[i][0],doc.oc[i][1]], grp:doc.grp[i], col:colOf(i)};}); toast(clip.length+' copiado(s)'); }
+  function doPaste(){ if(!clip.length||cncLock()) return; pushUndo(); var newSet=new Set(), map={}; for(var n=0;n<clip.length;n++){ var c=clip[n]; var idx=doc.paths.length; doc.paths.push({pts:c.pts.map(function(q){return [q[0],q[1]];})}); doc.off.push([c.off[0]+5,c.off[1]+5]); doc.sx.push(c.sx); doc.sy.push(c.sy); doc.rot.push(c.rot); doc.oc.push([c.oc[0],c.oc[1]]); var g=c.grp||0; doc.grp.push(g?(map[g]||(map[g]=++groupSeq)):0); doc.uid.push(++uidSeq); if(c.col) colores[uidSeq]=c.col; newSet.add(idx);} sel.idx=-1; sel.set=newSet; refreshUI(); toast('Pegado'); }
   function doDelete(){ if(cncLock()) return; var A=activeIdx().slice().sort(function(a,b){return b-a;}); pushUndo(); for(var n=0;n<A.length;n++){var i=A[n]; doc.paths.splice(i,1); doc.off.splice(i,1); doc.sx.splice(i,1); doc.sy.splice(i,1); doc.rot.splice(i,1); doc.oc.splice(i,1); doc.grp.splice(i,1); doc.uid.splice(i,1);} sel.idx=-1; sel.set=new Set(); paintTps(); refreshUI(); toast('Eliminado'); }
 
   // ===== Herramientas del riel =====
@@ -2956,7 +3016,8 @@ var PlotterMotor = (function(){
                expand:['geo_expand','/api/expand'], round:['geo_round','/api/round'],
                nest:['geo_nest','/api/nest'],
                nest_start:['geo_nest_start','/api/nest_start'], nest_status:['geo_nest_status','/api/nest_status'],
-               fit_many:['fit_many','/api/fit_many'], divide:['geo_divide','/api/divide']};
+               fit_many:['fit_many','/api/fit_many'], divide:['geo_divide','/api/divide'],
+               weed:['geo_weed','/api/weed'], dogbone:['geo_dogbone','/api/dogbone']};
   function geoCall(kind, payload, done){
     var m=GEO_API[kind];
     if(api()){ api()[m[0]](payload).then(done).catch(function(e){ toast('Error: '+e); }); }
@@ -3157,6 +3218,62 @@ var PlotterMotor = (function(){
 
   // Fila "Organizar": lo mismo que ofrece el clic derecho, a la vista (con el dedo, el clic
   // derecho es una pulsación larga que nadie adivina). Llama a las MISMAS funciones.
+  // ===== Color de la figura =====
+  function pintarColores(has){ var row=el('colRow'); if(!row) return;
+    var A=has?activeIdx():[], c0=A.length?colOf(A[0]):null, igual=A.length>0&&A.every(function(i){ return colOf(i)===c0; });
+    var h='<button class="sw none'+(igual&&c0===''?' on':'')+'" data-c="" title="Sin color"'+(has?'':' disabled')+'></button>';
+    VINILES.forEach(function(v){ h+='<button class="sw'+(igual&&c0===v[0]?' on':'')+'" data-c="'+v[0]+'" title="'+v[1]+'" style="background:'+v[0]+'"'+(has?'':' disabled')+'></button>'; });
+    if(igual&&c0&&!VINILES.some(function(v){ return v[0]===c0; })) h+='<button class="sw on" data-c="'+c0+'" title="Color del archivo: '+c0+'" style="background:'+c0+'"></button>';
+    row.innerHTML=h; }
+  el('colRow').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b||b.disabled||!hasDoc()) return;
+    if(mode()==='all'){ toast('Selecciona primero las figuras que quieres de ese color'); return; }   // sin selección NO se pinta todo
+    var c=b.getAttribute('data-c'), A=activeIdx(); if(!A.length) return;
+    pushUndo(); A.forEach(function(i){ if(c) colores[doc.uid[i]]=c; else delete colores[doc.uid[i]]; });
+    refreshUI(); pintarColCut(); toast(A.length+(A.length===1?' figura':' figuras')+' → '+nombreCol(c)); });
+  // ===== Corte por color (plotter): se manda solo lo que esté encendido =====
+  var colOff=new Set();        // colores APAGADOS ('' = las figuras sin color)
+  function coloresPresentes(){ var m={}, orden=[]; for(var i=0;i<doc.paths.length;i++){ var c=colOf(i); if(m[c]==null){ m[c]=0; orden.push(c); } m[c]++; } return {n:m, orden:orden}; }
+  function idxCorte(){ if(!colOff.size||state.machine!=='plotter') return null;
+    var r=[]; for(var i=0;i<doc.paths.length;i++) if(!colOff.has(colOf(i))) r.push(i); return r; }
+  function pintarColCut(){ var g=el('colCutGrp'); if(!g) return; var cp=coloresPresentes();
+    colOff.forEach(function(c){ if(cp.n[c]==null) colOff.delete(c); });           // colores que ya no existen
+    g.style.display=(cp.orden.length>1)?'':'none'; if(cp.orden.length<2){ colOff.clear(); return; }
+    el('colCutRow').innerHTML=cp.orden.map(function(c){ return '<button class="swchip'+(colOff.has(c)?'':' on')+'" data-c="'+c+'" title="Pulsa para '+(colOff.has(c)?'incluirlo en':'dejarlo fuera de')+' este corte"><i style="background:'+(c||'transparent')+'"></i>'+hesc(nombreCol(c))+' · '+cp.n[c]+'</button>'; }).join('');
+    var idx=idxCorte();
+    el('colCutNote').textContent=idx?('Se cortan '+idx.length+' de '+doc.paths.length+' figuras. Las demás se quedan en el diseño.'):'Se cortan todos. Apaga los que no vayan en este vinil.'; }
+  el('colCutRow').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; var c=b.getAttribute('data-c');
+    if(colOff.has(c)) colOff.delete(c); else colOff.add(c); pintarColCut(); });
+  // ===== Descarte (vinil): recuadro y tiras, como figuras normales del diseño =====
+  el('btnWeed').addEventListener('click',function(){ if(!hasDoc()) return;
+    // Sin selección, el descarte rodea LO QUE SE VA A CORTAR (los colores encendidos); si todo eso es de
+    // un solo color, el recuadro y las tiras nacen de ese color, para que salgan en el mismo vinil.
+    var A=(mode()==='all')?(idxCorte()||allIdx()):activeIdx(), step=Math.max(0,parseFloat(el('wdStep').value)||0);
+    if(!A.length){ toast('No hay figuras para el descarte'); return; }
+    var cw=colOf(A[0]); if(!A.every(function(i){ return colOf(i)===cw; })) cw='';
+    geoCall('weed',{paths:A.map(function(i){ return effPts(i); }), margin:Math.max(0,parseFloat(el('wdMar').value)||0), step_h:step, step_v:0},function(r){
+      if(!r||!r.ok){ toast((r&&r.error)||'No se pudo hacer el descarte'); return; }
+      pushUndo();
+      var nuevos=[r.box].concat(r.lines||[]), gid=++groupSeq, start=doc.paths.length;
+      nuevos.forEach(function(pts){ doc.paths.push({pts:pts.map(function(q){ return [q[0],q[1]]; })}); doc.off.push([0,0]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0);
+        var bb=bboxOfPts(pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]); doc.grp.push(gid); doc.uid.push(++uidSeq); if(cw) colores[uidSeq]=cw; });
+      sel.idx=-1; sel.set=new Set(); for(var i=start;i<doc.paths.length;i++) sel.set.add(i);
+      refreshUI(); pintarColCut();
+      toast('Descarte agregado: recuadro'+((r.lines||[]).length?' y '+r.lines.length+' tira(s)':'')+'. Es un grupo aparte: se puede mover o borrar.'); }); });
+  // ===== Alivio en esquinas para ensambles (CNC) =====
+  var dbTocado=false; el('dbDia').addEventListener('input',function(){ dbTocado=true; });
+  el('dbMode').addEventListener('click',function(e){ var b=e.target.closest('button'); if(b) setSeg('dbMode','data-db',b.getAttribute('data-db')); });
+  el('btnDogbone').addEventListener('click',function(){ if(!hasDoc()||cncLock()) return;
+    var A=activeIdx().filter(function(i){ return isClosedIdx(i); });
+    if(!A.length){ toast('Selecciona figuras cerradas para aliviar sus esquinas'); return; }
+    var mo=el('dbMode').querySelector('.on').getAttribute('data-db');
+    geoCall('dogbone',{items:A.map(function(i){ return effPts(i); }), dia:parseFloat(el('dbDia').value)||0, mode:mo},function(r){
+      if(!r||!r.ok){ toast((r&&r.error)||'No se pudieron aliviar las esquinas'); return; }
+      if(!r.total){ toast(mo==='hueco'?'Esas figuras no tienen esquinas salientes que aliviar':'Esas figuras no tienen esquinas entrantes — ¿son huecos?'); return; }
+      pushUndo();
+      r.results.forEach(function(res,k){ if(!res||!res.n) return; var i=A[k];
+        doc.paths[i]={pts:res.pts}; doc.off[i]=[0,0]; doc.sx[i]=1; doc.sy[i]=1; doc.rot[i]=0;
+        var bb=bboxOfPts(res.pts); doc.oc[i]=[(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]; });
+      refreshUI(); toast(r.total+' esquina(s) aliviadas para fresa de '+el('dbDia').value+' mm'); }); });
   el('orgGroup').addEventListener('click',doGroup);
   el('orgUngroup').addEventListener('click',doUngroup);
   el('orgFlipH').addEventListener('click',function(){ op(function(){ mirrorActive('h'); }); });
@@ -3656,9 +3773,9 @@ var PlotterMotor = (function(){
     doc.paths=(res.paths||[]).map(function(p){return {pts:p.pts.map(function(q){return [q[0],q[1]];})};});
     doc.off=[]; doc.sx=[]; doc.sy=[]; doc.rot=[]; doc.oc=[]; doc.grp=[]; doc.uid=[];
     textMeta={};   // diseño nuevo: recetas de texto viejas fuera
-    lockedUids=new Set();
+    lockedUids=new Set(); colores={}; projId=null;
     var gid=doc.paths.length>1?(++groupSeq):0;   // import agrupado por defecto (un diseño = un grupo)
-    for(var i=0;i<doc.paths.length;i++){ doc.off.push([0,0]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0); var bb=bboxOfPts(doc.paths[i].pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]); doc.grp.push(gid); doc.uid.push(++uidSeq); }
+    for(var i=0;i<doc.paths.length;i++){ doc.off.push([0,0]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0); var bb=bboxOfPts(doc.paths[i].pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]); doc.grp.push(gid); doc.uid.push(++uidSeq); if(res.paths[i]&&res.paths[i].col) colores[uidSeq]=res.paths[i].col; }
     tpaths=[]; tpSel=-1; paintTps(); formOpen=false; revOpen=false; volverRev=false; pintarVista();   // diseño nuevo: las trayectorias viejas ya no aplican
     state.name=res.name;
     // El área que viene con el diseño es la DEL PLOTTER (config vieja). Si estás en modo CNC,
@@ -3671,7 +3788,7 @@ var PlotterMotor = (function(){
     toast('Diseño cargado: '+state.name+' ('+doc.paths.length+' trazados)');
   }
   // ===== Proyecto (.dstudio): guarda TODO tu arreglo para reabrirlo idéntico =====
-  function loadProject(proj){ sinGuardar=false;
+  function loadProject(proj){ sinGuardar=false; projId=null;      // (si viene de la biblioteca, quien llama pone projId después)
     var objs=(proj.objects||[]);
     doc.paths=objs.map(function(o){return {pts:o.pts};});
     doc.off=objs.map(function(o){return (o.off&&[o.off[0],o.off[1]])||[0,0];});
@@ -3686,6 +3803,7 @@ var PlotterMotor = (function(){
     textMeta=proj.textMeta||{};   // recetas de texto del proyecto (v3)
     guides=(proj.guides&&proj.guides.v&&proj.guides.h)?proj.guides:{v:[],h:[]};
     lockedUids=new Set(proj.locked||[]);
+    colores={}; objs.forEach(function(o,i){ if(o.col) colores[doc.uid[i]]=o.col; });
     if(proj.sheets && state.machine==='cnc') state.sheets=Math.max(1,Math.min(8,proj.sheets|0));
     tpaths=(proj.cncTps||[]).slice(); tpSeq=proj.tpSeq||tpaths.length; tpSel=-1; formOpen=false; revOpen=false; volverRev=false;
     paintTps(); pintarVista();
@@ -3700,7 +3818,7 @@ var PlotterMotor = (function(){
   }
   function projectData(){ return { format:'design-studio-project', version:3, name:state.name||'proyecto', work:state.work, cut:cutParams(),
     cncTps:tpaths, tpSeq:tpSeq, textMeta:textMeta, guides:guides, locked:Array.from(lockedUids), sheets:state.sheets||1,
-    objects: doc.paths.map(function(p,i){ return {pts:p.pts, off:doc.off[i], sx:doc.sx[i], sy:doc.sy[i], rot:doc.rot[i], grp:doc.grp[i], uid:doc.uid[i]}; }) }; }
+    objects: doc.paths.map(function(p,i){ var o={pts:p.pts, off:doc.off[i], sx:doc.sx[i], sy:doc.sy[i], rot:doc.rot[i], grp:doc.grp[i], uid:doc.uid[i]}; if(colOf(i)) o.col=colOf(i); return o; }) }; }
   function saveProject(){ if(!hasDoc()) return; var data=projectData();
     if(api()){ api().save_project(data).then(function(r){ if(r&&r.ok){ toast('Proyecto guardado: '+r.path); autosaveClear(); } else if(r&&r.error&&!r.cancelled) toast(r.error); }).catch(function(e){toast('Error: '+e);}); }
     else { var blob=new Blob([JSON.stringify(data)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(state.name||'proyecto').replace(/\.[^.]+$/,'')+'.dstudio'; a.click(); toast('Proyecto guardado'); autosaveClear(); sinGuardar=false; } }
@@ -3728,12 +3846,50 @@ var PlotterMotor = (function(){
   // botón de enviar los tapaba, y "Abrir" (reemplaza) contra "Importar" (suma) solo se
   // explicaba en el texto emergente. Cada opción PULSA el botón oculto de siempre. =====
   var MAC=/Mac|iPhone|iPad/.test(navigator.platform||''), MOD=MAC?'⌘':'Ctrl+';
+  // ===== "Mis proyectos": guardados en la cuenta, para abrirlos desde cualquier equipo =====
+  var projId=null;        // id en la biblioteca del proyecto abierto (null = aún no está guardado ahí)
+  function guardarEnCuenta(comoNuevo){ if(!hasDoc()) return;
+    if(window.DS_INVITADO){ toast('La prueba sin cuenta no guarda proyectos: se descarga como archivo'); el('btnSaveProject').click(); return; }
+    function mandar(nombre,id){ var data=projectData(); data.name=nombre;
+      postJSON('/api/proyecto_guardar',{project:data, id:id||null}).then(function(r){
+        if(!r||!r.ok){ toast((r&&r.error)||'No se pudo guardar el proyecto'); return; }
+        projId=r.id; state.name=r.name; sinGuardar=false; autosaveClear(); refreshInspector();
+        toast('Guardado en tus proyectos: '+r.name); }).catch(function(e){ toast('No se pudo guardar: '+e); }); }
+    if(projId&&!comoNuevo){ mandar(state.name||'proyecto',projId); return; }
+    var base=String(state.name||'proyecto').replace(/\.[^.]+$/,'');
+    askConfirm(comoNuevo?'Guardar como nuevo':'Guardar en mis proyectos','<div class="field"><label>Nombre</label><input id="proyNom" value="'+hesc(base).replace(/"/g,'&quot;')+'" style="text-align:left" maxlength="80" autocomplete="off" spellcheck="false"></div>',
+      function(ok){ if(!ok) return; var n=(el('proyNom')?el('proyNom').value:'').trim()||base; mandar(n,null); }, {yes:'Guardar', ancho:400});
+    var i0=el('proyNom'); if(i0){ i0.focus(); i0.select(); } }
+  function fechaCorta(seg){ var d=new Date(seg*1000), h=new Date(); var mismo=d.toDateString()===h.toDateString();
+    return mismo?('hoy '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)):(d.getDate()+'/'+(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(-2)); }
+  function abrirProyectos(){ el('proyModal').style.display='flex'; el('proyList').innerHTML='<div class="muted-note">Cargando…</div>';
+    fetch('/api/proyectos').then(function(r){ return r.json(); }).then(function(r){ var L=el('proyList'); L.innerHTML='';
+      if(r&&r.invitado){ L.innerHTML='<div class="muted-note">La prueba sin cuenta no guarda proyectos. Entra con una cuenta para tener tu lista.</div>'; return; }
+      if(!r||!r.ok){ L.innerHTML='<div class="muted-note">'+hesc((r&&r.error)||'No se pudo leer la lista')+'</div>'; return; }
+      if(!r.projects.length){ L.innerHTML='<div class="muted-note">Aún no hay proyectos guardados. Usa Archivo → Guardar en mis proyectos.</div>'; return; }
+      r.projects.forEach(function(pr){ var row=document.createElement('div'); row.className='proyrow'+(pr.id===projId?' on':'');
+        var b=document.createElement('b'); b.textContent=pr.name; row.appendChild(b);
+        var sm=document.createElement('small'); sm.textContent=pr.n+' fig. · '+fechaCorta(pr.saved); row.appendChild(sm);
+        var del=document.createElement('button'); del.className='tpbtn'; del.title='Borrar este proyecto de tu cuenta'; del.innerHTML=TP_TRASH; row.appendChild(del);
+        del.addEventListener('click',function(ev){ ev.stopPropagation();
+          askConfirm('Borrar proyecto','Se borra <b>'+hesc(pr.name)+'</b> de tu cuenta. No se puede deshacer.',function(ok){ if(!ok) return;
+            postJSON('/api/proyecto_borrar',{id:pr.id}).then(function(x){ if(x&&x.ok){ if(projId===pr.id) projId=null; abrirProyectos(); } else toast((x&&x.error)||'No se pudo borrar'); }); },{yes:'Borrar'}); });
+        row.addEventListener('click',function(){ var abrir=function(){
+            postJSON('/api/proyecto_abrir',{id:pr.id}).then(function(x){ if(!x||!x.ok){ toast((x&&x.error)||'No se pudo abrir'); return; }
+              el('proyModal').style.display='none'; loadProject(x.project); projId=x.id; }); };
+          if(hasDoc()&&sinGuardar) askConfirm('Tienes cambios sin guardar','Abrir <b>'+hesc(pr.name)+'</b> reemplaza lo que hay en la mesa.',function(ok){ if(ok) abrir(); },{yes:'Abrir de todos modos'}); else abrir(); });
+        L.appendChild(row); }); }).catch(function(e){ el('proyList').innerHTML='<div class="muted-note">No se pudo leer la lista: '+hesc(String(e))+'</div>'; }); }
+  el('proyClose').addEventListener('click',function(){ el('proyModal').style.display='none'; });
+  el('proyModal').addEventListener('click',function(e){ if(e.target===el('proyModal')) el('proyModal').style.display='none'; });
   function abrirArchivo(){ var r=el('btnFile').getBoundingClientRect();
     function it(lbl,id,keys){ return {label:lbl, keys:keys, dis:el(id).disabled, fn:function(){ el(id).click(); }}; }
     ctxShow([ it('Abrir…  (reemplaza la mesa)','btnOpen',MOD+'O'),
               it('Importar…  (suma a la mesa)','btnImport'),
+              {label:'Mis proyectos…', fn:abrirProyectos},
               {sep:true},
-              it('Guardar proyecto','btnSaveProject',MOD+'S'),
+              {label:'Guardar en mis proyectos', keys:MOD+'S', dis:!hasDoc(), fn:function(){ guardarEnCuenta(false); }},
+              {label:'Guardar como nuevo…', dis:!hasDoc(), fn:function(){ guardarEnCuenta(true); }},
+              it('Descargar proyecto (.dstudio)','btnSaveProject'),
               it('Exportar como…','btnExport'),
               {sep:true},
               {label:'Área de trabajo…', fn:openWA} ], r.left, r.bottom+6); }
@@ -3746,6 +3902,7 @@ var PlotterMotor = (function(){
     var k=(e.key||'').toLowerCase(), id=k==='s'?'btnSaveProject':k==='o'?'btnOpen':null;
     if(!id) return;
     e.preventDefault();
+    if(k==='s'){ var tap=Array.prototype.some.call(document.querySelectorAll('.modal'),function(m){ return m.style.display==='flex'||m.style.display==='block'; }); if(!tap&&hasDoc()) guardarEnCuenta(false); return; }
     var tapado=Array.prototype.some.call(document.querySelectorAll('.modal'),function(m){ return m.style.display==='flex'||m.style.display==='block'; });
     if(tapado||el(id).disabled) return;
     el(id).click(); });
@@ -3777,7 +3934,7 @@ var PlotterMotor = (function(){
       doc.paths.push({pts:pts});
       doc.off.push([dx,dy]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0);
       var bb=bboxOfPts(pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]);
-      doc.grp.push(gid); doc.uid.push(++uidSeq);
+      doc.grp.push(gid); doc.uid.push(++uidSeq); if(p.col) colores[uidSeq]=p.col;
     });
     sel.idx=-1; sel.set=new Set();
     for(var i=start;i<doc.paths.length;i++) sel.set.add(i);
@@ -3807,7 +3964,7 @@ var PlotterMotor = (function(){
       var bb=bboxOfPts(o.pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]);
       var g=o.grp||0;
       if(g){ if(!gmap[g]) gmap[g]=++groupSeq; g=gmap[g]; }
-      doc.grp.push(g); doc.uid.push(++uidSeq);
+      doc.grp.push(g); doc.uid.push(++uidSeq); if(o.col) colores[uidSeq]=o.col;
     });
     sel.idx=-1; sel.set=new Set();
     for(var i=start;i<doc.paths.length;i++) sel.set.add(i);
@@ -4025,7 +4182,7 @@ var PlotterMotor = (function(){
   cv.addEventListener('mousedown',function(){ document.querySelector('.app').classList.remove('insp'); },true);
 
   // ===== Menú de cuenta (riel, abajo): cuenta, estación, contraseña, salir y la huella de la versión =====
-  function armarCuenta(r){ var b=el('toolCuenta'), m=el('cuentaMenu'); b.style.display='';
+  function armarCuenta(r){ var b=el('toolCuenta'), m=el('cuentaMenu'); b.style.display=''; window.DS_INVITADO=!!r.invitado;
     var h='<div class="quien">'+(r.invitado?'<b>Modo de prueba</b> · nada se guarda':'Cuenta <b>'+hesc(r.usuario||'')+'</b>'+(r.dueno?' · dueño':''))+'</div><div class="sep"></div>';
     h+='<a class="mi" href="/estacion" target="_blank">Estación de corte</a>';
     if(!r.invitado) h+='<a class="mi" href="/clave">Cambiar contraseña</a>';
@@ -4367,7 +4524,7 @@ var PlotterMotor = (function(){
     el('destGrp').style.display=puedeRemoto()?'':'none';
     el('destSeg').querySelectorAll('button').forEach(function(b){ var k=b.getAttribute('data-dest');
       b.classList.toggle('on',k===d); b.disabled=(k==='directo'&&!puedeDirecto()); });
-    el('destStat').textContent=e[1];
+    el('destStat').textContent=e[1]; pintarColCut();
     el('btnSendTop').title=((d==='remoto')?'Mandar el corte a la fila de la estación del taller — ':'Cortar en el plotter de este equipo — ')+e[1]; }
   function sondearRemoto(){ if(!puedeRemoto()||state.machine==='cnc'||document.hidden) return;
     fetch('/api/estacion/estado').then(function(r){ return r.json(); }).then(function(r){
@@ -4398,6 +4555,7 @@ var PlotterMotor = (function(){
   el('destSeg').addEventListener('click',function(ev){ var b=ev.target.closest('button'); if(!b||b.disabled) return; fijarDestino(b.getAttribute('data-dest')); });
   el('destFila').addEventListener('click',function(){ window.open('/estacion','_blank'); });
   el('btnSendTop').addEventListener('click',function(){ if(!hasDoc()) return;
+    { var ic=idxCorte(); if(ic&&!ic.length){ toast('No hay ningún color encendido para cortar — enciende alguno en el paso Corte'); return; } }
     if(destino()==='remoto') siCabe(mandarAEstacion); else sendToPlotter(); });
   // Estación de corte: el servidor arma el HPGL (el mismo de "Enviar") y lo deja en la fila;
   // el teléfono del taller avisa y espera a que alguien toque Cortar.
@@ -5187,7 +5345,7 @@ var PlotterMotor = (function(){
       G.forEach(function(g,k){ var i=el('tapNom'+k); g.archivo=nombreTap(i?i.value:'', g.archivo); });
       bajarRev(); }, {yes:(varios?'Guardar los '+G.length+' archivos':'Guardar'), ancho:420});
     var i0=el('tapNom0'); if(i0){ i0.focus(); i0.select(); } }
-  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^tapNom/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
+  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^(tapNom|proyNom)/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
   function bajarRev(){ if(!revDatos||!state.cnc) return;
     var gs=revDatos.grupos.slice(), hechos=0, lineas=0; el('revSave').disabled=true;
     (function sig(){ var g=gs.shift();
@@ -6234,7 +6392,7 @@ var PlotterMotor = (function(){
   el('exModal').addEventListener('click',function(e){ if(e.target===el('exModal')) el('exModal').style.display='none'; });
 
   // Gancho de depuración (inofensivo): permite inyectar/leer estado durante pruebas.
-  window.__DS={ load:loadDoc, add:addDoc, addProject:addProject, get doc(){return doc;}, get sel(){return sel;}, effPts:effPts, bboxOf:bboxOf, mode:mode, activeIdx:activeIdx, refreshUI:refreshUI, tp:tp, get view(){return view;}, projectData:projectData, loadProject:loadProject, get nedit(){return nedit;}, get pen(){return pen;}, get guides(){return guides;}, get refImg(){return refImg;}, get snapGuides(){return snapGuides;}, get nestAnim(){return nestAnim;}, autosaveTick:autosaveTick, get dirty(){return dirtySince;}, get state(){return state;}, setUnits:setUnits,
+  window.__DS={ colOf:colOf, load:loadDoc, add:addDoc, addProject:addProject, get doc(){return doc;}, get sel(){return sel;}, effPts:effPts, bboxOf:bboxOf, mode:mode, activeIdx:activeIdx, refreshUI:refreshUI, tp:tp, get view(){return view;}, projectData:projectData, loadProject:loadProject, get nedit(){return nedit;}, get pen(){return pen;}, get guides(){return guides;}, get refImg(){return refImg;}, get snapGuides(){return snapGuides;}, get nestAnim(){return nestAnim;}, autosaveTick:autosaveTick, get dirty(){return dirtySince;}, get state(){return state;}, setUnits:setUnits,
     allUnits:allUnits, setFillView:setFillView, get fillView(){return fillView;}, get outlineMode(){return outlineMode;}, draw:draw,
     ex:{open:exOpen, payload:exPayload, go:exGo, paint:exPaint, setFmt:exSetFmt, set fmt(f){exFmt=f;}, get fmt(){return exFmt;}},
     hpglPayload:hpglPayload,

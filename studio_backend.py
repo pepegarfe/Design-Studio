@@ -726,6 +726,23 @@ def load_workarea():
     return 3000.0, 600.0
 
 
+def _color_hex(c):
+    """(r, g, b) con componentes 0–1 o 0–255 → '#rrggbb'. Negro, blanco y grises muy claros dan
+    None: son el "sin color" de casi todo archivo de corte y no deben contar como un color de vinil."""
+    try:
+        if c is None:
+            return None
+        v = [float(x) for x in c[:3]]
+        if max(v) <= 1.0:
+            v = [x * 255.0 for x in v]
+        r, g, b = [max(0, min(255, int(round(x)))) for x in v]
+        if max(r, g, b) < 40 or min(r, g, b) > 235:
+            return None
+        return '#%02x%02x%02x' % (r, g, b)
+    except Exception:
+        return None
+
+
 def load_vector(path):
     """Lee un vector (SVG/DXF/AI) y lo entrega como lo espera la UI: trazados en mm
     con Y hacia ARRIBA (el volteo del SVG va aquí, POR FORMATO — ver flip_paths_y)."""
@@ -735,10 +752,12 @@ def load_vector(path):
             styled = core.SVGParser().parse(path)
         elif ext == '.dxf':
             styled = core.DXFParser().parse(path)
-        elif ext == '.ai':
+        elif ext in ('.ai', '.pdf'):
+            # Un .ai moderno ES un PDF por dentro: el mismo lector abre los dos (los PDF que
+            # mandan los clientes y los que exporta CorelDRAW incluidos).
             styled = core.AIParser().parse(path)
         else:
-            return {'ok': False, 'error': 'Formato no soportado (usa SVG, DXF, AI o .dstudio).'}
+            return {'ok': False, 'error': 'Formato no soportado (usa SVG, DXF, AI, PDF o .dstudio).'}
     except Exception as e:
         return {'ok': False, 'error': f'No se pudo leer el archivo: {e}'}
     paths = []
@@ -748,7 +767,11 @@ def load_vector(path):
         if len(pts) < 2:
             continue
         rp = [[round(float(x), 3), round(float(y), 3)] for (x, y) in pts]
-        paths.append({'pts': rp})
+        item = {'pts': rp}
+        col = _color_hex(d.get('stroke') or d.get('fill'))
+        if col:
+            item['col'] = col              # el color del archivo viaja a la interfaz (corte por color)
+        paths.append(item)
         for x, y in rp:
             xs.append(x); ys.append(y)
     bbox = [min(xs), min(ys), max(xs), max(ys)] if xs else [0, 0, 0, 0]
@@ -1001,6 +1024,88 @@ SERVICE = PlotterService()
 
 def _autosave_path():
     return _cnc_path().parent / 'autosave.dstudio'
+
+
+# ---------- "Mis proyectos": los .dstudio guardados EN LA CUENTA ----------
+# Antes un proyecto solo existía como archivo descargado en el aparato donde se hizo. Aquí vive
+# en la carpeta de la cuenta (junto a su configuración), así se abre desde cualquier equipo.
+# El id lo pone el servidor y es lo ÚNICO que se acepta para abrir o borrar: nunca una ruta.
+_PROY_MAX = 300                 # proyectos por cuenta
+_PROY_BYTES = 12 * 1024 * 1024  # tamaño máximo de uno
+_PROY_ID = re.compile(r'^p[0-9a-f]{12}$')
+
+
+def _proy_dir():
+    d = _cnc_path().parent / 'proyectos'
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _proy_meta(p):
+    try:
+        d = json.loads(p.read_text(encoding='utf-8'))
+        return {'id': p.stem, 'name': str(d.get('name') or 'proyecto')[:80],
+                'n': len(d.get('objects') or []), 'saved': int(p.stat().st_mtime),
+                'bytes': p.stat().st_size}
+    except Exception:
+        return None
+
+
+def project_list():
+    try:
+        items = [m for m in (_proy_meta(p) for p in _proy_dir().glob('p*.dstudio')) if m]
+        items.sort(key=lambda m: -m['saved'])
+        return {'ok': True, 'projects': items, 'max': _PROY_MAX}
+    except Exception as e:
+        return {'ok': False, 'error': f'No se pudo leer la lista de proyectos: {e}'}
+
+
+@_en_fila
+def project_save(data):
+    """data: {'project': {...}, 'id': opcional}. Con id reemplaza ESE proyecto; sin id crea uno."""
+    try:
+        proj = (data or {}).get('project') or {}
+        if proj.get('format') != 'design-studio-project' or not proj.get('objects'):
+            return {'ok': False, 'error': 'No hay un proyecto que guardar.'}
+        nombre = re.sub(r'[\x00-\x1f]+', ' ', str(proj.get('name') or 'proyecto')).strip()[:80] or 'proyecto'
+        proj['name'] = nombre
+        texto = json.dumps(proj, ensure_ascii=False)
+        if len(texto.encode('utf-8')) > _PROY_BYTES:
+            return {'ok': False, 'error': 'El proyecto pesa más de 12 MB: simplifica el diseño o descárgalo como archivo.'}
+        d = _proy_dir()
+        pid = str((data or {}).get('id') or '')
+        if not (_PROY_ID.match(pid) and (d / f'{pid}.dstudio').exists()):
+            if len(list(d.glob('p*.dstudio'))) >= _PROY_MAX:
+                return {'ok': False, 'error': f'Ya hay {_PROY_MAX} proyectos guardados: borra alguno primero.'}
+            import secrets
+            pid = 'p' + secrets.token_hex(6)
+        _escribir(d / f'{pid}.dstudio', texto)
+        return {'ok': True, 'id': pid, 'name': nombre}
+    except Exception as e:
+        return {'ok': False, 'error': f'No se pudo guardar el proyecto: {e}'}
+
+
+def project_load(pid):
+    try:
+        if not _PROY_ID.match(str(pid or '')):
+            return {'ok': False, 'error': 'Proyecto desconocido.'}
+        p = _proy_dir() / f'{pid}.dstudio'
+        if not p.exists():
+            return {'ok': False, 'error': 'Ese proyecto ya no existe.'}
+        return {'ok': True, 'id': pid, 'project': json.loads(p.read_text(encoding='utf-8'))}
+    except Exception as e:
+        return {'ok': False, 'error': f'No se pudo abrir el proyecto: {e}'}
+
+
+@_en_fila
+def project_delete(pid):
+    try:
+        if not _PROY_ID.match(str(pid or '')):
+            return {'ok': False, 'error': 'Proyecto desconocido.'}
+        (_proy_dir() / f'{pid}.dstudio').unlink(missing_ok=True)
+        return {'ok': True}
+    except Exception as e:
+        return {'ok': False, 'error': f'No se pudo borrar el proyecto: {e}'}
 
 
 def autosave_save(data):

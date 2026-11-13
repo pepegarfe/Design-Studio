@@ -536,6 +536,53 @@ def api_divide():
     return _json(geo.divide_op(request.json or {}))
 
 
+@app.post('/api/weed')
+def api_weed():
+    return _json(geo.weed_op(request.json or {}))
+
+
+@app.post('/api/dogbone')
+def api_dogbone():
+    return _json(geo.dogbone_op(request.json or {}))
+
+
+# "Mis proyectos": guardados en la carpeta de la cuenta. La prueba sin cuenta no guarda nada.
+_SIN_CUENTA = {'ok': False, 'invitado': True,
+               'error': 'La prueba sin cuenta no guarda proyectos: descárgalo como archivo, o entra con una cuenta.'}
+
+
+@app.get('/api/proyectos')
+def api_proyectos():
+    if auth.es_invitado(_yo()):
+        return _json({'ok': True, 'projects': [], 'invitado': True})
+    import studio_backend as _sb
+    return _json(_sb.project_list())
+
+
+@app.post('/api/proyecto_guardar')
+def api_proyecto_guardar():
+    if auth.es_invitado(_yo()):
+        return _json(_SIN_CUENTA)
+    import studio_backend as _sb
+    return _json(_sb.project_save(request.json or {}))
+
+
+@app.post('/api/proyecto_abrir')
+def api_proyecto_abrir():
+    if auth.es_invitado(_yo()):
+        return _json(_SIN_CUENTA)
+    import studio_backend as _sb
+    return _json(_sb.project_load((request.json or {}).get('id')))
+
+
+@app.post('/api/proyecto_borrar')
+def api_proyecto_borrar():
+    if auth.es_invitado(_yo()):
+        return _json(_SIN_CUENTA)
+    import studio_backend as _sb
+    return _json(_sb.project_delete((request.json or {}).get('id')))
+
+
 SIN_ACOMODO = 'En la prueba sin cuenta se corre un acomodo a la vez: espera a que termine.'
 
 
@@ -622,13 +669,13 @@ def api_parse():
         return _json({'ok': False, 'error': 'No llegó ningún archivo.'}, 400)
     name = up.filename or 'archivo'
     ext = os.path.splitext(name)[1].lower()
-    if ext not in ('.svg', '.dxf', '.ai'):
-        return _json({'ok': False, 'error': 'Formato no soportado (usa SVG, DXF o AI).'})
+    if ext not in ('.svg', '.dxf', '.ai', '.pdf'):
+        return _json({'ok': False, 'error': 'Formato no soportado (usa SVG, DXF, AI o PDF).'})
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
     tmp.close()
     try:
         up.save(tmp.name, overwrite=True)
-        with (_PYMUPDF if ext == '.ai' else contextlib.nullcontext()):
+        with (_PYMUPDF if ext in ('.ai', '.pdf') else contextlib.nullcontext()):
             r = load_vector(tmp.name)   # el MISMO lector que el escritorio
     finally:
         try:

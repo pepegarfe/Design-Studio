@@ -340,6 +340,35 @@ NO se deducen del código:
   recuerda en `localStorage`). El código que necesita el panel a la vista llama **`mostrarPanel()`**,
   no `classList.add('insp')`: si la columna estaba plegada, eso solo no la despliega.
 
+### Color, descarte, alivios y "Mis proyectos" (12-nov-2026)
+
+- **Color por figura = un mapa `colores[uid]`** (`studio_ui.html`), como los candados. ⚠️ **No lo
+  conviertas en un arreglo paralelo a `doc.paths`**: va por uid justamente para que mover, borrar
+  o reordenar figuras no tenga que acordarse de él. Sin entrada = sin color. Viaja en el
+  historial (`snapshot().cols`), en el proyecto (`objects[i].col`) y al copiar/pegar/duplicar; al
+  abrir un archivo llega de `load_vector()` (`col`, vía `_color_hex()`: negro y casi-blanco cuentan
+  como "sin color"). **El color NO cambia el corte**: solo decide qué se manda.
+- **Corte por color (plotter)**: `colOff` = colores apagados; `idxCorte()` da los índices que sí
+  se cortan y **`hpglPayload()` lo aplica solo cuando no le pasan índices**. Con todo apagado el
+  botón de enviar avisa y no manda. Solo existe en modo Plotter.
+- **Sin selección NO se pinta nada**: el color exige selección explícita (`mode()!=='all'`), para
+  que un clic distraído no coloree el diseño entero.
+- **Descarte** (`geo_ops.weed_op`): recuadro + tiras horizontales, como FIGURAS normales del
+  diseño (un grupo). Las tiras se recortan contra todas las figuras con 0.6 mm de respiro. Sin
+  selección rodea lo que se va a cortar y, si es de un solo color, nace de ese color.
+- **Alivio de esquinas** (`geo_ops.dogbone_op`, sección "Ensamble", solo en CNC): círculo sobre la
+  bisectriz a un radio del vértice; "hueco" alivia las esquinas salientes (lo agranda), "pieza" las
+  entrantes (le quita). ⚠️ El radio es el de la fresa **+ 0.1 mm**: con el exacto, el recorrido de
+  la fresa en esa esquina se reduce a un punto y desaparece. Solo esquinas de 30° a 150°.
+- **"Mis proyectos"**: `.dstudio` en `<carpeta de la cuenta>/proyectos/` (`project_*` en
+  `studio_backend.py`). ⚠️ **Se abre y se borra SOLO por el id que puso el servidor**
+  (`p` + 12 hex, validado con `_PROY_ID`), nunca por nombre ni ruta. La prueba sin cuenta no
+  guarda. `projId` = el abierto; Cmd/Ctrl+S guarda ahí (pide nombre la primera vez); la descarga
+  del `.dstudio` sigue en Archivo.
+- **PDF se abre con el lector de `.ai`** (`AIParser`, PyMuPDF). **EPS y CDR NO**: necesitan
+  programas del sistema (Ghostscript, libcdr) que no se pudieron probar en la Mac, y de CDR no hay
+  archivo de muestra. No los prometas sin probarlos en la imagen de Railway.
+
 ## Aspecto visual — sistema de diseño (tokens)
 
 Desde jul-2026 la UI tiene **un sistema de diseño centralizado** al inicio del archivo. **No

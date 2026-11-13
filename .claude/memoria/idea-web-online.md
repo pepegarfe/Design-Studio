@@ -363,6 +363,13 @@ teléfono (está hecha para computadora).
   una barra junto a la selección, color y número por corte, formulario con dibujos y "Atravesar",
   un archivo por fresa y aviso de orden. Reglas en CLAUDE.md. ⏳ Sin probar en la máquina ni
   con Ángel; yo le propuse **ver a alguien nuevo preparar un corte** y ajustar con eso.
+- ✅ **Paquete "nivel profesional", partes 1–3 (12-nov-2026)**, tras un análisis de lo que falta
+  frente a Illustrator/Corel/Aspire para un taller de rotulación: color por figura y corte por
+  color, descarte, abrir PDF (con sus colores), "Mis proyectos" en la cuenta y alivio de esquinas
+  (dogbone). Reglas en CLAUDE.md. ⏳ **Quedó fuera y se lo dije:** EPS y CDR (faltan programas del
+  sistema y un .cdr de muestra — pedírselo a Jose), texto de un solo trazo para grabar (falta la
+  tabla de una fuente Hershey; el grabado de línea ya se hace con perfil "Sobre" poco profundo),
+  mosaico, imprimir-y-cortar (depende de si su plotter tiene sensor), V-carve, órdenes de trabajo.
 
 ## Pendiente para publicar (fase 5)
 - `datos_web/` debe vivir en un disco que SOBREVIVA a cada despliegue, con respaldos: ahí están las
