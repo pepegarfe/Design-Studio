@@ -395,7 +395,7 @@
   .grp-t.fsec{margin:14px 0 7px;}
   /* Cancelar / Calcular pegados al fondo del panel: el formulario es largo y fijo */
   .formbtns{position:sticky;bottom:-15px;z-index:2;display:flex;gap:7px;margin:14px -16px -15px;padding:10px 16px 14px;background:var(--panel);border-top:1px solid var(--line);}
-  #revGo,#revSave{align-items:center;justify-content:center;gap:7px;} #revSave{display:flex;} #revGo svg,#revSave svg{width:15px;height:15px;}
+  #revGo,#revSave,#btnGoCut{align-items:center;justify-content:center;gap:7px;} #revSave,#btnGoCut{display:flex;} #btnGoCut svg{width:15px;height:15px;} #revGo svg,#revSave svg{width:15px;height:15px;}
   #cutRev .rowbtns .gbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;} #cutRev .rowbtns .gbtn svg{width:14px;height:14px;}
   /* Pasos del Corte de la CNC: tres BOTONES encadenados, cada uno con su resumen */
   /* ⚠️ flex:none — .inspect es una columna flex con scroll: sin esto, cuando el contenido es largo
@@ -731,7 +731,7 @@
       <!-- La fresa "habitual" ya no se elige aquí: es la última usada en un corte. El selector sigue en
            el HTML, oculto, porque es el que guarda la elección (#tpTool del formulario es su espejo). -->
       <div style="display:none"><select class="selfield" id="toolPick"></select><div class="toolsum" id="toolSum">—</div></div>
-      <div class="navrow"><button class="pbtn acc" id="btnGoCut" title="Paso 2: los cortes">Cortes ›</button></div>
+      <div class="navrow"><button class="pbtn acc" id="btnGoCut" title="Paso 2: los cortes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v7"/><path d="m9 10 3 4 3-4z" fill="currentColor" stroke="none"/><rect x="4" y="17" width="16" height="3" rx="1"/><path d="M7 17v-2M17 17v-2"/></svg> Cortes</button></div>
     </div>
 
     <div class="pane" id="paneCncCut" style="display:none">
