@@ -329,6 +329,7 @@
   #simBar .seg button{flex:none;padding:0 12px;}
   #simView{flex:1;min-height:0;position:relative;background:var(--bg);}
   #simView canvas{display:block;}
+  #simWait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--muted);pointer-events:none;z-index:2;}
   #simFoot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--faint);}
   #simStat{font-family:var(--mono);font-size:11px;color:var(--muted);}
   .toast{position:fixed;left:50%;top:84px;transform:translateX(-50%) translateY(-4px);background:var(--panel);border:1px solid var(--line-2);color:var(--ink);font-size:13px;padding:10px 16px;border-radius:9px;box-shadow:0 8px 24px -8px #0009;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;}
@@ -1131,7 +1132,7 @@
       </select>
       <button class="pbtn" id="simShot" title="Guardar lo que se ve como imagen PNG (prueba para el cliente)">Guardar imagen…</button>
     </div>
-    <div id="simView"></div>
+    <div id="simView"><div id="simWait" style="display:none"></div></div>
     <div id="simFoot"><span>Arrastrar = orbitar · rueda = zoom · clic derecho = mover · <b>doble clic = quitar el sobrante</b> · rojo = muerde la cama más de 0.5 mm</span><span id="simStat"></span></div>
   </div>
 </div>
@@ -4950,7 +4951,16 @@ var PlotterMotor = (function(){
     last_pass: t.last_pass||0, last_rev: !!t.last_rev,
     depth: t.depth, tool: tpToolOf(t), material: state.cnc.material, work: state.work }; }
   function activeTps(){ return tpaths.filter(function(t){ return t.enabled && tpResolve(t).length; }); }
-  var CNCB={ prev:function(d){ return api()? api().cnc_toolpath(d) : postJSON('/api/cnc_toolpath',d); },
+  // MEMORIA de recorridos ya calculados. La vista previa se pide para TODOS los cortes activos en
+  // cada Calcular, al entrar a Revisar y al abrir la vista 3D: sin memoria, agregar un perfil
+  // sencillo volvía a calcular el cajeado pesado de al lado, cada vez. La llave es el pedido
+  // ENTERO (figuras, receta, fresa, material), así que cualquier cambio real la invalida sola.
+  function memo(max){ var m=new Map(); return function(d,pedir){ var k=JSON.stringify(d);
+      if(m.has(k)){ var v=m.get(k); m.delete(k); m.set(k,v); return v; }
+      var pr=pedir(d).then(function(r){ if(!r||!r.ok) m.delete(k); return r; }, function(e){ m.delete(k); throw e; });
+      m.set(k,pr); if(m.size>max) m.delete(m.keys().next().value); return pr; }; }
+  var memoPrev=memo(60), memoTap=memo(8);
+  var CNCB={ prev:function(d){ return memoPrev(d,function(x){ return api()? api().cnc_toolpath(x) : postJSON('/api/cnc_toolpath',x); }); },
              tap: function(d){ return api()? api().save_tap(d)     : postJSON('/api/tap',d); } };
   // --- previsualización (todas las activas; sin lista = lo del formulario sobre la selección/todo) ---
   function computePreview(){
@@ -5246,7 +5256,7 @@ var PlotterMotor = (function(){
   // (cama, relleno, por-trayectoria) quedan exactos.
   var S3={renderer:null,scene:null,camera:null,controls:null,mesh:null,aux:null,tool:null,
           raf:0,open:false,res:null,jobs:null,anim:null};
-  function simTap(d){ return api()? api().cnc_tap_text(d) : postJSON('/api/tap',d); }
+  function simTap(d){ return memoTap(d,function(x){ return api()? api().cnc_tap_text(x) : postJSON('/api/tap',x); }); }
   function simStat(s){ el('simStat').textContent=s; }
   function parseTap(tap){
     // G-code → movimientos [x0,y0,z0,x1,y1,z1,rapid]. Solo hay G00/G01 (límite del
@@ -6036,22 +6046,32 @@ var PlotterMotor = (function(){
     var lk=el('simLook'), mt=(state.cnc.material||{}).type;
     if(lk.querySelector('option[value="'+mt+'"]')) lk.value=mt;      // arranca con el material activo
     simSize(); simLoop();
-    simStat('Generando G-code…');
-    var jobs=[], bad=null;
-    (function next(k){
-      if(k>=list.length){
-        if(!jobs.length){ simStat(''); toast(bad||'No se pudo simular'); return; }
-        runSim(jobs);
-        if(bad) toast('⚠ '+bad);
-        return;
-      }
-      var t=list[k];
-      simTap(tpPayloadOf(t)).then(function(r){
-        if(r&&r.ok) jobs.push({moves:parseTap(r.tap), rad:(parseFloat(tpToolOf(t).dia)||6)/2, name:t.name});
-        else bad=(t.name?t.name+': ':'')+((r&&r.error)||'error');
-        next(k+1);
-      }).catch(function(e){ bad=String(e); next(k+1); });
-    })(0);
+    // ⚠️ Mientras llega el G-code NO se deja a la vista el resultado ANTERIOR. Antes se quedaba
+    // ahí: con un recorrido largo (varios segundos de espera) parecía que la vista "no se
+    // actualizaba", y si pulsabas Reproducir animaba el corte VIEJO hasta que llegaba el nuevo y
+    // saltaba de golpe al resultado. Se oculta lo viejo, se apaga Reproducir y cada apertura lleva
+    // su número: una respuesta que llega tarde de una apertura anterior se descarta.
+    var tok=(S3.tok=(S3.tok||0)+1);
+    if(S3.anim) S3.anim.playing=false; S3.anim=null; animBtn(false);
+    ['mesh','aux','tool'].forEach(function(k){ if(S3[k]) S3[k].visible=false; });
+    S3.res=null; S3.jobs=null;                            // nada de lo anterior se puede reproducir
+    el('simPlay').disabled=true;
+    simStat('Generando G-code… ('+list.length+(list.length===1?' corte)':' cortes)'));
+    el('simWait').textContent='Preparando la simulación…'; el('simWait').style.display='flex';
+    // todos los cortes A LA VEZ (antes uno tras otro: la espera era la SUMA de todos)
+    Promise.all(list.map(function(t){
+      return simTap(tpPayloadOf(t)).then(function(r){
+        if(r&&r.ok) return {moves:parseTap(r.tap), rad:(parseFloat(tpToolOf(t).dia)||6)/2, name:t.name};
+        return {bad:(t.name?t.name+': ':'')+((r&&r.error)||'error')}; },
+        function(e){ return {bad:String(e)}; }); })).then(function(rs){
+      if(tok!==S3.tok||!S3.open) return;                      // ya se abrió otra vez, o se cerró
+      var jobs=rs.filter(function(x){ return x.moves; }), bad=(rs.filter(function(x){ return x.bad; })[0]||{}).bad;
+      if(!jobs.length){ simStat('No se pudo simular'); el('simWait').textContent=bad||'No se pudo simular'; toast(bad||'No se pudo simular'); return; }
+      simStat('Simulando el corte…');
+      setTimeout(function(){ if(tok!==S3.tok||!S3.open) return;   // un respiro para que el aviso se pinte antes del cálculo pesado
+        runSim(jobs); el('simPlay').disabled=!S3.res;
+        if(S3.res) el('simWait').style.display='none'; else el('simWait').textContent='Ningún corte baja al material';
+        if(bad) toast('⚠ '+bad); },30); });
   }
   function closeSim(){
     S3.open=false;

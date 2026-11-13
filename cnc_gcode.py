@@ -25,6 +25,7 @@ Dialecto: solo G00/G01 (sin arcos), G90 G21 G17, avances mm/min, comentarios ASC
 ⚠️ El controlador puede IGNORAR F y S de fábrica ("F Read = Ign" en el handle).
 Cero de Z: 'top' = cara superior del material, 'bed' = cama (la cara queda en Z=grosor).
 """
+import bisect
 import math
 import re
 
@@ -421,13 +422,20 @@ def _cum(pts):
 
 
 def _point_at(pts, cum, s):
-    for i in range(1, len(pts)):
-        if cum[i] >= s - 1e-9:
-            seg = cum[i] - cum[i-1]
-            t = 0.0 if seg <= 1e-12 else (s - cum[i-1]) / seg
-            return [pts[i-1][0] + (pts[i][0] - pts[i-1][0]) * t,
-                    pts[i-1][1] + (pts[i][1] - pts[i-1][1]) * t]
-    return [pts[-1][0], pts[-1][1]]
+    """Punto a `s` mm del inicio de la polilínea.
+
+    ⚠️ BÚSQUEDA BINARIA, no un recorrido desde el principio: a esta función se le llama una vez
+    POR VÉRTICE de cada pasada (`_ring_pass`, `_open_pass`, zigzag), así que buscarlo de corrido
+    volvía cuadrático el cálculo. Con una cadena de cajeado de miles de puntos la rampa de entrada
+    tardaba 8 veces más que sin rampa, y se notó en cuanto los cajeados nuevos nacieron con rampa
+    (12-nov-2026). Da EXACTAMENTE el mismo punto: el primer i con cum[i] >= s - 1e-9."""
+    i = bisect.bisect_left(cum, s - 1e-9, 1)
+    if i >= len(pts):
+        return [pts[-1][0], pts[-1][1]]
+    seg = cum[i] - cum[i-1]
+    t = 0.0 if seg <= 1e-12 else (s - cum[i-1]) / seg
+    return [pts[i-1][0] + (pts[i][0] - pts[i-1][0]) * t,
+            pts[i-1][1] + (pts[i][1] - pts[i-1][1]) * t]
 
 
 # ---------- puentes ----------
