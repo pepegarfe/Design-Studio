@@ -69,7 +69,7 @@ a 200 mm → 0.0075 mm; escalar ×5 conserva 0.02% del radio; rectas intactas.
 mini-curvas (potrace: 25k puntos en un círculo) → por eso el piso + la simplificación en mm;
 (2) potrace mete un `<g transform="scale(0.1)">` que el piso calculado solo con la matriz raíz
 no ve → por eso la limpieza final se hace en MM REALES post-matriz, que atrapa todo.
-⚠️ No volver a muestrear curvas con N fijo (ver CLAUDE.md).
+⚠️ No volver a muestrear curvas con N fijo (ver `.claude/rules/motor-y-escritorio-legado.md`).
 **Ronda 2 (commit 0f53cd2)**: el DXF seguía cuadriculado — su tolerancia era fija en UNIDADES
 DEL DIBUJO y la escala $INSUNITS→mm se aplica DESPUÉS: un DXF declarado en metros (×1000) o
 pulgadas (×25.4) quedaba con desviación real de hasta 1mm. Fix: `parse()` calcula la escala

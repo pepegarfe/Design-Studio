@@ -11,7 +11,7 @@ metadata:
 # Interfaz y Corte: lo que se hizo el 12-nov-2026
 
 Una sola sesión, ~30 commits, todo en línea al terminar (último: `5d0dd74`). Las **reglas** de cada
-cosa viven en `CLAUDE.md` (secciones "Reglas visuales", "Diseño → Corte", "Color, descarte, alivios
+cosa viven en `.claude/rules/interfaz-web.md` y `cnc.md` (movidas del `CLAUDE.md` el 18-nov-2026; secciones "Reglas visuales", "Diseño → Corte", "Color, descarte, alivios
 y Mis proyectos" y las de CNC). Aquí va la **historia y el porqué**, que el código no cuenta.
 
 ## Cómo se decidió
@@ -65,5 +65,5 @@ elige → se programa por etapas, cada una probada → se sube**. Ver [[preferen
 - **Railway reinicia con cada nota**: la sincronización de Obsidian sube sola los cambios de
   `CLAUDE.md` y de esta carpeta ("Notas: cambios desde Obsidian") y cada subida tumba el sitio ~30 s.
   Ofrecido configurar "Watch Paths"; sin respuesta.
-- **`CLAUDE.md` pasa de 400 líneas** contra la regla de <200 de Jose. Ofrecido moverlo a
-  `.claude/rules/`; sin respuesta.
+- ✅ **`CLAUDE.md` pasaba de 400 líneas** contra la regla de <200 de Jose. Hecho el 18-nov-2026: quedó en
+  ~90 y el resto se repartió en `.claude/rules/` (cnc, interfaz-web, pwa-y-despliegue, motor-y-escritorio-legado).

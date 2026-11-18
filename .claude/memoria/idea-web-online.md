@@ -345,7 +345,7 @@ teléfono (está hecha para computadora).
   "esta computadora"; revisar `es_esta_computadora()` con `DS_PROXY=1` antes de prenderlo.
   Después: mini-PC en el taller, o Railway con volume cuando haya clientes.
 - ⏳ **Interfaz "Diseño → Corte" (12-nov-2026, commit `62a14d8`, en línea)**: maqueta aprobada por
-  Jose y programada (reglas en CLAUDE.md, sección "Diseño → Corte"). Probada con navegador
+  Jose y programada (reglas en `.claude/rules/interfaz-web.md`, sección "Diseño → Corte"). Probada con navegador
   invisible (Playwright en `/tmp/ds-maqueta`, no persiste) y `.tap` idéntico byte a byte al
   anterior. **Falta que Jose la pruebe con el plotter REAL conectado** (conectar, mover cabezal,
   prueba de corte: mismo código, otro sitio) y en un teléfono real. Sin decidir: guardar
@@ -361,12 +361,12 @@ teléfono (está hecha para computadora).
   Aspire; le dibujé cuatro propuestas (página en claude.ai, no persiste aquí) y eligió la
   combinada: material como encabezado, pasos Cortes/Revisar, corte creado desde el dibujo con
   una barra junto a la selección, color y número por corte, formulario con dibujos y "Atravesar",
-  un archivo por fresa y aviso de orden. Reglas en CLAUDE.md. ⏳ Sin probar en la máquina ni
+  un archivo por fresa y aviso de orden. Reglas en `.claude/rules/interfaz-web.md`. ⏳ Sin probar en la máquina ni
   con Ángel; yo le propuse **ver a alguien nuevo preparar un corte** y ajustar con eso.
 - ✅ **Paquete "nivel profesional", partes 1–3 (12-nov-2026)**, tras un análisis de lo que falta
   frente a Illustrator/Corel/Aspire para un taller de rotulación: color por figura y corte por
   color, descarte, abrir PDF (con sus colores), "Mis proyectos" en la cuenta y alivio de esquinas
-  (dogbone). Reglas en CLAUDE.md. ⏳ **Quedó fuera y se lo dije:** EPS y CDR (faltan programas del
+  (dogbone). Reglas en `.claude/rules/interfaz-web.md`. ⏳ **Quedó fuera y se lo dije:** EPS y CDR (faltan programas del
   sistema y un .cdr de muestra — pedírselo a Jose), texto de un solo trazo para grabar (falta la
   tabla de una fuente Hershey; el grabado de línea ya se hace con perfil "Sobre" poco profundo),
   mosaico, imprimir-y-cortar (depende de si su plotter tiene sensor), V-carve, órdenes de trabajo.
