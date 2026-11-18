@@ -75,8 +75,9 @@ NO se deducen del código:
 ## Desplegar (operativo, no obvio)
 
 - ⚠️ **Desplegar = `git push` a `master`**: Railway reconstruye el `Dockerfile` y reinicia (~1 min).
-  **Cada push reinicia el sitio ~30 s, aunque solo cambien notas** (`.claude/`, `CLAUDE.md`; medido 11-nov-2026): al 18-nov no había
-  "Watch Paths" configurados. El sync de Obsidian también empuja a `master`.
+  **Cada push reinicia el sitio ~30 s, aunque solo cambien notas** (`.claude/`, `CLAUDE.md`; medido 11-nov-2026): no hay "Watch Paths"
+  y **Jose decidió dejarlo así** (18-nov-2026): no volver a ofrecerlo. El sync de Obsidian también
+  empuja a `master`.
 - Detalle de PWA, íconos, rutas públicas y actualización automática → `.claude/rules/pwa-y-despliegue.md`.
 
 ---

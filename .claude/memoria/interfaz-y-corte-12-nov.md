@@ -64,6 +64,6 @@ elige → se programa por etapas, cada una probada → se sube**. Ver [[preferen
   se fue al quitar la lista de la máquina en Revisar.
 - **Railway reinicia con cada nota**: la sincronización de Obsidian sube sola los cambios de
   `CLAUDE.md` y de esta carpeta ("Notas: cambios desde Obsidian") y cada subida tumba el sitio ~30 s.
-  Ofrecido configurar "Watch Paths"; sin respuesta.
+  Ofrecido configurar "Watch Paths". **Decisión de Jose (18-nov-2026): dejarlo así** — acepta el reinicio ocasional (ese día no se vio caída en 4 min de vigilancia a 10 s). No volver a ofrecerlo.
 - ✅ **`CLAUDE.md` pasaba de 400 líneas** contra la regla de <200 de Jose. Hecho el 18-nov-2026: quedó en
   ~90 y el resto se repartió en `.claude/rules/` (cnc, interfaz-web, pwa-y-despliegue, motor-y-escritorio-legado).
