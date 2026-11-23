@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 130b077a-6888-4299-a7dd-79d63c3281cb
-  modified: 2026-11-23T18:20:49.194Z
+  modified: 2026-11-23T18:40:58.469Z
 ---
 
 **Diagnóstico del 23-nov-2026** (tablet Amazon Fire HD, modelo KFRAWI, Fire OS 8.3, Chrome 150
@@ -32,6 +32,14 @@ Lo que fallaba, por capas:
 4. ✅ **Instalada el 23-nov-2026** como WebAPK `org.chromium.webapk.a0214c21a919c811b_v2`: sale en
    el escritorio de Amazon como "Estación" y abre a pantalla completa con la cuenta pepegarfe.
    (La otra cuenta de Google sigue sin sesión; no estorba.)
+5. ⚠️ **Play Store y Servicios de Google se apagaron A PROPÓSITO el 10-nov** (proyecto
+   `~/servidor-tablet`, `ajustes-cambiados.md`): fallaban en bucle a 136 % de CPU y la tablet
+   corre el recolector de Maps y los vigías de precios. Yo los encendí sin leer esa nota — error.
+   Tras instalar se **volvieron a apagar** (23-nov): la RAM libre subió de ~487 a ~575 MB y la
+   Estación **sigue abriendo** como app. Para reinstalarla o cambiarle nombre/ícono hay que
+   encenderlos otra vez un rato y apagarlos al terminar.
+
+**Regla:** antes de cambiar el estado de la tablet, leer `~/servidor-tablet/ajustes-cambiados.md`.
 
 **Why:** en la Fire, "Agregar a la pantalla principal" parece éxito pero no deja nada visible.
 **How to apply:** si una PWA "no se instala" en una Fire, la prueba es `adb shell pm list packages
