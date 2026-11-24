@@ -206,3 +206,17 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   fila se dibuja con su propia tipografía, así que la lista completa obliga al motor web a cargar
   cientos de fuentes cada vez que se abre el menú. Con el catálogo grande instalado (ago-2026:
   969 fuentes / 343 familias) eso se sentiría al abrir el desplegable.
+
+### Estación de corte (`estacion.html`, opción A elegida por Jose, 23-nov-2026)
+
+- Revisada en la tablet Fire acostada (960 × 600 puntos). Jose eligió el **retoque (A)**: una
+  columna de 760, barra fija arriba (`.barra`) con el estado del plotter (`#plot`) separado de su
+  botón Conectar (`#pill`, se oculta conectado), iconos en todos los botones (`ICO`/`ico()`),
+  vistas de 96 y avance en %. Las otras propuestas (B dos columnas "Ahora/Fila", C lista ancha)
+  no se eligieron; están en https://claude.ai/artifact/4V99EYNGpAe7MvEyuUr88H.
+- ⚠️ **"Descartar" pide un segundo toque** (`porConfirmar`, 4 s): borra el trabajo sin regreso
+  y está junto a "Cortar". No quitar la confirmación.
+- ⚠️ **`.acciones` lleva `align-items:center`**: sin eso la etiqueta Enviado/Falló/Detenido se
+  estira al alto del botón vecino y la palabra queda pegada arriba.
+- La lógica (`#estacion-logica`) no cambió: `web/test_estacion.mjs` solo prueba esa parte. Lo
+  visual se verificó en la tablet real con una copia local (`adb reverse tcp:8799 tcp:8799`).

@@ -31,13 +31,18 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink);
          font:17px/1.4 -apple-system, "Segoe UI", system-ui, sans-serif; }
-  main { max-width:640px; margin:0 auto; padding:14px 16px 40px; }
-  header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-  header h1 { font-size:20px; margin:0; flex:1; }
-  .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px;
-          border:1px solid var(--line); background:var(--panel); font-size:15px; font-weight:600; }
-  .pill i { width:10px; height:10px; border-radius:50%; background:var(--bad); }
-  .pill.ok i { background:var(--good); }
+  main { max-width:760px; margin:0 auto; padding:14px 16px 40px; }
+  /* Barra fija arriba: el estado del plotter siempre a la vista, separado del botón que conecta. */
+  .barra { position:sticky; top:0; z-index:5; background:var(--panel); border-bottom:1px solid var(--line); }
+  .barra > div { max-width:760px; margin:0 auto; padding:8px 16px; min-height:60px;
+                 display:flex; align-items:center; gap:12px; }
+  .barra h1 { font-size:20px; margin:0; flex:1; }
+  .plot { display:inline-flex; align-items:center; gap:10px; padding:6px 6px 6px 14px; border-radius:12px;
+          font-size:16px; font-weight:650; min-height:48px;
+          color:var(--bad); background:color-mix(in srgb, var(--bad) 10%, var(--panel)); }
+  .plot.ok { color:var(--good); background:color-mix(in srgb, var(--good) 11%, var(--panel)); padding-right:14px; }
+  .plot i { width:10px; height:10px; border-radius:50%; background:currentColor; flex:none; }
+  .plot button { background:var(--panel); color:var(--bad); border-color:transparent; }
   section { background:var(--panel); border:1px solid var(--line); border-radius:12px;
             padding:14px; margin-bottom:12px; }
   h2 { font-size:15px; margin:0 0 10px; color:var(--muted); font-weight:600;
@@ -46,16 +51,20 @@
   .trabajo { display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
   .trabajo:first-of-type { border-top:0; }
   .trabajo.nuevo { background:var(--soft); margin:0 -14px; padding:12px 14px; }
-  .vista { width:84px; height:84px; flex:none; border:1px solid var(--line); border-radius:8px;
+  .vista { width:96px; height:96px; flex:none; border:1px solid var(--line); border-radius:8px;
            background:var(--bg); display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .vista svg { width:100%; height:100%; }
   .vista path { fill:none; stroke:var(--accent); vector-effect:non-scaling-stroke; stroke-width:1.4; }
   .info { flex:1; min-width:0; }
   .nombre { font-weight:650; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .meta { color:var(--muted); font-size:14px; }
-  .acciones { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .acciones { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:8px; }
   button { font:inherit; font-weight:600; padding:12px 16px; min-height:48px; border-radius:10px;
-           border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
+           border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer;
+           display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+  button svg { width:20px; height:20px; flex:none; }
+  button.ghost { background:transparent; }
+  button.confirmar { background:var(--bad); border-color:var(--bad); color:#fff; }
   button.primary { background:var(--accent-btn); border-color:var(--accent-btn); color:#fff; }
   button.stop { background:var(--bad); border-color:var(--bad); color:#fff; }
   button.chico { padding:8px 12px; min-height:40px; font-size:15px; }
@@ -66,18 +75,24 @@
   .msg.err { background:color-mix(in srgb, var(--bad) 14%, transparent); color:var(--bad); }
   .msg.ok { background:color-mix(in srgb, var(--good) 14%, transparent); color:var(--good); }
   .msg.warn { background:color-mix(in srgb, var(--warn) 16%, transparent); color:var(--warn); }
-  .estado { font-size:13px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--bg); }
-  .estado.hecho { color:var(--good); } .estado.error { color:var(--bad); } .estado.cancelado { color:var(--warn); }
+  /* Etiqueta de resultado: alto fijo y centrada (antes se estiraba al alto del botón vecino). */
+  .estado { display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 10px; border-radius:999px;
+            font-size:13px; font-weight:700; }
+  .estado svg { width:14px; height:14px; }
+  .estado.hecho { color:var(--good); background:color-mix(in srgb, var(--good) 12%, var(--panel)); }
+  .estado.error { color:var(--bad); background:color-mix(in srgb, var(--bad) 11%, var(--panel)); }
+  .estado.cancelado { color:var(--warn); background:color-mix(in srgb, var(--warn) 13%, var(--panel)); }
   footer { color:var(--muted); font-size:13px; text-align:center; margin-top:16px; }
   footer a { color:inherit; }
 </style>
 </head>
 <body>
+<div class="barra"><div>
+  <h1>Estación de corte</h1>
+  <div class="plot" id="plot"><i></i><span id="pillTxt">Plotter sin conectar</span>
+    <button class="chico" id="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/></svg>Conectar</button></div>
+</div></div>
 <main>
-  <header>
-    <h1>Estación de corte</h1>
-    <button class="pill" id="pill"><i></i><span id="pillTxt">Conectar plotter</span></button>
-  </header>
 
   <div id="msg" class="msg" hidden></div>
 
@@ -86,11 +101,11 @@
     <div class="nombre" id="cortNombre"></div>
     <progress id="cortProg" value="0" max="1"></progress>
     <div class="meta" id="cortMeta"></div>
-    <div class="acciones"><button class="stop grande" id="btnDetener">Detener</button></div>
+    <div class="acciones"><button class="stop grande" id="btnDetener"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>Detener</button></div>
   </section>
 
   <section>
-    <h2>Esperando para cortar</h2>
+    <h2>Esperando para cortar<span id="nPend"></span></h2>
     <div id="pendientes"></div>
   </section>
 
@@ -107,7 +122,7 @@
   </section>
 
   <footer>
-    Deja esta pantalla abierta y el teléfono cargando · {{FILA}} · Cuenta <b>{{USUARIO}}</b> ·
+    Deja esta pantalla abierta y el aparato cargando · {{FILA}} · Cuenta <b>{{USUARIO}}</b> ·
     <a href="/">Ir a Design Studio</a> · <a href="/salir">Cerrar sesión</a>
   </footer>
 </main>
@@ -265,6 +280,19 @@ function haceCuanto(seg) {
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var vistas = {}, recienLlegados = {}, audio = null, candado = null, relojServidor = 0;
+  var porConfirmar = {};   // Descartar pide un segundo toque: id -> hora del primero
+  var ICO = {
+    cortar: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>',
+    basura: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+    otra:   '<path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/>',
+    si:     '<path d="M5 12l5 5 9-10"/>',
+    fila:   '<path d="M3 6h13M3 12h9M3 18h13M17 14l4 4-4 4"/>',
+    hecho:  '<path d="M5 12l5 5 9-10"/>',
+    error:  '<path d="M6 6l12 12M18 6 6 18"/>',
+    cancelado: '<path d="M7 7h10v10H7z"/>'
+  };
+  function ico(n, grueso) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (grueso ? 3 : 2) +
+    '" stroke-linecap="round" stroke-linejoin="round">' + ICO[n] + '</svg>'; }
 
   async function pedir(url, body) {
     var r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -326,8 +354,9 @@ function haceCuanto(seg) {
   }
   function pintar(e) {
     var c = !!e.conectado;
-    $('pill').classList.toggle('ok', c);
-    $('pillTxt').textContent = !e.soporte ? 'Sin cable USB' : c ? 'Plotter conectado' : 'Conectar plotter';
+    $('plot').classList.toggle('ok', c);
+    $('pillTxt').textContent = !e.soporte ? 'Sin cable USB' : c ? 'Plotter conectado' : 'Plotter sin conectar';
+    $('pill').hidden = c || !e.soporte;
     var m = e.mensaje || (!e.servidor ? { tipo: 'warn', texto: 'Sin conexión con el servidor: reintentando…' } : null)
          || (!e.soporte ? { tipo: 'err', texto: 'Este navegador no puede usar el cable USB. Abre la estación en Google Chrome (en Android o en computadora).' } : null);
     $('msg').hidden = !m;
@@ -337,26 +366,30 @@ function haceCuanto(seg) {
     if (e.cortando) {
       $('cortNombre').textContent = e.cortando.nombre;
       $('cortProg').max = e.progreso.total || 1; $('cortProg').value = e.progreso.n;
-      $('cortMeta').textContent = 'Enviando al plotter: ' + e.progreso.n + ' de ' + e.progreso.total + ' líneas';
+      var pct = e.progreso.total ? Math.floor(100 * e.progreso.n / e.progreso.total) : 0;
+      $('cortMeta').textContent = pct + ' % enviado al plotter (' + e.progreso.n + ' de ' + e.progreso.total + ' líneas)';
     }
     var ocupado = !!e.cortando;
     var pend = e.trabajos.filter(function(t){ return t.estado === 'pendiente'; })
                          .sort(function(a, b){ return a.creado - b.creado; });
+    $('nPend').textContent = pend.length ? ' · ' + pend.length : '';
     $('pendientes').innerHTML = pend.length ? pend.map(function(t){
-      return fila(t, '<button class="primary" data-cortar="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>Cortar</button>' +
-                     '<button class="chico" data-quitar="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>Descartar</button>'); }).join('')
-      : '<div class="vacio">Nada por cortar. Cuando mandes un diseño a la estación, aparece aquí y el teléfono suena.</div>';
+      var seguro = porConfirmar[t.id];
+      return fila(t, '<button class="primary" data-cortar="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>' + ico('cortar') + 'Cortar</button>' +
+                     '<button class="chico ' + (seguro ? 'confirmar' : 'ghost') + '" data-quitar="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>' +
+                     ico('basura') + (seguro ? '¿Seguro? Toca otra vez' : 'Descartar') + '</button>'); }).join('')
+      : '<div class="vacio">Nada por cortar. Cuando mandes un diseño a la estación, aparece aquí y esta pantalla suena.</div>';
     var dud = e.trabajos.filter(function(t){ return t.estado === 'cortando' && !(e.cortando && e.cortando.id === t.id); });
     $('secDudosos').hidden = !dud.length;
     $('dudosos').innerHTML = dud.map(function(t){
-      return fila(t, '<button class="chico" data-marcar="' + t.id + '" data-res="hecho">Sí, se cortó</button>' +
-                     '<button class="chico" data-marcar="' + t.id + '" data-res="pendiente">No, volver a la fila</button>'); }).join('');
+      return fila(t, '<button class="chico" data-marcar="' + t.id + '" data-res="hecho">' + ico('si') + 'Sí, se cortó</button>' +
+                     '<button class="chico" data-marcar="' + t.id + '" data-res="pendiente">' + ico('fila') + 'No, volver a la fila</button>'); }).join('');
     var hist = e.trabajos.filter(function(t){ return ['hecho', 'error', 'cancelado'].indexOf(t.estado) >= 0; })
                          .sort(function(a, b){ return b.actualizado - a.actualizado; }).slice(0, 8);
     var NOMBRE = { hecho: 'Enviado', error: 'Falló', cancelado: 'Detenido' };
     $('historial').innerHTML = hist.length ? hist.map(function(t){
-      return fila(t, '<span class="estado ' + t.estado + '">' + NOMBRE[t.estado] + '</span>' +
-                     '<button class="chico" data-otra="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>Cortar otra vez</button>'); }).join('')
+      return fila(t, '<span class="estado ' + t.estado + '">' + ico(t.estado, true) + NOMBRE[t.estado] + '</span>' +
+                     '<button class="chico" data-otra="' + t.id + '"' + (ocupado ? ' disabled' : '') + '>' + ico('otra') + 'Cortar otra vez</button>'); }).join('')
       : '<div class="vacio">Todavía nada.</div>';
     var nPend = pend.length;
     document.title = (nPend ? '(' + nPend + ') ' : '') + 'Estación de corte';
@@ -378,7 +411,13 @@ function haceCuanto(seg) {
     prepararAudio();
     var b = ev.target.closest('button'); if (!b) return;
     if (b.dataset.cortar) E.cortar(b.dataset.cortar);
-    else if (b.dataset.quitar) E.quitar(b.dataset.quitar);
+    else if (b.dataset.quitar) {
+      // Primer toque: pide confirmación 4 s. Segundo toque: descarta (no hay forma de recuperarlo).
+      var id = b.dataset.quitar;
+      if (porConfirmar[id] && Date.now() - porConfirmar[id] < 4000) { delete porConfirmar[id]; E.quitar(id); }
+      else { porConfirmar[id] = Date.now(); pintar(E.estado);
+             setTimeout(function(){ if (porConfirmar[id] && Date.now() - porConfirmar[id] >= 3900) { delete porConfirmar[id]; pintar(E.estado); } }, 4000); }
+    }
     else if (b.dataset.marcar) E.marcar(b.dataset.marcar, b.dataset.res);
     else if (b.dataset.otra) E.otraVez(b.dataset.otra);
   });
