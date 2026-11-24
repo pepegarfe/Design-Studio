@@ -1159,13 +1159,65 @@ class DXFParser:
                 if len(pts) >= 2:
                     result.append(self._wrap(pts, color))
 
+            elif t in ('TEXT', 'ATTRIB'):
+                self._texto_dxf(entity)
+
+            elif t == 'MTEXT':
+                self._mtexto_dxf(entity)
+
             elif t == 'INSERT':
                 col = self._color(entity)
                 for e in entity.virtual_entities():
                     self._collect(e, result, col, depth + 1)
+                for a in getattr(entity, 'attribs', None) or []:   # textos del bloque (ATTRIB)
+                    self._collect(a, result, col, depth + 1)
 
         except Exception:
             pass
+
+    # ── Textos (24-nov-2026): antes se descartaban EN SILENCIO. Se anotan en self.texts con el
+    # formato común {txt, org, cap, rot, anchor} (unidades del dibujo, Y-arriba) y
+    # studio_backend.load_vector los dibuja como NOTAS (se ven, no se cortan).
+    def _nota(self, txt, x, y, cap, rot_deg, anchor='start', dy=0.0):
+        txt = ' '.join(str(txt or '').split())
+        if txt and cap > 0:
+            self.texts.append({'txt': txt[:200], 'org': [x, y], 'cap': cap,
+                               'rot': math.radians(rot_deg or 0.0), 'anchor': anchor, 'dy': dy})
+
+    def _texto_dxf(self, e):
+        try:
+            if e.dxftype() == 'ATTRIB' and e.is_invisible:
+                return
+        except Exception:
+            pass
+        d = e.dxf
+        h = float(d.get('height', 2.5) or 2.5)
+        p = d.insert
+        ha = int(d.get('halign', 0) or 0)
+        va = int(d.get('valign', 0) or 0)
+        anchor = {1: 'middle', 2: 'end', 4: 'middle'}.get(ha, 'start')
+        if (ha or va) and d.hasattr('align_point'):
+            p = d.align_point                   # con alineación, el punto que manda es este
+        dy = {2: -h / 2.0, 3: -h}.get(va, 0.0)   # medio / arriba → la línea base baja
+        self._nota(e.plain_text(), p.x, p.y, h, d.get('rotation', 0.0), anchor, dy)
+
+    def _mtexto_dxf(self, e):
+        d = e.dxf
+        h = float(d.get('char_height', 2.5) or 2.5)
+        try:
+            rot = e.get_rotation()
+        except Exception:
+            rot = d.get('rotation', 0.0)
+        lineas = [ln for ln in e.plain_text().split('\n')]
+        ap = int(d.get('attachment_point', 1) or 1)
+        col, fila = (ap - 1) % 3, (ap - 1) // 3
+        paso = h * 1.667 * float(d.get('line_spacing_factor', 1.0) or 1.0)
+        alto = h + (len(lineas) - 1) * paso
+        base0 = {0: -h, 1: alto / 2.0 - h, 2: (len(lineas) - 1) * paso}[fila]
+        anchor = ('start', 'middle', 'end')[col]
+        p = d.insert
+        for i, ln in enumerate(lineas):
+            self._nota(ln, p.x, p.y, h, rot, anchor, base0 - i * paso)
 
     def _chain_paths(self, paths):
         """Merge end-to-end connected segments into single continuous paths.
@@ -1270,9 +1322,14 @@ class DXFParser:
         self._tol = 0.001 / max(scale, 1e-9)
 
         result = []
+        self.texts = []
         for entity in doc.modelspace():
             self._collect(entity, result, self._color(entity))
         chained = self._chain_paths(result)
+        for t in self.texts:                   # los textos también van a mm
+            t['org'] = [t['org'][0] * scale, t['org'][1] * scale]
+            t['cap'] *= scale
+            t['dy'] *= scale
 
         # Aplicar conversión de unidades si el archivo no está en mm
         if scale != 1.0:
@@ -1316,6 +1373,7 @@ class AIParser:
         doc = fitz.open(filepath)
         all_paths = []
         seen = set()
+        self.texts = []
         try:
             for page in doc:
                 self._extract_page(page, all_paths, seen)
@@ -1328,6 +1386,7 @@ class AIParser:
     def _extract_page(self, page, all_paths, seen):
         page_h = page.rect.height          # altura en puntos PDF para invertir Y
         sc     = self.PT_TO_MM
+        self._textos_pagina(page, page_h, sc)
 
         for drawing in page.get_drawings():
             raw_stroke = drawing.get("color")
@@ -1358,6 +1417,30 @@ class AIParser:
                         "fill":   fill,
                         "stroke": stroke,
                     })
+
+    def _textos_pagina(self, page, page_h, sc):
+        """Textos VIVOS de la página (los que en Illustrator no se convirtieron a contornos; los
+        convertidos ya llegan como trazos). Antes se perdían en silencio (24-nov-2026). Se saltan
+        los invisibles (alpha 0): son la capa de reconocimiento de texto de un PDF escaneado."""
+        try:
+            bloques = page.get_text('dict').get('blocks', [])
+        except Exception:
+            return
+        for b in bloques:
+            for ln in b.get('lines', []):
+                c, s = ln.get('dir', (1.0, 0.0))
+                rot = math.degrees(math.atan2(-s, c))      # la página va Y-abajo
+                for sp in ln.get('spans', []):
+                    if sp.get('alpha', 255) == 0:
+                        continue
+                    txt = ' '.join((sp.get('text') or '').split())
+                    if not txt:
+                        continue
+                    ox, oy = sp.get('origin', (0.0, 0.0))
+                    cap = 0.7 * float(sp.get('size') or 0) * sc
+                    if cap > 0:
+                        self.texts.append({'txt': txt[:200], 'org': [ox * sc, (page_h - oy) * sc],
+                                           'cap': cap, 'rot': math.radians(rot), 'anchor': 'start', 'dy': 0.0})
 
     def _items_to_subpaths(self, items, close_path, page_h, sc):
         """Items de pymupdf → subpaths en mm.

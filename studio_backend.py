@@ -793,8 +793,12 @@ def _fuente_nota():
 
 
 def _textos_a_notas(texts):
-    """Los <text> del SVG → trazos marcados `nota` (en mm, Y-ABAJO como el resto del SVG, para
-    que el volteo de load_vector los acomode igual). Devuelve (trazos, cuántos no se pudieron)."""
+    """Los textos de un archivo → trazos marcados `nota`. Dos formatos de entrada:
+    - SVG (`mtx`): posición en unidades del archivo + su matriz; sale en mm Y-ABAJO como el resto
+      del SVG, para que el volteo de load_vector los acomode igual.
+    - DXF y AI/PDF (`org`): ya en mm y Y-ARRIBA, con altura de mayúscula `cap`, giro `rot`
+      (radianes, antihorario) y `dy` = cuánto baja la línea base en el eje del texto.
+    Devuelve (trazos, cuántos no se pudieron)."""
     import math
     out, fallidos = [], 0
     fuente = _fuente_nota()
@@ -802,9 +806,12 @@ def _textos_a_notas(texts):
         if not fuente:
             fallidos += 1
             continue
-        a, b, c, d, e, f = t['mtx']
-        s_mm = math.sqrt(abs(a * d - b * c)) or 1.0           # mm por unidad del archivo
-        cap = max(0.5, 0.7 * t['fs'] * s_mm)                  # altura de mayúscula ≈ 0.7 em
+        if 'org' in t:
+            cap = max(0.5, float(t['cap']))
+        else:
+            a, b, c, d, e, f = t['mtx']
+            s_mm = math.sqrt(abs(a * d - b * c)) or 1.0       # mm por unidad del archivo
+            cap = max(0.5, 0.7 * t['fs'] * s_mm)              # altura de mayúscula ≈ 0.7 em
         try:
             import text_vector
             r = text_vector.text_paths({'text': t['txt'], 'path': fuente['path'],
@@ -816,6 +823,15 @@ def _textos_a_notas(texts):
             continue
         w = max((p[0] for q in r['paths'] for p in q['pts']), default=0.0)
         dx = {'middle': -w / 2.0, 'end': -w}.get(t.get('anchor'), 0.0)
+        if 'org' in t:
+            ox, oy = t['org']
+            dy = float(t.get('dy') or 0.0)
+            ca, sa = math.cos(t.get('rot') or 0.0), math.sin(t.get('rot') or 0.0)
+            for q in r['paths']:
+                pts = [(ox + (gx + dx) * ca - (gy + dy) * sa, oy + (gx + dx) * sa + (gy + dy) * ca)
+                       for gx, gy in q['pts']]
+                out.append({'pts': pts, 'fill': None, 'stroke': None, 'nota': True})
+            continue
         for q in r['paths']:
             uu = [(t['x'] + (gx + dx) / s_mm, t['y'] - gy / s_mm) for gx, gy in q['pts']]
             out.append({'pts': core._apply_mtx(uu, t['mtx']), 'fill': t.get('fill'),
@@ -837,12 +853,15 @@ def load_vector(path):
             if n_txt:
                 textos, fallidos = _textos_a_notas(parser.texts)
                 styled = list(styled) + textos
-        elif ext == '.dxf':
-            styled = core.DXFParser().parse(path)
-        elif ext in ('.ai', '.pdf'):
+        elif ext in ('.dxf', '.ai', '.pdf'):
             # Un .ai moderno ES un PDF por dentro: el mismo lector abre los dos (los PDF que
             # mandan los clientes y los que exporta CorelDRAW incluidos).
-            styled = core.AIParser().parse(path)
+            parser = core.DXFParser() if ext == '.dxf' else core.AIParser()
+            styled = parser.parse(path)
+            n_txt = len(getattr(parser, 'texts', None) or [])
+            if n_txt:                            # textos → NOTAS (ya en mm y Y-arriba)
+                textos, fallidos = _textos_a_notas(parser.texts)
+                styled = list(styled) + textos
         else:
             return {'ok': False, 'error': 'Formato no soportado (usa SVG, DXF, AI, PDF o .dstudio).'}
     except Exception as e:

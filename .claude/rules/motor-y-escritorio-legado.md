@@ -21,6 +21,13 @@ usa la web de este archivo es el MOTOR: parsers, aplanado de curvas, HPGL y conf
   `studio_backend.load_vector` los convierte en trazos marcados `nota`. Cada trazo lleva `capa`:
   el `<g>` con nombre más cercano (`inkscape:label` o id; Illustrator codifica `_` como `_x5F_`;
   los ids automáticos como `g12` o `Layer_1` no cuentan).
+- **`DXFParser` y `AIParser` tampoco descartan textos** (24-nov-2026): `parser.texts` con el formato
+  común `{txt, org, cap, rot, anchor, dy}` — YA en mm y Y-arriba (`cap` = altura de mayúscula,
+  `rot` en radianes, `dy` = cuánto baja la línea base). DXF: `TEXT`, `MTEXT` (un renglón por
+  línea), y los de bloques (`INSERT` → `virtual_entities` + `attribs`); escalados con `$INSUNITS`.
+  AI/PDF: `page.get_text('dict')`; ⚠️ se saltan los de `alpha 0` (la capa INVISIBLE de
+  reconocimiento de texto de un PDF escaneado: si no, un escaneo se llenaría de notas).
+  Los trazos de corte salieron idénticos a los de antes con y sin textos.
 - **No romper el `Z/z` de `_parse_d`**: cierra el subpath actual y **continúa** parseando (no hace
   `break`).
 - **Aplanado de curvas ADAPTATIVO por tolerancia** (desde 22-jul-2026): `_flat_cubic`/`_flat_quad`/

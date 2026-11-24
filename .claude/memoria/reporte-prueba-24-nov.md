@@ -34,6 +34,7 @@ letras A–D y una nota «voltear». Se reprodujo cada punto en la copia de prue
 - ✅ **Placa del trabajo** en Material, con aviso «Se sale de la placa».
 - ✅ **Cortes desde capas** (`cajeado_6` → cajeado de 6 mm), propuestos con un botón.
   Supuesto MÍO, sin confirmar con Jose: el número de la capa es la PROFUNDIDAD (no la fresa).
+- ✅ **Textos de DXF y AI/PDF → notas** también (mismo día, pedido aparte).
 - Detalle técnico en `.claude/rules/interfaz-web.md` ("Notas, capas…").
 - Trampa propia: `python3 auditar_gcode.py` con el Python del SISTEMA falla por falta de shapely
   (parece un error del código); se corre con `/opt/homebrew/bin/python3`.
@@ -44,4 +45,3 @@ letras A–D y una nota «voltear». Se reprodujo cada punto en la copia de prue
 - **Calibración por pantalla** (idea, Jose: «déjalo como idea»): hoy `ds_zcal` es UNO por
   navegador; con monitor externo o cambiando la resolución de la Mac el 100 % queda mal. Guardar uno
   por pantalla (llave = tamaño en píxeles) y avisar «esta pantalla no está calibrada».
-- Textos de DXF y AI/PDF: siguen sin leerse (solo se hizo SVG).
