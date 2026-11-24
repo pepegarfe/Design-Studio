@@ -381,3 +381,195 @@ def dogbone_op(data):
         return {'ok': True, 'results': out, 'total': total}
     except Exception as e:
         return {'ok': False, 'error': f'Alivio de esquinas: {e}'}
+
+
+# ───────────────────────── Mosaico (24-nov-2026) ─────────────────────────
+# Partir una pieza MÁS GRANDE que la placa en tramos que se ensamblan. Pedido de un probador:
+# "es exactamente este trabajo; Aspire lo tiene y aquí no existe".
+#
+# Cómo se construye cada tramo (todo en mm, coordenadas EFECTIVAS de la UI):
+#   1. La pieza se cuadricula: columnas y filas IGUALES, las mínimas para que cada tramo, con
+#      las uniones que le sobresalen, quepa en la placa (`tile` menos `borde` por lado).
+#   2. Cada costura lleva uniones ALTERNADAS (una sale a un lado, la siguiente al otro): así
+#      ningún tramo queda con todo "macho" ni todo "hembra" y la costura no se abre.
+#   3. Región de un tramo = su rectángulo + sus uniones − las del vecino que le entran.
+#   4. Las esquinas de la región se REDONDEAN al radio de la fresa (+0.1): una fresa redonda no
+#      puede cortar una esquina interior viva, y si una pieza la tiene viva y la otra redonda no
+#      encajan. Con el mismo radio en las dos, el arco convexo de una es el cóncavo de la otra.
+#   5. La región se encoge `holgura/2`: entre las dos piezas queda `holgura` para que entren.
+#   6. Tramo = región ∩ diseño. Lo que queda fuera de la pieza (uniones al aire) desaparece solo.
+
+def _union_cola(X, yc, d, n, w, signo):
+    """Cola de milano en una costura VERTICAL x=X, centrada en yc, que sale `d` hacia `signo`
+    (+1 derecha, −1 izquierda). Cuello `n` (en la costura) y cabeza `w` (al fondo, más ancha)."""
+    return Polygon([(X, yc - n / 2), (X + signo * d, yc - w / 2), (X + signo * d, yc + w / 2), (X, yc + n / 2)])
+
+
+def _union_puzzle(X, yc, d, n, w, signo):
+    """Rompecabezas: cuello recto de ancho `n` y una bola de diámetro `w` al fondo."""
+    from shapely.geometry import Point, box
+    rb = w / 2.0
+    cx = X + signo * (d - rb)
+    cuello = box(min(X, cx), yc - n / 2, max(X, cx), yc + n / 2)
+    return cuello.union(Point(cx, yc).buffer(rb, quad_segs=16))
+
+
+def _uniones_costura(X, a, b, d, paso, forma):
+    """Uniones a lo largo de una costura vertical x=X entre y=a e y=b. Devuelve [(polígono,
+    signo)]. Se dejan libres los extremos (cruces con otras costuras o el borde)."""
+    n, w = d * 0.75, d * 1.25
+    libre = d * 1.2
+    L = (b - a) - 2 * libre
+    if L < w:
+        return []
+    k = max(1, int(L // paso) + 1)
+    out = []
+    for i in range(k):
+        yc = a + libre + (L * (i + 0.5) / k)
+        signo = 1 if i % 2 == 0 else -1
+        f = _union_cola if forma == 'cola' else _union_puzzle
+        out.append((f(X, yc, d, n, w, signo), signo))
+    return out
+
+
+def _girar(poly, vertical_a_horizontal):
+    """Las costuras HORIZONTALES se construyen como verticales y se giran (x,y)→(y,x)."""
+    from shapely.affinity import affine_transform
+    return affine_transform(poly, [0, 1, 1, 0, 0, 0]) if vertical_a_horizontal else poly
+
+
+def mosaic_op(data):
+    """data: {'units': [[anillo...]...] (la pieza), 'tile': [ancho, alto] de la placa,
+              'joint': 'cola' | 'puzzle' | 'recta', 'size': fondo de la unión (mm),
+              'gap': holgura total (mm), 'dia': Ø de la fresa, 'margin': borde libre por lado}
+    → {'ok', 'cols', 'rows', 'tiles': [{'row','col','paths':[{'pts'}...], 'bbox'}...],
+       'seams': [[[x,y],[x,y]]...], 'warnings': [...]}"""
+    if not HAS_SHAPELY:
+        return {'ok': False, 'error': _NEED}
+    try:
+        from shapely.geometry import box
+        o = data or {}
+        polys = _units_polys(o.get('units'))
+        if not polys:
+            return {'ok': False, 'error': 'Selecciona la pieza (figuras cerradas) que quieres partir.'}
+        pieza = unary_union(polys)
+        tw, th = [float(v) for v in (o.get('tile') or [0, 0])[:2]]
+        forma = o.get('joint') if o.get('joint') in ('cola', 'puzzle', 'recta') else 'cola'
+        d = float(o.get('size') or 30.0) if forma != 'recta' else 0.0
+        gap = max(0.0, min(3.0, float(o.get('gap') if o.get('gap') is not None else 0.2)))
+        dia = float(o.get('dia') or 6.0)
+        margen = max(0.0, float(o.get('margin') if o.get('margin') is not None else 10.0))
+        R = dia / 2.0 + 0.1
+        avisos = []
+        if forma != 'recta':
+            if not (5.0 <= d <= 300.0):
+                return {'ok': False, 'error': 'El fondo de la unión debe medir entre 5 y 300 mm.'}
+            if d * 0.75 < dia * 1.6:
+                return {'ok': False, 'error': ('Con una fresa de %g mm la unión debe tener al menos %g mm de fondo: '
+                                               'si no, la fresa no entra en el cuello.') % (dia, math.ceil(dia * 1.6 / 0.75))}
+        x0, y0, x1, y1 = pieza.bounds
+        W, H = x1 - x0, y1 - y0
+        # útil por tramo: la placa menos el borde y lo que sobresalen las uniones (d por cada lado
+        # en el PEOR caso: un tramo de en medio recibe uniones salientes en las dos costuras)
+        uw, uh = tw - 2 * margen - 2 * d, th - 2 * margen - 2 * d
+        if uw < 20 or uh < 20:
+            return {'ok': False, 'error': 'La placa es muy chica para esas uniones y ese borde.'}
+        cols = max(1, math.ceil(W / uw - 1e-9))
+        rows = max(1, math.ceil(H / uh - 1e-9))
+        if cols * rows == 1:
+            return {'ok': False, 'error': 'La pieza ya cabe en la placa: no hace falta partirla.'}
+        if cols * rows > 60:
+            return {'ok': False, 'error': 'Saldrían %d tramos: revisa el tamaño de la placa.' % (cols * rows)}
+        xs = [x0 + W * i / cols for i in range(cols + 1)]
+        ys = [y0 + H * j / rows for j in range(rows + 1)]
+        G = max(W, H) + 1000.0                         # los tramos de la orilla se extienden de sobra
+        paso = d * 3.2
+        # uniones de cada costura: (polígono, quién lo POSEE como (col,row))
+        propias = {}
+        for i in range(1, cols):                        # costuras verticales x = xs[i]
+            for j in range(rows):
+                for p, s in _uniones_costura(xs[i], ys[j], ys[j + 1], d, paso, forma) if forma != 'recta' else []:
+                    dueno = (i - 1, j) if s > 0 else (i, j)   # sale a la derecha = es del tramo izquierdo
+                    propias.setdefault(dueno, []).append(p)
+        for j in range(1, rows):                        # costuras horizontales y = ys[j] (construidas giradas)
+            for i in range(cols):
+                for p, s in _uniones_costura(ys[j], xs[i], xs[i + 1], d, paso, forma) if forma != 'recta' else []:
+                    p = _girar(p, True)
+                    dueno = (i, j - 1) if s > 0 else (i, j)   # sale hacia arriba = es del tramo de abajo
+                    propias.setdefault(dueno, []).append(p)
+        # Solo uniones ENTERAS dentro de la pieza (con su redondeo y holgura de respiro): una
+        # unión a medias, mordida por un hueco o por la orilla, no agarra y queda frágil.
+        dentro = pieza.buffer(-(R + gap + 1.0))
+        sueltas = sum(len(ps) for ps in propias.values())
+        propias = {k: [p for p in ps if dentro.contains(p)] for k, ps in propias.items()}
+        quitadas = sueltas - sum(len(ps) for ps in propias.values())
+        todas = [(k, p) for k, ps in propias.items() for p in ps]
+        # 'avoid': cajas [x0,y0,x1,y1] de lo que NO se parte (notas, grabados): la etiqueta las esquiva
+        cajas = [box(*[float(v) for v in c[:4]]).buffer(15) for c in (o.get('avoid') or [])[:500] if len(c) >= 4]
+        estorbos = unary_union(cajas) if cajas else None
+        tiles, perdidos = [], 0
+        for j in range(rows):
+            for i in range(cols):
+                rx0 = xs[i] if i > 0 else x0 - G
+                rx1 = xs[i + 1] if i < cols - 1 else x1 + G
+                ry0 = ys[j] if j > 0 else y0 - G
+                ry1 = ys[j + 1] if j < rows - 1 else y1 + G
+                reg = box(rx0, ry0, rx1, ry1)
+                mias = propias.get((i, j), [])
+                if mias:
+                    reg = unary_union([reg] + mias)
+                ajenas = [p for k, p in todas if k != (i, j)]
+                if ajenas:
+                    reg = reg.difference(unary_union(ajenas))
+                if forma != 'recta':
+                    viva = reg
+                    reg = reg.buffer(-R, join_style=1).buffer(R, join_style=1)   # redondea lo convexo
+                    reg = reg.buffer(R, join_style=1).buffer(-R, join_style=1)   # y lo cóncavo
+                    # ⚠️ En los CRUCES de costuras las cuatro esquinas son salientes (la fresa las corta
+                    # vivas por fuera): redondearlas dejaba un agujero de ~8 mm² en cada cruce.
+                    cruces = [box(xs[ci] - 2 * R, ys[cj] - 2 * R, xs[ci] + 2 * R, ys[cj] + 2 * R)
+                              for ci in (i, i + 1) for cj in (j, j + 1) if 0 < ci < cols and 0 < cj < rows]
+                    if cruces:
+                        reg = reg.union(viva.intersection(unary_union(cruces)))
+                if gap > 0:
+                    reg = reg.buffer(-gap / 2.0, join_style=2)
+                parte = pieza.intersection(reg)
+                if parte.is_empty:
+                    continue
+                trozos = [g for g in getattr(parte, 'geoms', [parte]) if g.geom_type == 'Polygon' and g.area > 1.0]
+                perdidos += len([g for g in getattr(parte, 'geoms', [parte]) if g.geom_type == 'Polygon' and g.area <= 1.0])
+                if not trozos:
+                    continue
+                geo = unary_union(trozos)
+                paths = _rings_of(geo)
+                if paths:
+                    bx = geo.bounds
+                    # dónde va la etiqueta: el punto MÁS holgado del trozo mayor (no el centro del
+                    # rectángulo, que puede caer en un hueco)
+                    from shapely.ops import polylabel
+                    mayor = max(trozos, key=lambda g: g.area)
+                    if estorbos is not None:            # que no caiga sobre una nota o un grabado
+                        libre = mayor.difference(estorbos)
+                        libres = [g for g in getattr(libre, 'geoms', [libre]) if g.geom_type == 'Polygon']
+                        if libres:
+                            mayor = max(libres, key=lambda g: g.area)
+                    try:
+                        lp = polylabel(mayor, tolerance=1.0)
+                        holgura_lp = mayor.exterior.distance(lp) if not mayor.interiors else min(
+                            [mayor.exterior.distance(lp)] + [h.distance(lp) for h in mayor.interiors])
+                    except Exception:
+                        lp, holgura_lp = mayor.representative_point(), 20.0
+                    tiles.append({'row': j, 'col': i, 'paths': paths,
+                                  'bbox': [round(v, 3) for v in bx],
+                                  'label_at': [round(lp.x, 2), round(lp.y, 2)], 'label_room': round(holgura_lp, 2)})
+                    if (bx[2] - bx[0]) > tw - 2 * margen + 0.01 or (bx[3] - bx[1]) > th - 2 * margen + 0.01:
+                        avisos.append('El tramo %d-%d mide %.0f × %.0f mm: no cabe en la placa con su borde.'
+                                      % (j + 1, i + 1, bx[2] - bx[0], bx[3] - bx[1]))
+        if quitadas and forma != 'recta':
+            avisos.append('%d unión(es) no se pusieron porque caían en un hueco o en la orilla de la pieza.' % quitadas)
+        if perdidos:
+            avisos.append('%d pedacito(s) de menos de 1 mm² se descartaron (uniones que caían en una orilla).' % perdidos)
+        seams = [[[xs[i], y0], [xs[i], y1]] for i in range(1, cols)] + [[[x0, ys[j]], [x1, ys[j]]] for j in range(1, rows)]
+        return {'ok': True, 'cols': cols, 'rows': rows, 'tiles': tiles, 'seams': seams, 'warnings': avisos}
+    except Exception as e:
+        return {'ok': False, 'error': f'Mosaico: {e}'}

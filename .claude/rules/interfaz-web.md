@@ -236,6 +236,25 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   servidor avisa «Se sale de la placa». ⚠️ Con UN solo campo lleno no se guarda nada y `paintCnc`
   no pisa los campos mientras se escribe: al pasar de Ancho a Alto la respuesta borraba el ancho.
 
+### Mosaico (24-nov-2026, opciones A+A de Jose: https://claude.ai/artifact/SAoBB7awvBJg2wecJagkUL)
+
+- **Motor**: `geo_ops.mosaic_op` (ruta `/api/mosaic`, que además dibuja la etiqueta «fila-columna»
+  de cada tramo con `_textos_a_notas`). Cuadrícula IGUAL con lo mínimo para caber en la placa
+  (placa − 2·borde − 2·fondo de unión); uniones ALTERNADAS y solo ENTERAS dentro de la pieza;
+  esquinas redondeadas a Ø/2 + 0.1 (⚠️ salvo en los cruces de costuras: ahí quedaba un agujero);
+  `holgura` total entre piezas; tope 60 tramos. Medido: tramos sin encimarse, holgura exacta, y en
+  el perfil por fuera el centro de la fresa va a 3.00 ± 0.01 mm de la pieza en TODO el recorrido.
+- **Pantalla**: sección «Mosaico» dentro de `#ensWrap` (solo CNC, paso Diseño); usa la fresa de
+  Ensamble (`#dbDia`). La vista previa (`mosPrev`, punteado de acento, `pintarMosaico()` en la
+  envoltura de `draw`) SOLO se enciende al tocar la sección (`mosOn`) y se apaga al partir, al
+  cambiar de paso y al abrir otro diseño; `mosFirma` evita pedirla si nada cambió.
+- **Al partir**: entra lo CERRADO de la selección sin notas (nada = todo); cada tramo queda
+  separado en su lugar (`col × sep`, `fila × sep`, sep = fondo + 40) como un grupo con su etiqueta
+  como NOTA. Las notas y trazos abiertos de la pieza viajan con el tramo donde cae su centro
+  (`enTramo`, par-impar), y la etiqueta los esquiva (`avoid`). Los cortes (tpaths) de la pieza
+  vieja quedan sin figuras: hay que asignarlos de nuevo. Un solo deshacer regresa la pieza.
+- **Fuera a propósito**: el solape/media madera (exige voltear la placa).
+
 ### Fuentes en la web
 
 - ⚠️ **En la web el navegador NO tiene las fuentes: el catálogo vive en el servidor.** Pintar

@@ -546,6 +546,22 @@ def api_dogbone():
     return _json(geo.dogbone_op(request.json or {}))
 
 
+@app.post('/api/mosaic')
+def api_mosaic():
+    """Mosaico (geo_ops.mosaic_op) + la etiqueta «fila-columna» de cada tramo ya dibujada, para
+    que la interfaz la ponga como NOTA (se ve, no se corta). Tope: 60 tramos (lo pone el motor)."""
+    r = geo.mosaic_op(request.json or {})
+    if r.get('ok'):
+        import studio_backend as _sb
+        for t in r['tiles']:
+            cap = max(8.0, min(60.0, (t.get('label_room') or 20.0) * 0.8))
+            pts, _ = _sb._textos_a_notas([{'txt': '%d-%d' % (t['row'] + 1, t['col'] + 1),
+                                           'org': t['label_at'], 'cap': cap, 'rot': 0.0,
+                                           'anchor': 'middle', 'dy': -cap / 2.0}])
+            t['label'] = [{'pts': [[round(x, 3), round(y, 3)] for x, y in p['pts']]} for p in pts]
+    return _json(r)
+
+
 # "Mis proyectos": guardados en la carpeta de la cuenta. La prueba sin cuenta no guarda nada.
 _SIN_CUENTA = {'ok': False, 'invitado': True,
                'error': 'La prueba sin cuenta no guarda proyectos: descárgalo como archivo, o entra con una cuenta.'}

@@ -695,6 +695,20 @@
         <button data-db="pieza" title="La figura es una PIEZA (se corta por fuera): se alivian sus esquinas entrantes">Es una pieza</button>
       </div>
       <button class="gbtn" id="btnDogbone" disabled style="width:100%;margin-top:8px" title="Añade en cada esquina un mordisco redondo del tamaño de la fresa: una fresa redonda no deja esquinas interiores a escuadra, y sin esto las piezas no encajan">Aliviar esquinas</button>
+      <div id="mosWrap">
+      <div class="grp-t sec">Mosaico</div>
+      <div class="muted-note" style="margin:0 0 8px">Parte una pieza más grande que la placa en tramos que se ensamblan. Usa la fresa de arriba.</div>
+      <div class="mrow" style="margin-bottom:0"><div class="field" style="flex:1" title="Ancho de la placa donde se corta cada tramo"><label>Ancho</label><input id="mosW" inputmode="decimal"><span class="u">mm</span></div><div class="field" style="flex:1" title="Alto de la placa"><label>Alto</label><input id="mosH" inputmode="decimal"><span class="u">mm</span></div></div>
+      <div class="grp-t fsec">Unión</div>
+      <div class="seg pics" id="mosJoint" style="margin-top:0">
+        <button class="on" data-j="cola" title="Cola de milano: no se separa al jalar en ninguna dirección"><svg viewBox="0 0 44 30"><path d="M2 18h12l-2.5-10h21L30 18h12" class="pi"/></svg>Cola</button>
+        <button data-j="puzzle" title="Rompecabezas: bola y cuello; entra más fácil"><svg viewBox="0 0 44 30"><path d="M2 20h15v-4a5.5 5.5 0 1 1 10 0v4h15" class="pi"/></svg>Rompecabezas</button>
+        <button data-j="recta" title="Recta: sin uniones, para pegar con una tira por detrás (aprovecha más la placa)"><svg viewBox="0 0 44 30"><path d="M2 15h40" class="pi"/></svg>Recta</button>
+      </div>
+      <div class="mrow" style="margin:8px 0 0"><div class="field" style="flex:1" title="Cuánto entra cada unión en el tramo vecino"><label>Fondo</label><input id="mosD" value="30" inputmode="decimal"><span class="u">mm</span></div><div class="field" style="flex:1" title="Espacio que se deja entre las piezas para que entren sin forzar"><label>Holgura</label><input id="mosG" value="0.2" inputmode="decimal"><span class="u">mm</span></div></div>
+      <div class="muted-note" id="mosSum" style="margin-top:8px"></div>
+      <button class="gbtn" id="btnMosaic" disabled style="width:100%;margin-top:8px" title="Reemplaza la pieza por sus tramos, separados en su lugar y con su etiqueta (deshacer la regresa entera)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="4.5" width="7" height="6.5" rx="1"/><rect x="13.5" y="4.5" width="7" height="6.5" rx="1"/><rect x="3.5" y="13" width="7" height="6.5" rx="1"/><rect x="13.5" y="13" width="7" height="6.5" rx="1"/></svg> <span id="mosBtnLbl">Partir en mosaico</span></button>
+      </div>
       </div>
       <div class="grp-t sec">Combinar</div>
       <div class="alignrow">
@@ -1504,7 +1518,7 @@ var PlotterMotor = (function(){
     showTab(dsg?'transform':(cnc?'cnccut':'plot'));   // el Corte de la CNC entra por la lista; el resumen lleva a Configuración
     if(!dsg&&!cnc) refrescarPlotter();
     if(!dsg&&cnc&&hasDoc()){ fitMode='design'; userZoomed=false; view.ready=false; fitView(); }
-    syncRec(); pintarCapas(); }   // al entrar a Corte: las PIEZAS a la vista, no la placa entera
+    syncRec(); pintarCapas(); if(typeof mosOn!=='undefined' && mosOn){ mosOn=false; mosVista(); } }   // al entrar a Corte: las PIEZAS a la vista, no la placa entera
   el('modeSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     var m=b.getAttribute('data-sm'); if(m!==sideMode) setSideMode(m); });
   el('unitSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; setUnits(b.getAttribute('data-u'),true); });
@@ -2079,8 +2093,9 @@ var PlotterMotor = (function(){
     sideSegRefresh();
     var has=hasDoc();
     ['fx','fy','fw','fh','fr','fs'].forEach(function(id){el(id).disabled=!has;});
-    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgRotL','scHalf','scDouble','orgFront','orgBack','orgCopies','btnDogbone'].forEach(function(id){el(id).disabled=!has;});
+    ['lockAspect','rotPreset','alL','alCH','alR','alT','alMV','alB','disH','disV','boolU','boolD','boolI','boolX','boolDiv','btnOffset','offDist','btnExpand','expW','btnNest','nstGap','nstMar','orgGroup','orgUngroup','orgFlipH','orgFlipV','orgRot','orgRotL','scHalf','scDouble','orgFront','orgBack','orgCopies','btnDogbone','btnMosaic'].forEach(function(id){el(id).disabled=!has;});
     pintarColores(has && mode()!=='all'); el('ensWrap').style.display=(state.machine==='cnc')?'':'none';
+    if(state.machine==='cnc'){ var plM=placa()||state.work; el('mosW').placeholder=String(plM[0]); el('mosH').placeholder=String(plM[1]); mosVista(); }
     if(!dbTocado && state.cnc && typeof cncTool==='function' && cncTool()) el('dbDia').value=cncTool().dia;
     el('alignTo').querySelectorAll('button').forEach(function(b){b.disabled=!has;});   // segmentado: apagar sus botones
     if(has){ var actIdx=activeIdx(); var nUnits=activeUnits().length; el('disH').disabled = nUnits<3; el('disV').disabled = nUnits<3;
@@ -3061,7 +3076,7 @@ var PlotterMotor = (function(){
                nest:['geo_nest','/api/nest'],
                nest_start:['geo_nest_start','/api/nest_start'], nest_status:['geo_nest_status','/api/nest_status'],
                fit_many:['fit_many','/api/fit_many'], divide:['geo_divide','/api/divide'],
-               weed:['geo_weed','/api/weed'], dogbone:['geo_dogbone','/api/dogbone']};
+               weed:['geo_weed','/api/weed'], dogbone:['geo_dogbone','/api/dogbone'], mosaic:['geo_mosaic','/api/mosaic']};
   function geoCall(kind, payload, done){
     var m=GEO_API[kind];
     if(api()){ api()[m[0]](payload).then(done).catch(function(e){ toast('Error: '+e); }); }
@@ -3328,6 +3343,68 @@ var PlotterMotor = (function(){
         doc.paths[i]={pts:res.pts}; doc.off[i]=[0,0]; doc.sx[i]=1; doc.sy[i]=1; doc.rot[i]=0;
         var bb=bboxOfPts(res.pts); doc.oc[i]=[(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]; });
       refreshUI(); toast(r.total+' esquina(s) aliviadas para fresa de '+el('dbDia').value+' mm'); }); });
+  // ===== Mosaico (24-nov-2026; opciones A+A elegidas por Jose) =====
+  // Parte la pieza (lo cerrado de la selección, sin notas; nada = todo) en tramos que caben en la
+  // placa. Mientras se ajusta, `mosPrev` dibuja los tramos sobre la pieza (punteado de acento). Al
+  // partir, cada tramo queda SEPARADO en su lugar (col×sep, fila×sep), como grupo, con su etiqueta
+  // «fila-columna» como NOTA; las notas y trazos abiertos de la pieza viajan con el tramo donde caen.
+  var mosJ='cola', mosOn=false, mosPrev=null, mosFirma='', mosT=null;
+  function mosPlacaV(){ var w=parseFloat(String(el('mosW').value).replace(',','.')), h=parseFloat(String(el('mosH').value).replace(',','.'));
+    return (w>0&&h>0)?[w,h]:(placa()||state.work); }
+  function mosPieza(){ var gu=geoUnits().map(function(u){ return {idxs:u.idxs, cerr:u.idxs.filter(function(i){ return isClosedIdx(i)&&!esNota(i); })}; })
+      .filter(function(u){ return u.cerr.length; });
+    return gu; }
+  function mosPayload(gu){ var av=[]; gu.forEach(function(u){ u.idxs.forEach(function(i){ if(u.cerr.indexOf(i)<0) av.push(bboxOf([i])); }); });
+    return { avoid:av, units:gu.map(function(u){ return u.cerr.map(function(i){ return effPts(i); }); }),
+    tile:mosPlacaV(), joint:mosJ, size:parseFloat(el('mosD').value)||30, gap:parseFloat(el('mosG').value), dia:parseFloat(el('dbDia').value)||6, margin:10 }; }
+  function mosResumen(r){ var b=el('mosSum'), lb=el('mosBtnLbl');
+    if(!r){ b.textContent='Ajusta un valor y las costuras se dibujan sobre la pieza.'; lb.textContent='Partir en mosaico'; return; }
+    if(!r.ok){ b.textContent=r.error||'No se pudo calcular'; lb.textContent='Partir en mosaico'; return; }
+    var mx=0,my=0; r.tiles.forEach(function(t){ mx=Math.max(mx,t.bbox[2]-t.bbox[0]); my=Math.max(my,t.bbox[3]-t.bbox[1]); });
+    b.innerHTML='Saldrán <b>'+r.tiles.length+' tramos</b> ('+r.cols+' × '+r.rows+') de hasta <b>'+Math.round(mx)+' × '+Math.round(my)+' mm</b>.'+((r.warnings||[]).length?('<br>⚠ '+r.warnings.map(hesc).join('<br>⚠ ')):'');
+    lb.textContent='Partir en '+r.tiles.length+' tramos'; }
+  function mosVista(){ if(!mosOn||state.machine!=='cnc'||!hasDoc()||cncStep()){ if(mosPrev){ mosPrev=null; mosFirma=''; draw(); } return; }
+    var gu=mosPieza(); if(!gu.length){ mosPrev=null; mosFirma=''; el('mosSum').textContent='Selecciona la pieza (figuras cerradas) que quieres partir.'; draw(); return; }
+    var p=mosPayload(gu), f=JSON.stringify(p); if(f===mosFirma) return; mosFirma=f;
+    clearTimeout(mosT); mosT=setTimeout(function(){ geoCall('mosaic',p,function(r){ if(f!==mosFirma) return; mosPrev=(r&&r.ok)?r:null; mosResumen(r); draw(); }); },220); }
+  function mosEncender(){ if(!mosOn){ mosOn=true; mosFirma=''; } mosVista(); }
+  el('mosWrap').addEventListener('focusin',mosEncender);
+  ['mosW','mosH','mosD','mosG'].forEach(function(id){ el(id).addEventListener('input',mosEncender);
+    el(id).addEventListener('keydown',function(e){ if(e.key==='Escape'){ mosOn=false; mosVista(); this.blur(); } }); });
+  el('mosJoint').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; mosJ=b.getAttribute('data-j');
+    el('mosJoint').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on',x===b); }); mosEncender(); });
+  // ¿punto dentro de un tramo? (par-impar sobre todos sus anillos, como el motor)
+  function enTramo(t,x,y){ var dentro=false; t.paths.forEach(function(p){ var q=p.pts;
+    for(var a=0,b=q.length-1;a<q.length;b=a++){ if(((q[a][1]>y)!==(q[b][1]>y)) && (x<(q[b][0]-q[a][0])*(y-q[a][1])/(q[b][1]-q[a][1])+q[a][0])) dentro=!dentro; } }); return dentro; }
+  el('btnMosaic').addEventListener('click',function(){ if(!hasDoc()||cncLock()) return;
+    var gu=mosPieza(); if(!gu.length){ toast('Selecciona la pieza (figuras cerradas) que quieres partir'); return; }
+    var p=mosPayload(gu);
+    geoCall('mosaic',p,function(r){
+      if(!r||!r.ok){ toast((r&&r.error)||'No se pudo partir'); return; }
+      pushUndo();
+      var sep=(p.joint==='recta'?0:p.size)+40;
+      var consum=[], extras=[];   // extras = notas y trazos abiertos de la pieza (por uid: los índices cambian)
+      gu.forEach(function(u){ u.idxs.forEach(function(i){ if(u.cerr.indexOf(i)>=0) consum.push(i); else extras.push(doc.uid[i]); }); });
+      var cols={}; consum.forEach(function(i){ cols[colOf(i)]=1; }); var ck=Object.keys(cols), col1=(ck.length===1&&ck[0])?ck[0]:'';
+      geoRemove(consum);
+      var ns=new Set(), sueltos=0;
+      r.tiles.forEach(function(t){ var dx=t.col*sep, dy=t.row*sep, gid=++groupSeq;
+        function poner(pts,nota){ var idx=doc.paths.length, q=pts.map(function(v){ return [v[0]+dx,v[1]+dy]; });
+          doc.paths.push({pts:q}); doc.off.push([0,0]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0);
+          var bb=bboxOfPts(q); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]); doc.grp.push(gid); doc.uid.push(++uidSeq);
+          if(nota) notas[uidSeq]=1; else if(col1) colores[uidSeq]=col1; ns.add(idx); }
+        t.paths.forEach(function(pp){ poner(pp.pts,false); });
+        (t.label||[]).forEach(function(pp){ poner(pp.pts,true); });
+        t._dx=dx; t._dy=dy; t._g=gid; });
+      // lo que no se partió viaja con el tramo donde cae su centro
+      extras.forEach(function(u){ var i=doc.uid.indexOf(u); if(i<0) return; var b=bboxOf([i]), cx=(b[0]+b[2])/2, cy=(b[1]+b[3])/2;
+        var t=r.tiles.filter(function(tt){ return enTramo(tt,cx,cy); })[0];
+        if(!t){ sueltos++; return; }
+        doc.off[i]=[doc.off[i][0]+t._dx, doc.off[i][1]+t._dy]; doc.grp[i]=t._g; ns.add(i); });
+      sel.idx=-1; sel.set=ns; mosOn=false; mosPrev=null; mosFirma=''; mosResumen(null);
+      refreshUI(); fitView();
+      toast('Partida en '+r.tiles.length+' tramos ('+r.cols+' × '+r.rows+'). Las etiquetas 1-1, 1-2… son notas: se ven, no se cortan. Para cortarlos, «Acomodar piezas» los reparte en las hojas.'+(sueltos?(' · '+sueltos+' trazo(s) quedaron fuera de todo tramo y no se movieron'):'')+((r.warnings||[]).length?(' · ⚠ '+r.warnings.join(' · ')):''));
+    }); });
   el('orgGroup').addEventListener('click',doGroup);
   el('orgUngroup').addEventListener('click',doUngroup);
   el('orgFlipH').addEventListener('click',function(){ op(function(){ mirrorActive('h'); }); });
@@ -3871,7 +3948,7 @@ var PlotterMotor = (function(){
     doc.paths=(res.paths||[]).map(function(p){return {pts:p.pts.map(function(q){return [q[0],q[1]];})};});
     doc.off=[]; doc.sx=[]; doc.sy=[]; doc.rot=[]; doc.oc=[]; doc.grp=[]; doc.uid=[];
     textMeta={};   // diseño nuevo: recetas de texto viejas fuera
-    lockedUids=new Set(); colores={}; notas={}; capas={}; capasOcultas=false; projId=null;
+    lockedUids=new Set(); colores={}; notas={}; capas={}; capasOcultas=false; mosOn=false; mosPrev=null; projId=null;
     var gid=doc.paths.length>1?(++groupSeq):0;   // import agrupado por defecto (un diseño = un grupo)
     for(var i=0;i<doc.paths.length;i++){ doc.off.push([0,0]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0); var bb=bboxOfPts(doc.paths[i].pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]); doc.grp.push(gid); doc.uid.push(++uidSeq); if(res.paths[i]&&res.paths[i].col) colores[uidSeq]=res.paths[i].col; metaDesde(res.paths[i],uidSeq); }
     tpaths=[]; tpSel=-1; paintTps(); formOpen=false; revOpen=false; volverRev=false; pintarVista();   // diseño nuevo: las trayectorias viejas ya no aplican
@@ -5432,7 +5509,14 @@ var PlotterMotor = (function(){
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
   { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
       var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); }
-      syncRec(); }; }
+      syncRec(); pintarMosaico(); }; }
+  function pintarMosaico(){ if(!(mosOn&&mosPrev&&view.ready&&state.machine==='cnc'&&!cncStep())) return;
+    ctx.save(); ctx.strokeStyle=cvar('--accent'); ctx.lineWidth=1.6; ctx.setLineDash([6,4]);
+    mosPrev.tiles.forEach(function(t){ t.paths.forEach(function(p){ var q=p.pts; ctx.beginPath(); var a=tp(q[0][0],q[0][1]); ctx.moveTo(a[0],a[1]);
+      for(var k=1;k<q.length;k++){ var b=tp(q[k][0],q[k][1]); ctx.lineTo(b[0],b[1]); } ctx.closePath(); ctx.stroke(); }); });
+    ctx.setLineDash([]); ctx.fillStyle=cvar('--accent'); ctx.font='700 12px '+cvar('--mono'); ctx.textAlign='center';
+    mosPrev.tiles.forEach(function(t){ var a=tp(t.label_at[0],t.label_at[1]); ctx.fillText((t.row+1)+'-'+(t.col+1),a[0],a[1]+4); });
+    ctx.textAlign='start'; ctx.restore(); }
   // "Recorridos" (junto al zoom) solo existe en el paso Corte de la CNC; encendido = se ven.
   // Se llama tras cada redibujo y al cambiar de paso (pasar a Diseño no redibuja).
   function syncRec(){ var rp=el('recPill'), vis=cncStep(); if((rp.style.display!=='none')!==vis) rp.style.display=vis?'':'none';
