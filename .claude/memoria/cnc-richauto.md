@@ -232,6 +232,8 @@ M30
     Trayectorias → Vista previa/Render AL FINAL.
   - **Semántica ojo vs Vista previa** (explicada a Jose): el OJO decide qué entra al CORTE
     (afecta el .tap); VISTA PREVIA solo enciende/apaga la capa visual (no afecta el export).
+    (24-nov-2026: el ojo confundía a un probador y se cambió por una CASILLA; ver
+    `.claude/rules/interfaz-web.md`.)
 
 - **I. Seguridad y flujo fino del panel de Corte — ✅ COMMIT caa5092 (22-jul, cierre)**:
   - **Alerta de TRASPASO**: si `start+depth > grosor`, modal de confirmación antes de Calcular

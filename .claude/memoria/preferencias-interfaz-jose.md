@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 7c7f36ce-19d2-4a33-afda-0d07dab90adc
-  modified: 2026-11-13T01:02:15.169Z
+  modified: 2026-11-24T22:24:25.978Z
 ---
 
 # Lo que Jose aprobó y lo que rechazó en la interfaz
@@ -35,6 +35,12 @@ paréntesis como "(mío)" es mi interpretación, no palabras suyas.
 - **Formularios fijos**, todo a la vista y en orden lógico, en vez de plegables.
 - **Un renglón por acción con su nombre** (eligió la opción B en Transformar, la más clara aunque
   la más alta, sobre la que yo recomendaba).
+
+- **24-nov-2026, lista de cortes de la CNC** (opciones dibujadas en
+  https://claude.ai/artifact/Ccz4fFwhNraMPP8pFMFgn7): para "¿se corta?" eligió la **casilla (B)**
+  sobre la etiqueta con nombre que yo recomendaba, pero **"deja la manija de arrastre"**: la
+  casilla se suma, no reemplaza a la manija. Botón **«Recorridos» junto al zoom (A)** reemplazando
+  al de Revisar, y que el clic en el lienzo tome la figura y no el recorrido (C).
 
 ## Lo que probó y mandó quitar — no volver a proponerlo
 - La **barra de acciones flotante** junto a la figura seleccionada.
