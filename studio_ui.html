@@ -107,10 +107,14 @@
   .zoompill button svg{width:15px;height:15px;}
   .wapill{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:0 4px 14px -6px #0006;z-index:3;}
   .wapill button{width:26px;height:26px;border:0;background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;display:grid;place-content:center;}
+  .wapill button.lab{width:auto;display:flex;align-items:center;gap:5px;padding:0 8px;font:600 12px var(--font);color:var(--ink);}
+  .wapill button.lab svg{width:15px;height:15px;flex:none;}
+  .wapill button.lab.on{background:var(--accent-soft);color:var(--accent);}
   .wapill button:hover{background:var(--hover);color:var(--ink);}
   .wapill button.on{background:var(--accent-soft);color:var(--accent);}
   .wapill button svg{width:15px;height:15px;}
   .zoompill span{font-family:var(--mono);font-size:12px;color:var(--ink);padding:0 8px;min-width:48px;text-align:center;cursor:pointer;}
+  #zoomInp{width:48px;height:22px;border:1px solid var(--accent);border-radius:5px;background:var(--input);color:var(--ink);font:inherit;text-align:center;padding:0 2px;}
   .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:2;pointer-events:none;}
   .empty .ill{width:64px;height:64px;color:var(--line-2);}
   .empty p{margin:0;color:var(--faint);font-size:15px;}
@@ -408,6 +412,11 @@
   .chipb{height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--line-2);background:var(--input);color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;flex:none;}
   .chipb.on{background:var(--panel);color:var(--ink);box-shadow:0 0 0 1px var(--ink);}
   .tprow .tpdot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .tpchk{width:16px;height:16px;flex:none;padding:0;border-radius:4px;border:1.5px solid var(--line-2);background:transparent;color:var(--panel);cursor:pointer;display:grid;place-content:center;}
+  .tpchk.on{background:var(--ink);border-color:var(--ink);}
+  .tpchk svg{width:11px;height:11px;display:block;}
+  .tpchk:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  .tprow .tpnocorta{font-size:11px;font-weight:700;color:var(--faint);flex:none;white-space:nowrap;}
   .tprow .tptime{font-family:var(--mono);font-size:10.5px;color:var(--muted);flex:none;white-space:nowrap;}
   .tprow .tpmeta{font-family:var(--font);font-size:11px;color:var(--muted);white-space:normal;line-height:1.4;padding:1px 4px 2px 28px;}
   .tprow{padding:7px 7px 6px;border-color:var(--line);margin-top:3px;}
@@ -483,6 +492,9 @@
        Plotter/CNC quedan en icono y deshacer/rehacer bajan al lienzo: cabe hasta en 360 px. */
     .mach button{font-size:0;gap:0;padding:0 10px;} .mach button svg{width:17px;height:17px;}
     #undoFloat{display:flex;}
+    /* En el paso Corte de la CNC el lugar de deshacer/rehacer es para "Recorridos": ahí no se edita
+       ninguna figura (cncLock), y los dos juntos no caben en 360 px (24-nov-2026). */
+    body.corteCnc #undoFloat{display:none;}
     #stSel{display:none;}
     /* Abajo, UN renglón: deshacer/rehacer a la izquierda; relleno, ajustar y el % a la derecha.
        − y + sobran (en el teléfono el zoom es con dos dedos) y el engrane del área de trabajo
@@ -575,7 +587,7 @@
       <span>Interior</span><input id="shpInner" value="50" disabled><span>%</span>
     </div>
     <div id="undoFloat"></div>
-    <div class="pillbar"><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill wa"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
+    <div class="pillbar"><div class="wapill" id="recPill" style="display:none"><button id="btnRec" class="lab" title="Encender o apagar en el lienzo el recorrido de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18c3-9 6 3 9-6s5-4 7-6"/><path d="M17 6h3v3"/></svg><span>Recorridos</span></button></div><div class="wapill"><button id="toolFill" title="Ver las figuras RELLENAS (Cmd+Shift+Y) — silueta maciza del mismo color que el contorno, para reconocer la figura y ver qué queda como hueco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill="currentColor" fill-opacity=".38"/></svg></button></div><div class="wapill wa"><button id="btnSettings" title="Tamaño del área de trabajo…"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="11" rx="1.5"/><path d="M4.5 17.5v3.5M19.5 17.5v3.5M4.5 19.25h15"/><path d="M8 17.6 4.9 19.25 8 20.9M16 17.6l3.1 1.65L16 20.9"/></svg></button></div><div class="wapill"><button id="toolFit" title="Ajustar vista a la hoja de trabajo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></svg></button></div><div class="zoompill"><button id="zOut">−</button><span id="zoomTxt">Ajustar</span><button id="zIn">+</button></div></div>
   </main>
 
   <aside class="inspect">
@@ -802,7 +814,7 @@
       </div>
       <div id="cutRev" style="display:none">
         <div id="revBody"></div>
-        <div class="rowbtns"><button class="gbtn" id="revPrev" title="Pintar en el lienzo el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="revPrevLbl">Ver recorrido</span></button><button class="gbtn" id="revSim" title="Simulación 3D del resultado con el MISMO G-code que se lleva la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver en 3D</button></div>
+        <div class="rowbtns"><button class="gbtn" id="revPrev" style="display:none" title="Pintar en el lienzo el recorrido del centro de la fresa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg> <span id="revPrevLbl">Ver recorrido</span></button><button class="gbtn" id="revSim" title="Simulación 3D del resultado con el MISMO G-code que se lleva la máquina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg> Ver en 3D</button></div>
         <div class="navrow"><button class="pbtn" id="navCuts" title="Paso 2: volver a los cortes para cambiar algo">‹ Cortes</button><button class="pbtn acc" id="revSave" style=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> <span id="revSaveLbl">Guardar G-code</span></button></div>
         <div class="muted-note" id="revNote" style="margin-top:8px"></div>
       </div>
@@ -1382,6 +1394,11 @@ var PlotterMotor = (function(){
   var state={work:[3000,600], name:null, machine:'plotter', plotterWork:[3000,600], cnc:null, sheets:1};
   var doc={paths:[], off:[], sx:[], sy:[], rot:[], oc:[], grp:[], uid:[]};   // por trazado: puntos crudos + transform + centro original + id estable
   var uidSeq=0;   // los uid sobreviven a borrar/pegar: las trayectorias CNC referencian por uid
+  // Zoom: 100 % = tamaño real (ver "Zoom UI" más abajo).
+  var PX_MM=96/25.4, zCal=1, zEdit=false;
+  try{ var zc=parseFloat(localStorage.getItem('ds_zcal')); if(zc>0.3&&zc<3) zCal=zc; }catch(e){}
+  function pxReal(){ return PX_MM*zCal; }                     // px por mm a tamaño real
+  function zoomPct(){ return Math.round(view.scale/pxReal()*100); }
   var sel={idx:-1, set:new Set()};                     // idx = individual ; set = grupo (rubber-band)
   // COLOR por figura (12-nov-2026): un mapa uid → '#rrggbb'. Va por uid (como los candados) y no en un
   // arreglo paralelo a doc.paths: así ninguna operación que mueve, borra o reordena figuras tiene que
@@ -1450,7 +1467,8 @@ var PlotterMotor = (function(){
     el('tabsBar').style.display=dsg?'':'none';   // en Corte no hay pestañas: plotter = un panel; CNC = Cortes ↔ Material (enlace "Cambiar")
     showTab(dsg?'transform':(cnc?'cnccut':'plot'));   // el Corte de la CNC entra por la lista; el resumen lleva a Configuración
     if(!dsg&&!cnc) refrescarPlotter();
-    if(!dsg&&cnc&&hasDoc()){ fitMode='design'; userZoomed=false; view.ready=false; fitView(); } }   // al entrar a Corte: las PIEZAS a la vista, no la placa entera
+    if(!dsg&&cnc&&hasDoc()){ fitMode='design'; userZoomed=false; view.ready=false; fitView(); }
+    syncRec(); }   // al entrar a Corte: las PIEZAS a la vista, no la placa entera
   el('modeSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return;
     var m=b.getAttribute('data-sm'); if(m!==sideMode) setSideMode(m); });
   el('unitSeg').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; setUnits(b.getAttribute('data-u'),true); });
@@ -1976,7 +1994,7 @@ var PlotterMotor = (function(){
         ctx.beginPath(); ctx.moveTo(RUL-3.5,TYm+0.5); ctx.lineTo(RUL,TYm+0.5); ctx.stroke(); }
     }
     ctx.fillStyle=cvar('--panel'); ctx.fillRect(0,0,RUL,RUL);   // esquina (clic = borrar guías)
-    el('zoomTxt').textContent=Math.round(view.scale*100)+' %';
+    if(!zEdit) el('zoomTxt').textContent=zoomPct()+' %';   // (no pisar la cajita mientras escriben)
   }
 
   // ===== Inspector =====
@@ -2184,29 +2202,7 @@ var PlotterMotor = (function(){
   var pan=null, moving=null, marquee=null, spaceDown=false, draft=null;   // draft = forma en curso (herramientas de dibujo)
   function hitPath(sx,sy){ // índice del trazado bajo el cursor (o -1). Recorre de arriba (último) a abajo.
     var thr=6*TOQ; for(var i=doc.paths.length-1;i>=0;i--){ if(isLocked(i)) continue; var e=effPts(i); for(var k=0;k<e.length-1;k++){ var a=tp(e[k][0],e[k][1]), b=tp(e[k+1][0],e[k+1][1]); if(distSeg(sx,sy,a[0],a[1],b[0],b[1])<=thr) return i; } if(e.length===1){var a2=tp(e[0][0],e[0][1]); if(Math.hypot(sx-a2[0],sy-a2[1])<=thr) return i;} } return -1; }
-  // ¿Hay una TRAYECTORIA CNC bajo el cursor? Devuelve su fila en la lista (o -1).
-  // Se recorre de arriba hacia abajo (la última dibujada es la que se ve encima).
-  function hitToolpath(sx,sy){
-    if(!(state.machine==='cnc' && cncPrev)) return -1;
-    var thr=6;
-    for(var gi=cncPrev.groups.length-1; gi>=0; gi--){
-      var G=cncPrev.groups[gi];
-      if(G.tpi==null) continue;
-      for(var t=0;t<G.tps.length;t++){
-        var pts=G.tps[t];
-        for(var k=0;k<pts.length-1;k++){
-          var a=tp(pts[k][0],pts[k][1]), b=tp(pts[k+1][0],pts[k+1][1]);
-          if(distSeg(sx,sy,a[0],a[1],b[0],b[1])<=thr) return G.tpi;
-        }
-      }
-      var dr=Math.max(2,(G.dia/2)*view.scale);     // los taladros son círculos: se pulsan dentro
-      for(var q=0;q<G.drills.length;q++){
-        var d=tp(G.drills[q][0],G.drills[q][1]);
-        if(Math.hypot(sx-d[0],sy-d[1])<=dr+thr) return G.tpi;
-      }
-    }
-    return -1;
-  }
+
   function distSeg(px,py,x1,y1,x2,y2){ var dx=x2-x1,dy=y2-y1; var L=dx*dx+dy*dy; if(L===0) return Math.hypot(px-x1,py-y1); var t=((px-x1)*dx+(py-y1)*dy)/L; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(x1+t*dx),py-(y1+t*dy)); }
   // ¿el trazado i está en la selección EXPLÍCITA? (en modo "Todos" no hay selección explícita → false,
   // para que un clic sobre una figura la seleccione individualmente en vez de mover todo)
@@ -2223,15 +2219,12 @@ var PlotterMotor = (function(){
       guideDrag={o: sx<=RUL?'v':'h', pos:null, idx:-1, sx:sx, sy:sy};
       return;
     }
-    // En el paso CNC, con las trayectorias a la vista: pulsar una la selecciona en la
-    // lista de Corte. Va ANTES que la selección de figuras porque se dibuja encima.
-    // Pulsar CUALQUIER OTRA COSA la suelta, igual que al volver a pulsar su fila.
+    // En el paso CNC el clic en el lienzo toma FIGURAS, aunque tengan un recorrido dibujado
+    // encima: un corte se abre SOLO desde su fila (decisión de Jose, 24-nov-2026). Antes el
+    // recorrido iba primero y tocar un barreno abría la edición del cajeado.
+    // Un clic con un corte abierto en la lista lo suelta, igual que al volver a pulsar su fila.
     if(cncStep()){
-      if(cncPrev){
-        if(tabEdit() && tabClick(sx,sy)) return;   // colocando puentes a mano
-        if(!formOpen){ var htp=hitToolpath(sx,sy);
-          if(htp>=0){ selectTpFromCanvas(htp); return; } }
-      }
+      if(cncPrev && tabEdit() && tabClick(sx,sy)) return;   // colocando puentes a mano
       if(tpSel>=0 && !formOpen) deselectTp();      // y se sigue: el clic aún puede tomar una figura
       // Con el formulario abierto el clic NO suelta el corte: sirve para elegir las figuras a las
       // que se aplica (línea "Se aplica a…" del formulario).
@@ -2999,7 +2992,11 @@ var PlotterMotor = (function(){
     if(typeof nedit!=='undefined' && nedit){ nodeInsertAt(sx,sy); return; }   // doble clic = agregar nodo
     var hit=hitPath(sx,sy);
     if(hit<0) return; var g=doc.grp[hit];
-    if(g && textMeta[g]) openTextModal(g);   // cncLock lo revisa openTextModal
+    if(g && textMeta[g]){ openTextModal(g); return; }   // cncLock lo revisa openTextModal
+    // Doble clic en una figura de un GRUPO = entrar al grupo: queda seleccionada ELLA sola
+    // (como Illustrator y como el clic en su capa). Un SVG entra como un grupo entero; sin esto
+    // había que ir a Organizar → Separar para tomar un barreno suelto.
+    if(g && groupMembers(hit).length>1 && !isLocked(hit)){ sel.set=new Set(); sel.idx=hit; refreshUI(); }
   });
 
   // ===== Combinar (booleanas) y Contorno (offset) — shapely en el backend =====
@@ -3764,7 +3761,43 @@ var PlotterMotor = (function(){
   // ===== Zoom UI =====
   el('zIn').addEventListener('click',function(){var r=cv.getBoundingClientRect();zoomAt(1.25,r.width/2,r.height/2);});
   el('zOut').addEventListener('click',function(){var r=cv.getBoundingClientRect();zoomAt(0.8,r.width/2,r.height/2);});
-  el('zoomTxt').addEventListener('click',fitSheet);
+  // ⚠️ 100 % = TAMAÑO REAL. `view.scale` es píxeles por mm; antes el % era view.scale×100, así que
+  // "100 %" era 1 px/mm ≈ la CUARTA parte del tamaño real (24-nov-2026). Un píxel CSS mide por norma
+  // 1/96 de pulgada, pero cada pantalla lo cumple distinto (en las Mac sale ~10-15 % chico): el
+  // factor `zCal` se mide con una regla (Archivo → Calibrar tamaño real) y se guarda EN ESE APARATO
+  // (localStorage), porque es de la pantalla, no de la cuenta.
+  // (PX_MM, zCal, zoomPct: arriba, junto a `sel`, porque draw() los usa desde el arranque)
+  function setZoomPct(p){ if(!view.ready||!(p>0)) return; var r=cv.getBoundingClientRect();
+    zoomAt((p/100*pxReal())/view.scale, r.width/2, r.height/2); }
+  // Tocar el % = escribir uno (Enter aplica, Esc cancela). "Ajustar" sigue en su botón (#toolFit).
+  el('zoomTxt').title='Escribe el zoom que quieras · 100 % = tamaño real';
+  el('zoomTxt').addEventListener('click',function(){ if(zEdit||!view.ready) return; zEdit=true;
+    var sp0=el('zoomTxt'), inp=document.createElement('input'); inp.id='zoomInp'; inp.inputMode='decimal';
+    inp.value=String(zoomPct()); inp.setAttribute('aria-label','Zoom en porcentaje');
+    sp0.textContent=''; sp0.appendChild(inp); inp.focus(); inp.select();
+    var hecho=false;
+    function fin(ok){ if(hecho) return; hecho=true; var v=parseFloat(String(inp.value).replace(',','.').replace('%',''));
+      zEdit=false; sp0.textContent=zoomPct()+' %';
+      if(ok){ if(v>0) setZoomPct(Math.max(1,Math.min(2000,v))); else toast('Escribe un número, por ejemplo 100'); } }
+    inp.addEventListener('keydown',function(e){ e.stopPropagation();
+      if(e.key==='Enter'){ e.preventDefault(); fin(true); } else if(e.key==='Escape'){ e.preventDefault(); fin(false); } });
+    inp.addEventListener('click',function(e){ e.stopPropagation(); });
+    inp.addEventListener('blur',function(){ fin(true); }); });
+  // Calibrar: se dibuja una barra que DEBERÍA medir L mm; con la regla dicen cuánto mide de verdad.
+  function calibrarZoom(){ var L=(window.innerWidth>520)?100:50, w=Math.round(L*pxReal());
+    askConfirm('Calibrar tamaño real',
+      'Pon una regla sobre la pantalla y mide la barra:'+
+      '<div style="margin:14px 0 6px;height:14px;width:'+w+'px;max-width:100%;background:var(--ink);border-radius:2px"></div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Debería medir '+L+' mm.</div>'+
+      '<div class="field"><label>Mide</label><input id="calMed" inputmode="decimal" value="'+L+'"><span class="u">mm</span></div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-top:8px">Se guarda en este aparato: cada pantalla mide distinto.</div>',
+      function(ok){ if(!ok) return; var m=parseFloat(String(el('calMed').value).replace(',','.'));
+        if(!(m>L*0.3&&m<L*3)){ toast('Esa medida no parece correcta: escribe lo que mide la barra en mm'); return; }
+        zCal=Math.max(0.3,Math.min(3,zCal*L/m));
+        try{ localStorage.setItem('ds_zcal',String(zCal)); }catch(e){}
+        setZoomPct(100); toast('Calibrado: ahora 100 % es tamaño real en esta pantalla'); },
+      {yes:'Guardar', ancho:Math.min(440,window.innerWidth-24)});
+    setTimeout(function(){ var c=el('calMed'); if(c){ c.focus(); c.select(); } },50); }
   el('btnUndo').addEventListener('click',undo); el('btnRedo').addEventListener('click',redo);
   // (Enviar al plotter se cablea en el bloque Fase 3, abajo)
 
@@ -3930,7 +3963,8 @@ var PlotterMotor = (function(){
               it('Descargar proyecto (.dstudio)','btnSaveProject'),
               it('Exportar como…','btnExport'),
               {sep:true},
-              {label:'Área de trabajo…', fn:openWA} ], r.left, r.bottom+6); }
+              {label:'Área de trabajo…', fn:openWA},
+              {label:'Calibrar tamaño real…', fn:calibrarZoom} ], r.left, r.bottom+6); }
   el('btnFile').addEventListener('click',function(ev){ ev.stopPropagation(); abrirArchivo(); });
   el('btnFile').addEventListener('mousedown',function(ev){ ev.stopPropagation(); });
   // Atajos de archivo: valen también escribiendo en un campo (si no, el navegador abre SU
@@ -4938,7 +4972,7 @@ var PlotterMotor = (function(){
     paintOp(); paintPasses(); }
   // --- lista ---
   function opIconSvg(o){ var src=el('opSeg').querySelector('button[data-o="'+o+'"] svg'); var c=src?src.cloneNode(true):null; if(c) c.setAttribute('class','opic'); return c; }
-  var TP_EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>', TP_EYEOFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" opacity=".35"/><path d="m4 4 16 16"/></svg>', TP_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6.5 7l1 13h9l1-13"/></svg>', TP_GRIP='<svg viewBox="0 0 10 16" fill="currentColor"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
+  var TP_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6.5 7l1 13h9l1-13"/></svg>', TP_GRIP='<svg viewBox="0 0 10 16" fill="currentColor"><circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
   var dragIdx=null;
   // Un COLOR por corte: el mismo en su fila y en el lienzo, para ver qué figura lleva qué.
   var TP_COLORES=['#D11E68','#2F6FE0','#1E7F5C','#B7791F','#7C3AED','#0E7490','#C2410C','#4D7C0F'];
@@ -4962,21 +4996,18 @@ var PlotterMotor = (function(){
   function fmtSecs(x){ x=Math.round(x||0); return x<60?(x+' s'):(Math.floor(x/60)+' min'+(x%60?(' '+(x%60)+' s'):'')); }
   function refreshPrev(){ killPrev();
     if(prevOn && activeTps().length) computePreview(); else draw(); }
-  // Pulsar una trayectoria en el LIENZO = seleccionarla en la lista y cargarla en el
-  // formulario, igual que pulsar su fila. Se lleva la fila a la vista por si la lista
-  // es larga y la seleccionada quedó fuera de pantalla.
-  function selectTpFromCanvas(i){
-    if(i<0 || i>=tpaths.length) return;
-    tpSel=i; loadEditor(tpaths[i]); paintTps(); abrirForm();
-    var L=el('tpList'), row=L&&L.children[i];
-    if(row && row.scrollIntoView) row.scrollIntoView({block:'nearest'});
-    toast('Trayectoria «'+tpaths[i].name+'» seleccionada');
-  }
+
   // Soltar la trayectoria seleccionada. Deseleccionar NO es solo quitar el azul: el
   // formulario vuelve a "trayectoria nueva" (el botón pasa de Recalcular a Calcular),
   // que es exactamente lo que ya hacía volver a pulsar su fila.
   function deselectTp(){ if(tpSel<0) return; tpSel=-1; el('tpName').value=''; paintTps(); if(formOpen){ formOpen=false; volverRev=false; pintarVista(); } }
-  function paintTps(){ var L=el('tpList'); if(!L) return; L.innerHTML=''; setTimeout(pintarCorte,0);
+  // ⚠️ Si alguien está RENOMBRANDO una fila (doble clic), no se rehace la lista: borrar la cajita
+  // le quita el foco y las letras siguientes caen al lienzo como ATAJOS (cambiaban la herramienta
+  // y cortaban el nombre). Pasaba cuando la vista previa llegaba mientras escribían — en Railway
+  // tarda segundos. Al terminar de renombrar, done() vuelve a llamar paintTps() y se pone al día.
+  function paintTps(){ var L=el('tpList'); if(!L) return;
+    var ed=L.querySelector('.tpnm-edit'); if(ed && !ed._cerrada && document.activeElement===ed){ setTimeout(pintarCorte,0); return; }
+    L.innerHTML=''; setTimeout(pintarCorte,0);
     el('tpEmpty').style.display=tpaths.length?'none':'block';
     el('tpCount').textContent=tpaths.length?String(tpaths.length):'';
     var tot=0, hayT=false; tpaths.forEach(function(t){ if(t.enabled&&t._secs!=null){ tot+=t._secs; hayT=true; } });
@@ -4990,6 +5021,12 @@ var PlotterMotor = (function(){
       var row=document.createElement('div'); row.className='tprow'+(i===tpSel?' on':'')+(t.enabled?'':' off');
       row.draggable=true;
       var gr=document.createElement('span'); gr.className='grip'; gr.title='Arrastra para cambiar el orden de corte'; gr.innerHTML=TP_GRIP; row.appendChild(gr);
+      // Casilla = ¿sale en el G-code? (antes era un ojo y parecía "ocultar"; opción B de Jose, 24-nov)
+      var ck=document.createElement('button'); ck.className='tpchk'+(t.enabled?' on':''); ck.setAttribute('role','checkbox'); ck.setAttribute('aria-checked',t.enabled?'true':'false');
+      ck.title=t.enabled?'Se corta: sale en el G-code (clic para dejarlo fuera)':'No se corta: no sale en el G-code (clic para incluirlo)';
+      if(t.enabled) ck.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+      ck.addEventListener('click',function(e){ e.stopPropagation(); t.enabled=!t.enabled; paintTps(); refreshPrev(); toast(t.enabled?('«'+t.name+'» se corta'):('«'+t.name+'» no se corta — no saldrá en el G-code')); });
+      row.appendChild(ck);
       var dotc=document.createElement('span'); dotc.className='tpdot'; dotc.style.background=colorTp(t); row.appendChild(dotc);
       var nm=document.createElement('span'); nm.className='tpnm'; nm.textContent=t.name;
       nm.title='Doble clic para renombrar'; row.appendChild(nm);
@@ -4997,7 +5034,7 @@ var PlotterMotor = (function(){
         var inp=document.createElement('input'); inp.className='tpnm-edit'; inp.value=t.name;
         row.replaceChild(inp,nm); inp.focus(); inp.select();
         var closed=false;
-        function done(save){ if(closed) return; closed=true;
+        function done(save){ if(closed) return; closed=true; inp._cerrada=true;
           if(save){ var v=inp.value.trim(); if(v) t.name=v; }
           paintTps(); if(tpSel>=0&&tpaths[tpSel]===t) el('tpName').value=t.name; }
         inp.addEventListener('click',function(ev){ ev.stopPropagation(); });
@@ -5008,7 +5045,7 @@ var PlotterMotor = (function(){
       mt.textContent=(i+1)+' · '+fraseTp(t)+((t._secs!=null&&t.enabled)?(' · ≈ '+fmtSecs(t._secs)):''); row.appendChild(mt);
       function mkb(html,title,fn){ var b=document.createElement('button'); b.className='tpbtn'; b.innerHTML=html; b.title=title;
         b.addEventListener('click',function(e){ e.stopPropagation(); fn(); }); row.appendChild(b); }
-      mkb(t.enabled?TP_EYE:TP_EYEOFF, t.enabled?'Activa (clic para excluirla del corte)':'Excluida (clic para activarla)', function(){ t.enabled=!t.enabled; paintTps(); refreshPrev(); toast(t.enabled?('«'+t.name+'» incluida en el corte'):('«'+t.name+'» excluida — no saldrá en el G-code')); });
+      if(!t.enabled){ var nc=document.createElement('span'); nc.className='tpnocorta'; nc.textContent='No se corta'; row.appendChild(nc); }
       mkb(TP_COPY,'Duplicar trayectoria (misma receta, mismas figuras)', function(){ var c=JSON.parse(JSON.stringify(t)), num=++tpSeq;
         c.id=num; c.num=num; c.name=t.name+' copia'; c.color=TP_COLORES[(num-1)%TP_COLORES.length]; tpaths.splice(i+1,0,c); if(tpSel>i) tpSel++; paintTps(); refreshPrev(); toast('Duplicada: «'+c.name+'»'); });
       mkb(TP_TRASH,'Eliminar trayectoria', function(){ tpaths.splice(i,1); if(tpSel===i)tpSel=-1; else if(tpSel>i)tpSel--; paintTps(); refreshPrev(); });
@@ -5259,7 +5296,13 @@ var PlotterMotor = (function(){
       ctx.fillStyle='#fff'; ctx.font='700 10px '+(getComputedStyle(document.body).fontFamily||'sans-serif'); ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(String(G.tpi+1),q[0],q[1]+0.5); ctx.textAlign='start'; ctx.textBaseline='alphabetic'; }); }
   { var _dibujar=draw; draw=function(){ _dibujar.apply(this,arguments); pintarInsignias(); pintarFigs();
-      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); } }; }   // tras cada redibujo: la barra sigue a la selección
+      var rl=el('revPrevLbl'), tx=cncPrev?'Ocultar':'Ver recorrido'; if(rl.textContent!==tx){ rl.textContent=tx; el('revPrev').classList.toggle('on',!!cncPrev); }
+      syncRec(); }; }
+  // "Recorridos" (junto al zoom) solo existe en el paso Corte de la CNC; encendido = se ven.
+  // Se llama tras cada redibujo y al cambiar de paso (pasar a Diseño no redibuja).
+  function syncRec(){ var rp=el('recPill'), vis=cncStep(); if((rp.style.display!=='none')!==vis) rp.style.display=vis?'':'none';
+    document.body.classList.toggle('corteCnc',vis);
+    el('btnRec').classList.toggle('on',!!cncPrev); }   // tras cada redibujo: la barra sigue a la selección
   function pintarCorte(){ pintarFigs(); pintarCanto();
     pintarPasos();
     el('formTit').textContent=(tpSel>=0&&tpaths[tpSel])?('Editando: '+(tpaths[tpSel].name||'trayectoria')):('Nueva: '+(OPLBL[curOp()]||'trayectoria'));
@@ -5383,7 +5426,7 @@ var PlotterMotor = (function(){
       G.forEach(function(g,k){ var i=el('tapNom'+k); g.archivo=nombreTap(i?i.value:'', g.archivo); });
       bajarRev(); }, {yes:(varios?'Guardar los '+G.length+' archivos':'Guardar'), ancho:420});
     var i0=el('tapNom0'); if(i0){ i0.focus(); i0.select(); } }
-  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^(tapNom|proyNom)/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
+  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^(tapNom|proyNom|calMed)/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
   function bajarRev(){ if(!revDatos||!state.cnc) return;
     var gs=revDatos.grupos.slice(), hechos=0, lineas=0; el('revSave').disabled=true;
     (function sig(){ var g=gs.shift();
@@ -5396,6 +5439,7 @@ var PlotterMotor = (function(){
   el('revSave').addEventListener('click',guardarRev);
   el('revGo').addEventListener('click',abrirRev);
   el('revPrev').addEventListener('click',function(){ el('btnTpPrev').click(); });
+  el('btnRec').addEventListener('click',function(){ el('btnTpPrev').click(); draw(); });
   el('revSim').addEventListener('click',function(){ el('btnSim3d').click(); });
   // ===== Los tres pasos: Material · Cortes · Revisar =====
   function pasoActual(){ return tabActual==='cnccfg'?0:((revOpen&&!formOpen)?2:1); }
@@ -6440,8 +6484,8 @@ var PlotterMotor = (function(){
             get rows(){return fpRows;}, get fams(){return fpFams;}, get drawn(){return fpDrawn;},
             build:buildFams, fill:fillFontList, step:fontStep, more:fpDrawRows, byName:setFontByName },
     cnc:{ get tpaths(){return tpaths;}, get tpSel(){return tpSel;}, set tpSel(v){tpSel=v;},
-          get prev(){return cncPrev;}, set prev(v){cncPrev=v;}, hitToolpath:hitToolpath,
-          selectFromCanvas:selectTpFromCanvas, paintTps:paintTps,
+          get prev(){return cncPrev;}, set prev(v){cncPrev=v;}, 
+          paintTps:paintTps,
           get step(){return cncStep();}, setSideMode:setSideMode } };
 })();
 </script>

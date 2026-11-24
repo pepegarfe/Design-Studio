@@ -47,6 +47,12 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   y `'sheet'` con `fitSheet()` (botón de ajustar, cambio de máquina o de área). ⚠️ No llames
   `fitView()` a secas para "volver a la hoja": respeta el modo vigente, y el `ResizeObserver` lo
   llama en cada cambio de tamaño.
+- ⚠️ **Zoom: 100 % = TAMAÑO REAL** (`zoomPct()`, `setZoomPct()`). `view.scale` son píxeles por mm;
+  el % es `view.scale / (96/25.4 × zCal)`. Antes era `view.scale×100`: "100 %" mostraba la pieza a
+  ~¼ de su tamaño (lo reportó Jose, 24-nov-2026). `zCal` se mide con una regla (Archivo →
+  Calibrar tamaño real, `calibrarZoom()`) y vive en `localStorage` (`ds_zcal`) porque es de la
+  PANTALLA, no de la cuenta. Tocar el % abre una cajita (`#zoomInp`); mientras está abierta,
+  `draw()` no pisa el texto (`zEdit`) — la misma trampa que el renombrado de cortes.
 - **Los avisos (`.toast`) salen ARRIBA del lienzo**: abajo tapaban los botones de zoom.
 - **Un interruptor lleva icono Y nombre** (decisión de Jose, 12-nov): el nombre solo en el texto
   emergente no existe con el dedo, y "Nº | mm" no lo entendía nadie.
@@ -90,10 +96,19 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
 - **Las figuras de un corte se pueden cambiar**: con el formulario abierto, el clic en el lienzo
   selecciona FIGURAS (no suelta el corte ni salta a otro) y "Usar las seleccionadas" las deja en
   `formUids`, que se aplican al Calcular. Al abrir un corte, sus figuras quedan seleccionadas.
-- **"Ver recorrido" y "Ver en 3D" viven SOLO en Revisar** (`#revPrev`, `#revSim`; pedido de Jose,
-  12-nov). Los de antes (`#btnTpPrev`, `#btnSim3d`) siguen en el HTML, **ocultos**, porque tienen
-  la lógica y los de Revisar los pulsan. Al abrir un corte para editarlo, su recorrido se enciende
-  solo (hace falta para poner puentes a mano). **El botón dice lo que hace**: en Cortes "Revisar",
+- **Los recorridos se encienden y apagan con «Recorridos», junto al zoom** (`#recPill`/`#btnRec`,
+  opción A de Jose, 24-nov-2026): solo se ve en el paso Corte de la CNC (`syncRec()`, que corre tras
+  cada redibujo y en `setSideMode`, porque pasar a Diseño no redibuja). Reemplazó al "Ver recorrido"
+  de Revisar (`#revPrev`, ahora oculto: no repetir botones). "Ver en 3D" sigue SOLO en Revisar
+  (`#revSim`). Los de antes (`#btnTpPrev`, `#btnSim3d`) siguen en el HTML, **ocultos**, porque tienen
+  la lógica y los visibles los pulsan. ⚠️ **Calcular enciende los recorridos solo**, y al abrir un
+  corte para editarlo también (hace falta para poner puentes a mano).
+- **El clic en el lienzo del paso Corte toma FIGURAS, aunque tengan un recorrido encima**; un corte
+  se abre SOLO desde su fila (opción C de Jose, 24-nov-2026). Antes el recorrido ganaba el clic y
+  tocar un barreno abría la edición del cajeado. Ya no existen `hitToolpath`/`selectTpFromCanvas`.
+- **Cada corte lleva una CASILLA "se corta"** (`.tpchk`, junto a la manija ⋮⋮, opción B de Jose,
+  24-nov-2026) = `t.enabled`, si sale en el G-code. Apagada, la fila se tacha y dice "No se corta".
+  Era un OJO y parecía "ocultar la vista" (lo reportó un probador). No volver a un ojo. **El botón dice lo que hace**: en Cortes "Revisar",
   en Revisar "Guardar G-code" — no "Revisar y guardar" para un paso que solo revisa.
 - **Revisar es el único camino para guardar** (`abrirRev()` → `guardarRev()` → `bajarRev()`). Antes
   de bajar el archivo se ofrece **cambiarle el nombre** (uno por fresa si son varios; `nombreTap()`
@@ -106,6 +121,13 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   siguen en el archivo pero ya nada visible los llama.
 - **La fresa se elige dentro del formulario** (`#tpTool`), que es un **espejo** de `#toolPick`
   (Configuración): al cambiarlo PULSA aquel. No dupliques la lógica de `tool_sel`/`resetPasses`.
+- ⚠️ **`paintTps()` NO rehace la lista mientras se renombra una fila** (cajita `.tpnm-edit` con el
+  foco): borrarla tiraba el foco al `<body>` y las letras siguientes caían al lienzo como ATAJOS
+  (cambiaban la herramienta, el nombre quedaba cortado). Pasaba cuando la vista previa llegaba a
+  media escritura — en Railway tarda segundos; en la Mac no se reproduce sin retrasar la respuesta
+  (Playwright: `page.route` con 3 s). `done()` marca `_cerrada` y repinta. (24-nov-2026)
+- **Doble clic en una figura de un grupo = entrar al grupo** (queda ella sola seleccionada); en un
+  texto sigue abriendo su edición. Un SVG importado entra como UN grupo. (24-nov-2026)
 - **Tiempo por trayectoria** (`t._secs`) y total (`#tpTotal`): salen de la ÚLTIMA vista previa; si
   no se ha pedido "Ver recorrido" tras cambiar el diseño, son de antes (por eso llevan "≈").
 - ⚠️ **CNC: puentes "A mano"** (`tabs.mode == 'manual'`, `tabs.pts` = puntos `[x, y]` en mm sobre
@@ -145,7 +167,8 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   ratón el `title` se muda a `data-tip` y al salir se devuelve, así que **sigue poniendo y
   leyendo `.title` como siempre** — no hay que usar otra propiedad. No actúa con el dedo (`TOQ>1`).
 - **Teléfono (≤ 520 px)**: arriba, Plotter/CNC en icono; abajo, UN renglón sobre el lienzo —
-  **deshacer/rehacer se mudan** de la barra a `#undoFloat` (bloque "barraMovil": los MISMOS
+  **deshacer/rehacer se mudan** de la barra a `#undoFloat` — salvo en el paso Corte de la CNC
+  (`body.corteCnc`), donde ese lugar es de «Recorridos» y no se edita nada (bloque "barraMovil": los MISMOS
   botones, cambiados de padre) y a la derecha quedan relleno, ajustar y el %. **− y + se ocultan**
   (el zoom es con dos dedos) y el engrane del área de trabajo (`.wapill.wa`) también: está en el
   menú Archivo. ⚠️ Si agregas un botón a `.top` o a `.pillbar`, mide a 360 px.
