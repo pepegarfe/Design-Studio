@@ -40,8 +40,13 @@ letras A–D y una nota «voltear». Se reprodujo cada punto en la copia de prue
   (parece un error del código); se corre con `/opt/homebrew/bin/python3`.
 
 ## ⏳ Pendiente
-- **Mosaico**: partir una pieza más grande que la hoja, con cola de milano o solape (Aspire lo
-  tiene). El más grande; proyecto aparte.
+- **Mosaico** (EN MARCHA, 24-nov-2026): el MOTOR ya está escrito, en `geo_ops.mosaic_op` (cola de
+  milano / rompecabezas / recta; cuadrícula igual; uniones alternadas y solo ENTERAS dentro de la
+  pieza; esquinas redondeadas a fresa+0.1 salvo en los cruces; holgura). Medido: tramos sin
+  encimarse, holgura exacta, la fresa sigue la forma a 0.017 mm. **Sin subir y sin pantalla.**
+  Opciones de pantalla publicadas para Jose: https://claude.ai/artifact/SAoBB7awvBJg2wecJagkUL
+  (recomendé A+A: sección «Mosaico» en el panel de Diseño + tramos separados con etiqueta-nota).
+  El solape (media madera) quedó FUERA: exige voltear la placa.
 - **Calibración por pantalla** (idea, Jose: «déjalo como idea»): hoy `ds_zcal` es UNO por
   navegador; con monitor externo o cambiando la resolución de la Mac el 100 % queda mal. Guardar uno
   por pantalla (llave = tamaño en píxeles) y avisar «esta pantalla no está calibrada».
