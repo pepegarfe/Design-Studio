@@ -28,16 +28,20 @@ letras A–D y una nota «voltear». Se reprodujo cada punto en la copia de prue
 - «Cambié los puentes de 3 a 4 y no tomó»: en la prueba sí tomó al pulsar Recalcular. Sospecha
   (mía): se cambió el número sin Recalcular. Si vuelve a salir, preguntar los pasos exactos.
 
-## ⏳ Pendiente (confirmado que NO existe; nada de esto está hecho)
+## Hecho la segunda tanda (24-nov-2026, «haz del 1 al 4 sin parar»)
+- ✅ **Textos del SVG → notas** que se ven y no se cortan (antes se perdían sin aviso).
+- ✅ **Elegir por color**: fichas en Cortes + clic derecho.
+- ✅ **Placa del trabajo** en Material, con aviso «Se sale de la placa».
+- ✅ **Cortes desde capas** (`cajeado_6` → cajeado de 6 mm), propuestos con un botón.
+  Supuesto MÍO, sin confirmar con Jose: el número de la capa es la PROFUNDIDAD (no la fresa).
+- Detalle técnico en `.claude/rules/interfaz-web.md` ("Notas, capas…").
+- Trampa propia: `python3 auditar_gcode.py` con el Python del SISTEMA falla por falta de shapely
+  (parece un error del código); se corre con `/opt/homebrew/bin/python3`.
+
+## ⏳ Pendiente
 - **Mosaico**: partir una pieza más grande que la hoja, con cola de milano o solape (Aspire lo
   tiene). El más grande; proyecto aparte.
-- **Textos del SVG**: el lector los DESCARTA sin avisar (entraron 23 figuras y 0 textos). Pidió que
-  entren como notas que no se cortan.
-- **Tamaño de la hoja por trabajo** (1220×550) que avise si algo se sale; hoy solo existe la cama
-  de la máquina, y se guarda para siempre.
-- **Seleccionar todo lo del mismo color** (asignó 17 barrenos con 17 clics).
-- **Asignar operación por capa o color al importar** (capa `cajeado_6` → cajeado de 6 mm); hoy el
-  nombre de la capa no se conserva al abrir.
 - **Calibración por pantalla** (idea, Jose: «déjalo como idea»): hoy `ds_zcal` es UNO por
   navegador; con monitor externo o cambiando la resolución de la Mac el 100 % queda mal. Guardar uno
   por pantalla (llave = tamaño en píxeles) y avisar «esta pantalla no está calibrada».
+- Textos de DXF y AI/PDF: siguen sin leerse (solo se hizo SVG).

@@ -16,6 +16,11 @@ usa la web de este archivo es el MOTOR: parsers, aplanado de curvas, HPGL y conf
 - **No usar `svgpathtools` como parser primario.** `SVGParser.parse()` siempre llama
   `_parse_basic()`, que usa `xml.etree` de la stdlib. `_parse_with_lib()` existe pero **no se
   invoca** (por eso el flag `HAS_SVG` casi no importa).
+- **`SVGParser` NO descarta los `<text>`** (24-nov-2026): los anota en `parser.texts` (texto,
+  posición, tamaño y matriz; un renglón por `<tspan>` con posición propia) y
+  `studio_backend.load_vector` los convierte en trazos marcados `nota`. Cada trazo lleva `capa`:
+  el `<g>` con nombre más cercano (`inkscape:label` o id; Illustrator codifica `_` como `_x5F_`;
+  los ids automáticos como `g12` o `Layer_1` no cuentan).
 - **No romper el `Z/z` de `_parse_d`**: cierra el subpath actual y **continúa** parseando (no hace
   `break`).
 - **Aplanado de curvas ADAPTATIVO por tolerancia** (desde 22-jul-2026): `_flat_cubic`/`_flat_quad`/

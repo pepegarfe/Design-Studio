@@ -213,6 +213,29 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   programas del sistema (Ghostscript, libcdr) que no se pudieron probar en la Mac, y de CDR no hay
   archivo de muestra. No los prometas sin probarlos en la imagen de Railway.
 
+### Notas, capas, elegir por color y placa (24-nov-2026, reporte de prueba)
+
+- **NOTA = figura que se VE y NUNCA se corta** (`notas[uid]`, punteada gris en el lienzo). Nacen de
+  los `<text>` de un SVG (el servidor los dibuja con una fuente sencilla, `_fuente_nota()`) o del
+  clic derecho «Convertir en nota». ⚠️ **Todo lo que corta se salta las notas**: `tpResolve` y
+  `sinNotas()` (CNC), `hpglPayload` (plotter, y con él la estación). Si agregas otro camino que
+  mande figuras a una máquina, fíltralas ahí también.
+- **CAPA** (`capas[uid]`): nombre de la capa del archivo. `notas` y `capas` van por uid y viajan
+  por los MISMOS sitios que `colores` (historial, copiar/pegar, duplicar, proyecto `objects[i].nota/
+  .capa`, importar) con `metaCopia()`/`metaDesde()`.
+- **Cortes desde capas** (`recetaCapa()`, caja `#capaBox` en Cortes): perfil/contorno/corte (+ fuera,
+  dentro, sobre), cajeado/vaciado/pocket, taladro/barreno/drill; **un número = profundidad en mm**;
+  sin número, el grosor. Se PROPONE con un botón (el nombre de una capa puede no ser una orden) y
+  crea los cortes por el mismo camino del usuario (`nuevaTp` → `_calcApply`). «Ahora no» la oculta
+  hasta abrir otro diseño (`capasOcultas`).
+- **Elegir por color**: fichas `#colPick` en Cortes (solo con 2+ colores) y «Seleccionar todo este
+  color» en el clic derecho (`selMismoColor()`). Un color del archivo que no es de la lista de
+  viniles se NOMBRA por el vinil más parecido (`nombreCol()`): nunca enseñar «#ff0000».
+- **Placa del trabajo** (`material.sheet` = [ancho, alto] o null = la mesa; campos `#matSW/#matSH`
+  en Material, `placa()`): se dibuja desde el origen, la vista 3D solo pone material ahí, y el
+  servidor avisa «Se sale de la placa». ⚠️ Con UN solo campo lleno no se guarda nada y `paintCnc`
+  no pisa los campos mientras se escribe: al pasar de Ancho a Alto la respuesta borraba el ancho.
+
 ### Fuentes en la web
 
 - ⚠️ **En la web el navegador NO tiene las fuentes: el catálogo vive en el servidor.** Pintar

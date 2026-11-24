@@ -91,4 +91,6 @@ pip install -r requirements-servidor.txt
 
 Pruebas: `python3 web/auditar_servidor.py` (sobre una copia), `python3 auditar_gcode.py`,
 `node web/test_plotter_web.mjs`, `node web/test_estacion.mjs`, `node web/test_webusb.mjs`.
+⚠️ En la Mac, `python3` = **`/opt/homebrew/bin/python3`**: el del sistema no tiene shapely y la
+auditoría de G-code "falla" sin que el código tenga nada (24-nov-2026).
 Cómo verificar la interfaz con navegador: [[como-verificar-la-interfaz]].

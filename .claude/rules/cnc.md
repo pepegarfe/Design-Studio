@@ -91,7 +91,7 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Historia: 
   escrito a mano. **Antes de culpar al preset, mira cuál de los dos manda**; la cuenta del
   archivo lo delata (12.2/2 = 6.1 exacto es imposible con `pass_depth` 5.0).
 - ⚠️ **CNC: lo que el generador corrige u omite, lo AVISA** (`_cnc_warnings()` en
-  `studio_backend.py`, desde nov-2026): corte fuera de la mesa, más hondo que el material, pasada
+  `studio_backend.py`, desde nov-2026): corte fuera de la mesa o de la PLACA (`material.sheet`), más hondo que el material, pasada
   mayor que el diámetro, contornos con menos puentes o sin ninguno (`tab_report`), figuras más
   chicas que la fresa (`count_unfit`). Llegan en `warnings` de la vista previa y del `.tap`; la UI
   los deja en una caja fija (`#tpWarn`) y **vuelve a pedirlos justo antes de guardar**. Son avisos,

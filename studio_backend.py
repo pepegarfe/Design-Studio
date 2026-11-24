@@ -435,12 +435,22 @@ def cnc_set(patch):
                     return {'ok': False, 'error': 'Las marchas deben ser números (RPM).'}
                 if len(gears) not in (8, 9) or any(not (100 <= g <= 60000) for g in gears):
                     return {'ok': False, 'error': 'Las marchas son 8 valores de RPM (100–60000).'}
+            # Placa de ESTE trabajo [ancho, alto] en mm, o None = la mesa entera (24-nov-2026).
+            sh = m.get('sheet', old.get('sheet'))
+            if sh is not None:
+                try:
+                    sh = [round(float(sh[0]), 1), round(float(sh[1]), 1)]
+                except (TypeError, ValueError, IndexError):
+                    return {'ok': False, 'error': 'La placa lleva ancho y alto en mm.'}
+                if not all(10 <= v <= 10000 for v in sh):
+                    return {'ok': False, 'error': 'La placa debe medir entre 10 y 10 000 mm por lado.'}
             # ⚠️ dict RECONSTRUIDO con lista blanca: toda llave nueva del material debe
             # añadirse AQUÍ o se pierde en cada guardado (así se perdía spinup al inicio)
             cur['material'] = {'thickness': t, 'z_zero': zz, 'clearance': cl,
                                'home_end': bool(m.get('home_end', old.get('home_end', True))),
                                'spinup': sp, 'gears': gears,
-                               'type': str(m.get('type', old.get('type', mat_ids[0])))}
+                               'type': str(m.get('type', old.get('type', mat_ids[0]))),
+                               'sheet': sh}
         if cur['material'].get('type') not in mat_ids:
             cur['material']['type'] = mat_ids[0]
         if 'tools' in patch:
@@ -602,6 +612,19 @@ def _cnc_warnings(data, job, op, tps, drills, tool, material):
         if x0 < -dia - 0.01 or y0 < -dia - 0.01 or x1 > ww + dia + 0.01 or y1 > wh + dia + 0.01:
             out.append('Se sale de la mesa (%g × %g mm): la fresa iría de X %.1f a %.1f y de '
                        'Y %.1f a %.1f.' % (ww, wh, x0, x1, y0, y1))
+    # La PLACA del trabajo (más chica que la mesa): misma tolerancia de un diámetro. Fuera de
+    # ella la fresa corta aire o, peor, la pieza vecina o las prensas.
+    sh = (material or {}).get('sheet')
+    try:
+        sw, shh = float(sh[0]), float(sh[1])
+    except (TypeError, ValueError, IndexError):
+        sw = shh = 0.0
+    if pts and sw > 0 and shh > 0:
+        x0, x1 = min(p[0] for p in pts) - r, max(p[0] for p in pts) + r
+        y0, y1 = min(p[1] for p in pts) - r, max(p[1] for p in pts) + r
+        if x0 < -dia - 0.01 or y0 < -dia - 0.01 or x1 > sw + dia + 0.01 or y1 > shh + dia + 0.01:
+            out.append('Se sale de la placa (%g × %g mm): la fresa iría de X %.1f a %.1f y de '
+                       'Y %.1f a %.1f.' % (sw, shh, x0, x1, y0, y1))
     depth, start = float(job.get('depth') or 0), float(job.get('start') or 0)
     try:
         th = float(material.get('thickness') or 0)
@@ -743,13 +766,77 @@ def _color_hex(c):
         return None
 
 
+_NOTA_PREFERIDAS = ('Arial', 'Helvetica', 'Roboto', 'Open Sans', 'DejaVu Sans', 'Liberation Sans', 'Lato')
+_NOTA_FUENTE = []          # [fuente] elegida una vez por proceso (es común a todas las cuentas)
+_NOTA_MAX = 300            # tope de textos por archivo: cada uno abre la fuente y la recorre
+
+
+def _fuente_nota():
+    """Una fuente sencilla y legible para dibujar los textos del archivo. No se busca la del
+    diseño: las notas son para LEER ("A", "voltear"), no se cortan."""
+    if _NOTA_FUENTE:
+        return _NOTA_FUENTE[0]
+    elegida = None
+    try:
+        import text_vector
+        fs = (text_vector.list_fonts() or {}).get('fonts') or []
+        regulares = [f for f in fs if (f.get('sub') or '').lower() in ('', 'regular', 'normal', 'book')]
+        for fam in _NOTA_PREFERIDAS:
+            elegida = next((f for f in regulares if f.get('family') == fam), None)
+            if elegida:
+                break
+        elegida = elegida or (regulares[0] if regulares else (fs[0] if fs else None))
+    except Exception:
+        elegida = None
+    _NOTA_FUENTE.append(elegida)
+    return elegida
+
+
+def _textos_a_notas(texts):
+    """Los <text> del SVG → trazos marcados `nota` (en mm, Y-ABAJO como el resto del SVG, para
+    que el volteo de load_vector los acomode igual). Devuelve (trazos, cuántos no se pudieron)."""
+    import math
+    out, fallidos = [], 0
+    fuente = _fuente_nota()
+    for t in texts[:_NOTA_MAX]:
+        if not fuente:
+            fallidos += 1
+            continue
+        a, b, c, d, e, f = t['mtx']
+        s_mm = math.sqrt(abs(a * d - b * c)) or 1.0           # mm por unidad del archivo
+        cap = max(0.5, 0.7 * t['fs'] * s_mm)                  # altura de mayúscula ≈ 0.7 em
+        try:
+            import text_vector
+            r = text_vector.text_paths({'text': t['txt'], 'path': fuente['path'],
+                                        'index': fuente.get('index', 0), 'size': cap})
+        except Exception:
+            r = {'ok': False}
+        if not r.get('ok'):
+            fallidos += 1
+            continue
+        w = max((p[0] for q in r['paths'] for p in q['pts']), default=0.0)
+        dx = {'middle': -w / 2.0, 'end': -w}.get(t.get('anchor'), 0.0)
+        for q in r['paths']:
+            uu = [(t['x'] + (gx + dx) / s_mm, t['y'] - gy / s_mm) for gx, gy in q['pts']]
+            out.append({'pts': core._apply_mtx(uu, t['mtx']), 'fill': t.get('fill'),
+                        'stroke': t.get('stroke'), 'capa': t.get('capa'), 'nota': True})
+    fallidos += max(0, len(texts) - _NOTA_MAX)
+    return out, fallidos
+
+
 def load_vector(path):
     """Lee un vector (SVG/DXF/AI) y lo entrega como lo espera la UI: trazados en mm
     con Y hacia ARRIBA (el volteo del SVG va aquí, POR FORMATO — ver flip_paths_y)."""
     ext = os.path.splitext(path)[1].lower()
+    textos, fallidos, n_txt = [], 0, 0
     try:
         if ext == '.svg':
-            styled = core.SVGParser().parse(path)
+            parser = core.SVGParser()
+            styled = parser.parse(path)
+            n_txt = len(getattr(parser, 'texts', None) or [])
+            if n_txt:
+                textos, fallidos = _textos_a_notas(parser.texts)
+                styled = list(styled) + textos
         elif ext == '.dxf':
             styled = core.DXFParser().parse(path)
         elif ext in ('.ai', '.pdf'):
@@ -771,6 +858,10 @@ def load_vector(path):
         col = _color_hex(d.get('stroke') or d.get('fill'))
         if col:
             item['col'] = col              # el color del archivo viaja a la interfaz (corte por color)
+        if d.get('capa'):
+            item['capa'] = d['capa']       # nombre de la capa: la interfaz propone el corte por capa
+        if d.get('nota'):
+            item['nota'] = True            # letra de un texto: se VE, no se corta
         paths.append(item)
         for x, y in rp:
             xs.append(x); ys.append(y)
@@ -779,7 +870,8 @@ def load_vector(path):
         flip_paths_y(paths)   # solo SVG viene Y-abajo; AI/DXF ya llegan Y-arriba
     ww, wh = load_workarea()
     return {'ok': True, 'name': os.path.basename(path),
-            'paths': paths, 'bbox': bbox, 'work': [ww, wh]}
+            'paths': paths, 'bbox': bbox, 'work': [ww, wh],
+            'textos': n_txt, 'textos_fallidos': fallidos}
 
 
 def build_hpgl(data):

@@ -669,8 +669,35 @@ class SVGParser:
         # piso de aplanado: 0.01 mm reales convertidos a user-units con la escala raíz
         self._flat_floor = 0.001 / max(abs(mtx[0]), abs(mtx[3]), 1e-9)
         result = []
+        # Los <text> NO son trazos: se anotan aquí (texto, posición y tamaño en user units, con su
+        # matriz) y studio_backend.load_vector los convierte en letras dibujadas que la interfaz
+        # marca como NOTA (se ven, no se cortan). Antes se descartaban EN SILENCIO (24-nov-2026).
+        self.texts = []
         self._walk(root, result, (0, 0, 0), None, mtx)
         return self._dedup(result)
+
+    # Nombre de CAPA de un <g>: la etiqueta de Inkscape o el id (Illustrator escribe la capa como
+    # id y codifica los caracteres raros: "cajeado_6" llega como "cajeado_x5F_6"). Los ids
+    # automáticos ("g123", "layer1", "Layer_1") no son nombres que alguien haya escrito.
+    _AUTO_ID = re.compile(r'^(g|layer|path|svg|group|capa|layer_|grupo)[_-]?\d*$', re.I)
+
+    def _capa(self, elem):
+        nm = elem.get('{http://www.inkscape.org/namespaces/inkscape}label') or elem.get('id') or ''
+        nm = re.sub(r'_x([0-9A-Fa-f]{2})_', lambda m: chr(int(m.group(1), 16)), nm)
+        nm = re.sub(r'_\d+_$', '', nm).strip()        # Illustrator: "perfil_1_" = el 2.º "perfil"
+        if not nm or self._AUTO_ID.match(nm):
+            return None
+        return nm[:60]
+
+    @staticmethod
+    def _style_prop(elem, prop):
+        v = elem.get(prop)
+        for decl in elem.get('style', '').split(';'):
+            if ':' in decl:
+                p, x = decl.split(':', 1)
+                if p.strip().lower() == prop:
+                    v = x.strip()
+        return v
 
     def _elem_style(self, elem, parent_fill, parent_stroke):
         """Extrae fill/stroke del elemento, respetando herencia del padre."""
@@ -686,7 +713,7 @@ class SVGParser:
         stroke = _parse_svg_color(stroke_s) if stroke_s is not None else parent_stroke
         return fill, stroke
 
-    def _walk(self, elem, result, parent_fill, parent_stroke, mtx):
+    def _walk(self, elem, result, parent_fill, parent_stroke, mtx, inh=None):
         tag = elem.tag.split('}')[-1] if '}' in elem.tag else elem.tag
         if tag in self._SKIP_TAGS:
             return
@@ -694,13 +721,27 @@ class SVGParser:
         # Compose this element's own transform with the inherited matrix
         tf_str = elem.get('transform', '')
         cur_mtx = _compose_mtx(mtx, _parse_svg_transform(tf_str)) if tf_str else mtx
+        # Lo que se HEREDA: capa (del <g> con nombre más cercano), tamaño y anclaje de letra.
+        inh = dict(inh or {'capa': None, 'fs': 16.0, 'anchor': 'start'})
+        if tag == 'g':
+            inh['capa'] = self._capa(elem) or inh['capa']
+        fs = self._parse_length(self._style_prop(elem, 'font-size') or '')
+        if fs and fs > 0:
+            inh['fs'] = fs
+        an = self._style_prop(elem, 'text-anchor')
+        if an in ('start', 'middle', 'end'):
+            inh['anchor'] = an
+        capa = inh['capa']
+        if tag == 'text':
+            self._texto(elem, cur_mtx, inh, fill, stroke)
+            return                                        # sus <tspan> ya se leyeron ahí
         if tag == 'path':
             d = elem.get('d', '')
             if d:
                 for pts_uu in self._parse_d(d):
                     if len(pts_uu) >= 2:
                         result.append({"pts": _apply_mtx(pts_uu, cur_mtx),
-                                       "fill": fill, "stroke": stroke})
+                                       "fill": fill, "stroke": stroke, "capa": capa})
         else:
             pts_uu = None
             if tag == 'rect':
@@ -715,9 +756,36 @@ class SVGParser:
                 pts_uu = self._parse_poly(elem, closed=True)
             if pts_uu and len(pts_uu) >= 2:
                 result.append({"pts": _apply_mtx(pts_uu, cur_mtx),
-                               "fill": fill, "stroke": stroke})
+                               "fill": fill, "stroke": stroke, "capa": capa})
         for child in elem:
-            self._walk(child, result, fill, stroke, cur_mtx)
+            self._walk(child, result, fill, stroke, cur_mtx, inh)
+
+    def _texto(self, elem, mtx, inh, fill, stroke):
+        """Anota un <text>: un renglón por cada <tspan> con posición propia (así exportan
+        Illustrator e Inkscape los textos de varias líneas), o el texto entero si no los hay."""
+        def num(v):
+            try:
+                return float(re.split(r'[\s,]+', (v or '').strip())[0])
+            except (ValueError, IndexError):
+                return None
+        x0, y0 = num(elem.get('x')) or 0.0, num(elem.get('y')) or 0.0
+        renglones = []
+        tspans = [t for t in elem if (t.tag.split('}')[-1]) == 'tspan']
+        if tspans and any(t.get('x') is not None or t.get('y') is not None for t in tspans):
+            cx, cy = x0, y0
+            for t in tspans:
+                tx, ty = num(t.get('x')), num(t.get('y'))
+                cx = tx if tx is not None else cx
+                cy = ty if ty is not None else cy
+                fs = self._parse_length(self._style_prop(t, 'font-size') or '') or inh['fs']
+                renglones.append((''.join(t.itertext()), cx, cy, fs))
+        else:
+            renglones.append((''.join(elem.itertext()), x0, y0, inh['fs']))
+        for txt, x, y, fs in renglones:
+            txt = ' '.join(txt.split())
+            if txt:
+                self.texts.append({'txt': txt[:200], 'x': x, 'y': y, 'fs': fs, 'anchor': inh['anchor'],
+                                   'mtx': mtx, 'fill': fill, 'stroke': stroke, 'capa': inh['capa']})
 
     def _arc_pts(self, x1, y1, rx, ry, phi_deg, large_arc, sweep, x2, y2):
         """SVG arc endpoint params → list of (x,y) sample points (excluding start, px units)."""
