@@ -230,11 +230,47 @@ def _offset_side(paths, side, tool_dia, allowance=0.0, last_pass=0.0):
     if dist <= 0.05:
         raise ValueError('La holgura negativa se come el radio de la fresa.')
 
+    def cerrada(pts, d):
+        """Figura CERRADA: la desplaza como polígono (anillo cerrado), en el sentido del dibujo
+        y arrancando junto a su primer punto. ⚠️ `offset_curve` sobre un contorno cerrado lo
+        deja ABIERTO por el lado convexo (un cuadrado salía de (20,17) a (17,20): le faltaba
+        la esquina de arranque) y entonces se cortaba como línea abierta, con picada vertical
+        en cada pasada (25-nov-2026). None = no se pudo (sigue el camino de siempre)."""
+        try:
+            poly = Polygon(pts)
+            if not poly.is_valid or poly.area < 1e-6:
+                return None
+            ccw = poly.exterior.is_ccw
+            # a la derecha de un contorno antihorario queda el exterior
+            afuera = (sgn < 0) == ccw
+            g = poly.buffer(d if afuera else -d, quad_segs=16)
+        except Exception:
+            return None
+        res = []
+        for q in getattr(g, 'geoms', [g]):
+            if q.is_empty or not isinstance(q, Polygon):
+                continue
+            c = [list(t) for t in _simplify(q.exterior).coords]
+            if len(c) < 4:
+                continue
+            if q.exterior.is_ccw != ccw:
+                c.reverse()                          # conservar la dirección del dibujo
+            c = c[:-1]
+            k = min(range(len(c)), key=lambda i: _d2(c[i], pts[0]))
+            c = c[k:] + c[:k]
+            res.append(c + [c[0]])
+        return res
+
     def off(d):
         outs = []
         for pts in paths:
             if len(pts) < 2:
                 continue
+            if _is_closed(pts):
+                cc = cerrada([tuple(q) for q in pts], d)
+                if cc is not None:
+                    outs.extend(cc)
+                    continue
             try:
                 oc = LineString(pts).offset_curve(sgn * d, quad_segs=16)
             except Exception:
@@ -646,13 +682,14 @@ def _open_pass(pts, cum, z_from, z_cut, entry_len, back=False):
     trayecto abierto envolver saltaría del final al principio cortando en línea recta por
     donde no debe. Aquí el recorrido es de 0 a `perim` y se acabó.
 
-    ⚠️ `back` (la ÚLTIMA pasada): al terminar la rampa, REGRESA al inicio a fondo y luego
-    recorre todo. Sin esto el tramo de la rampa de la última pasada nunca se cortaba a la
-    profundidad final y quedaba una cuña en el fondo (reporte de Jose, 25-nov-2026, con una
-    línea de 60 mm a 8 mm: los primeros 25 mm quedaban de 5.3 a 8 mm). En un anillo cerrado
-    no pasa porque la vuelta completa repasa la rampa; en uno abierto nada la repasa.
-    Las pasadas intermedias no lo necesitan: la rampa de la siguiente baja por debajo de la
-    cuña anterior en todo el tramo.
+    ⚠️ `back` (se usa en TODAS las pasadas): al terminar la rampa, REGRESA al inicio a fondo
+    y luego recorre todo. En un anillo cerrado la vuelta completa repasa la rampa; en uno
+    abierto nada la repasa, y sin esto (25-nov-2026):
+    - en la ÚLTIMA pasada el tramo de la rampa quedaba en cuña en el fondo (una línea a 8 mm
+      quedaba de 5.3 a 8 mm en sus primeros 25 mm — reporte de Jose);
+    - en las INTERMEDIAS, la siguiente pasada vuelve al inicio por el aire y baja en VERTICAL
+      hasta la profundidad anterior — pero ahí la rampa anterior empezó en la superficie, así
+      que entraba de punta en material sin cortar, justo lo que la rampa debía evitar.
     """
     total = cum[-1]
     L = max(0.0, min(float(entry_len or 0.0), total))
@@ -725,8 +762,19 @@ def _zigzag_pass(pts, cum, perim, s0, z_from, z_cut, cfg, zones, z_tab, tab_ramp
     for _ in range(n):
         a, b = (s0, s0 + L) if fwd else (s0 + L, s0)
         # estaciones del tramo (vértices del anillo dentro del leg + extremos)
-        st = sorted({round(c, 6) for c in cum[:-1] if min(a, b) - 1e-9 <= c <= max(a, b) + 1e-9}
-                    | {a, b}, reverse=not fwd)
+        lo, hi = min(a, b), max(a, b)
+        st = {a, b}
+        for k in range(int(lo // perim), int(hi // perim) + 1):
+            base = k * perim
+            st |= {round(c + base, 6) for c in cum[:-1] if lo - 1e-9 <= c + base <= hi + 1e-9}
+            # ⚠️ también los bordes de cada puente (como en _ring_pass): sin ellos un tramo del
+            # vaivén que cruza un puente lo atraviesa en línea recta y le come altura
+            # (25-nov-2026: puentes de 3 mm que salían de 2.1 a 2.7)
+            for za, zb in (zones or ()):
+                for x in (za, za + tab_ramp, zb - tab_ramp, zb):
+                    if lo - 1e-9 <= x + base <= hi + 1e-9:
+                        st.add(x + base)
+        st = sorted(st, reverse=not fwd)
         z_a, z_b = z, z - drop
         for s in st:
             t = abs(s - a) / L
@@ -915,11 +963,10 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
             if (not closed) and rcfg and dz > 1e-9:
                 # cadena de anillos de cajeado: rampa a lo largo del propio trayecto, sin
                 # dar la vuelta (ver _open_pass)
+                # back=True en TODAS las pasadas: regresa a fondo sobre la rampa (ver _open_pass)
                 L_e = _entry_len(rcfg, dz, perim)
-                ultima = d == ring_depths[-1]
-                verts = _open_pass(pts, cum, z_prev, z_cut, L_e, back=ultima)
-                if ultima:
-                    secs += (2.0 * min(L_e, perim) / feed) * 60.0
+                verts = _open_pass(pts, cum, z_prev, z_cut, L_e, back=True)
+                secs += (2.0 * min(L_e, perim) / feed) * 60.0
             elif rtype == 'zigzag':
                 # vaivén descendente y luego la vuelta completa a fondo (repasa el tramo)
                 verts, s_zz = _zigzag_pass(pts, cum, perim, s_cur, z_prev, z_cut,
@@ -970,7 +1017,10 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
             secs += (perim / feed + float(tool['pass_depth']) / plunge) * 60.0
             if slot_feed:
                 secs += min(slot, perim) * (1.0 / slot_feed - 1.0 / feed) * 60.0
-        if closed and rc and rc['type'] == 'spiral' and not finish:
+        # ⚠️ TAMBIÉN en el anillo de acabado: su única pasada baja en espiral desde arriba en UNA
+        # vuelta; sin la vuelta plana la pared queda en tornillo y el arranque sin cortar
+        # (25-nov-2026: «and not finish» dejaba 8 mm de 8 sin cortar en el punto de entrada).
+        if closed and rc and rc['type'] == 'spiral':
             z_fin = z_start - ring_depths[-1]
             fzones = zones if (zones and z_fin < z_tab - 1e-9) else None
             verts, s_cur = _ring_pass(pts, cum, perim, s_cur, z_fin, z_fin,

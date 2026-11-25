@@ -19,11 +19,24 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Historia: 
   Una cadena es un trayecto **ABIERTO**: entra con `_open_pass` (no `_ring_pass`, que da la
   vuelta con `s % perim`) y **entre pasadas de profundidad DEBE subir y volver al inicio por
   el aire** — sin eso cortaría en línea recta del extremo lejano al principio.
-  ⚠️ **La ÚLTIMA pasada de un trayecto abierto con rampa REGRESA sobre la rampa a fondo**
+  ⚠️ **CADA pasada de un trayecto abierto con rampa REGRESA sobre la rampa a fondo**
   (`back=True`) antes de recorrerlo entero: en un anillo cerrado la vuelta completa repasa la
-  rampa, pero en uno abierto nada lo hace y quedaba una CUÑA en el fondo (25-nov-2026: una línea
-  a 8 mm quedaba de 5.3 a 8 mm en sus primeros 25 mm). Lo vigila `caso_rampa_abierta` en
-  `auditar_gcode.py`.
+  rampa, pero en uno abierto nada lo hace. Sin eso (25-nov-2026) la última dejaba una CUÑA en el
+  fondo (una línea a 8 mm quedaba de 5.3 a 8 mm en sus primeros 25 mm) y cada pasada intermedia
+  bajaba en VERTICAL en material sin cortar. Lo vigilan `caso_rampa_abierta` y
+  `caso_barrido_25nov` en `auditar_gcode.py`.
+- ⚠️ **Tres más del barrido del 25-nov-2026** (3341 combinaciones medidas punto por punto):
+  - **Espiral + acabado**: el anillo de acabado también necesita la vuelta plana final (se la
+    saltaba con `and not finish`: quedaba la pared en tornillo y 8 de 8 mm sin cortar tras el
+    arranque).
+  - **`_zigzag_pass` mete los bordes de los puentes como vértices** (igual que `_ring_pass`):
+    sin ellos el vaivén cruzaba el puente en línea recta y le comía hasta 0.9 mm.
+  - **Derecha/Izquierda sobre una figura CERRADA se desplaza como polígono** (`cerrada()` en
+    `_offset_side`): `offset_curve` la dejaba ABIERTA por el lado convexo y se cortaba como
+    línea, con todas las trampas de los abiertos.
+  Queda, MENOR: con puentes, si una pasada arranca sobre la subida de un puente, baja en
+  vertical hasta 0.38 mm (49 de 3341 casos). El barrido está en la memoria
+  ([[barrido-cnc-25-nov]]).
 - ⚠️ **Rendimiento del Corte (12-nov-2026).** Tres causas de "calcular tarda segundos", y su arreglo:
   (1) `_point_at()` va por **búsqueda binaria** (`bisect`): se llama una vez POR VÉRTICE de cada
   pasada y de corrido era cuadrática — un cajeado con rampa tardaba 8× (1.06 s → 0.17 s; G-code

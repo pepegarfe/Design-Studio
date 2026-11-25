@@ -546,6 +546,54 @@ def caso_rampa_abierta():
 caso_rampa_abierta()
 
 
+def caso_barrido_25nov():
+    """Lo que encontró el barrido de combinaciones del 25-nov-2026 (3341 casos)."""
+    t = dict(TOOL, pass_depth=2.7)
+    base = {'paths': [sq(20, 20, 80, 50)], 'op': 'profile', 'side': 'outside', 'depth': 8.0,
+            'tool': t, 'material': MAT_TOP, 'name': 'x', 'label': 'x'}
+    # 1) espiral + acabado: el anillo de acabado necesita su vuelta plana final
+    r = sb.cnc_build_tap(dict(base, last_pass=0.3,
+                              ramp={'on': True, 'type': 'spiral', 'mode': 'angle', 'v': 3}))
+    # el punto SIGUIENTE al arranque del anillo de acabado (el arranque mismo sí llega al
+    # fondo al cerrar la espiral; lo que quedaba sin cortar es lo que viene justo después)
+    arranques = re.findall(r'G00 X-?[\d.]+ Y-?[\d.]+\nG01 Z-?[\d.]+ F[\d.]+\n'
+                           r'(?:G01 )?X(-?[\d.]+) Y(-?[\d.]+)', r['tap'])
+    x, y = map(float, arranques[-1])
+    check('espiral + acabado: el inicio del anillo de acabado llega al fondo',
+          min(_z_cortando_cerca(r['tap'], x, y, r=0.1) or [0]) < -7.999,
+          str(min(_z_cortando_cerca(r['tap'], x, y, r=0.1) or [0])))
+    # 2) zigzag que cruza un puente: el puente conserva su altura
+    pl = dict(base, depth=12.2, last_pass=0.3,
+              tabs={'on': True, 'mode': 'dist', 'v': 60, 'w': 8, 'h': 3},
+              ramp={'on': True, 'type': 'zigzag', 'mode': 'angle', 'v': 10})
+    r = sb.cnc_build_tap(pl)
+    tabs = sb.cnc_toolpaths_preview(pl)['tabs_xy']
+    alt = [min(_z_cortando_cerca(r['tap'], a, b, r=0.3) or [0]) for a, b in tabs]
+    check('zigzag + puentes: cada puente queda a su altura (-9.2)',
+          tabs and all(abs(z + 9.2) < 0.02 for z in alt), str(alt))
+    # 3) figura CERRADA con Derecha/Izquierda: el recorrido sale cerrado y del lado correcto
+    for side, lo, hi in (('right', 17.0, 103.0), ('left', 23.0, 97.0)):
+        pv = sb.cnc_toolpaths_preview(dict(base, side=side))
+        tp = pv['toolpaths'][0]
+        xs = [q[0] for q in tp]
+        check(f'cerrada con {side}: recorrido cerrado y a {lo}..{hi}',
+              tp[0] == tp[-1] and abs(min(xs) - lo) < 0.01 and abs(max(xs) - hi) < 0.01,
+              str((tp[0], tp[-1], min(xs), max(xs))))
+    # 4) línea abierta con rampa: al volver al inicio, baja DENTRO de lo ya cortado
+    r = sb.cnc_build_tap(dict(base, paths=[[(20.0, 20.0), (80.0, 20.0)]], side='on',
+                              ramp={'on': True, 'type': 'smooth', 'mode': 'dist', 'v': 25}))
+    tap = r['tap']
+    malas = []
+    for m in re.finditer(r'G00 X20 Y20\nG01 Z(-?[\d.]+)', tap):
+        hecho = min(_z_cortando_cerca(tap[:m.start()], 20.0, 20.0, r=0.3) or [0])
+        if float(m.group(1)) < hecho - 1e-3:
+            malas.append((float(m.group(1)), hecho))
+    check('línea abierta con rampa: ninguna picada vertical en material sin cortar', not malas, str(malas))
+
+
+caso_barrido_25nov()
+
+
 print(f'\n== {len(OK)} verificaciones OK ==')
 if FALLAS:
     print(f'\n!! {len(FALLAS)} FALLAS:')
