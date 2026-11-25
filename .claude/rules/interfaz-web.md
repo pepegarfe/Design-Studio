@@ -233,8 +233,16 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   viniles se NOMBRA por el vinil más parecido (`nombreCol()`): nunca enseñar «#ff0000».
 - **Placa del trabajo** (`material.sheet` = [ancho, alto] o null = la mesa; campos `#matSW/#matSH`
   en Material, `placa()`): se dibuja desde el origen, la vista 3D solo pone material ahí, y el
-  servidor avisa «Se sale de la placa». ⚠️ Con UN solo campo lleno no se guarda nada y `paintCnc`
-  no pisa los campos mientras se escribe: al pasar de Ancho a Alto la respuesta borraba el ancho.
+  servidor avisa «Se sale de la placa». **Un campo VACÍO = la medida de la mesa** (el número gris
+  que muestra; mismo criterio en `mosPlacaV()` del mosaico); los dos vacíos = sin placa. ⚠️ Antes un
+  campo solo se ignoraba EN SILENCIO y el gris parecía un valor (reporte, 24-nov-2026). `paintCnc`
+  no pisa los campos mientras se escribe en ellos: al pasar de Ancho a Alto borraba el ancho.
+- **Tiempo de la barra de abajo (`#metaTime`) en la CNC = suma de los cortes activos** (`t._secs`, lo
+  mismo que Revisar; lo repinta también `pintarPasos`). ⚠️ Antes dividía el largo del DIBUJO entre
+  el avance: sin pasadas ni contorno de la fresa, decía ≈5 min y eran 26.
+- **«Recuperar trabajo» puede llegar DESPUÉS de que abriste otra cosa** (la pregunta va al
+  servidor): entonces lo dice, el botón es «Recuperar (reemplaza lo abierto)» y la ✕ cierra sin
+  borrar el respaldo (que el autoguardado reemplaza al primer cambio).
 
 ### Mosaico (24-nov-2026, opciones A+A de Jose: https://claude.ai/artifact/SAoBB7awvBJg2wecJagkUL)
 

@@ -802,7 +802,7 @@
       <div class="field" style="margin-top:8px" title="Grosor de la placa a cortar: elige uno de arriba o escribe el tuyo"><label>Otro</label><input id="matThick" value="15"><span class="u">mm</span></div>
       <div class="grp-t fsec">Tamaño de la placa</div>
       <div class="mrow" style="margin-bottom:0"><div class="field" style="flex:1" title="Ancho de la placa que vas a poner en la mesa (en X)"><label>Ancho</label><input id="matSW" inputmode="decimal"><span class="u">mm</span></div><div class="field" style="flex:1" title="Alto de la placa (en Y)"><label>Alto</label><input id="matSH" inputmode="decimal"><span class="u">mm</span></div></div>
-      <div class="muted-note" style="margin-top:6px">Vacío = la mesa entera. Se dibuja desde el origen y avisa si un corte se sale.</div>
+      <div class="muted-note" style="margin-top:6px">Un campo vacío toma la medida de la mesa (el número gris); los dos vacíos = la mesa entera. Se dibuja desde el origen y avisa si un corte se sale.</div>
       <input id="matDia" type="hidden" value="6">
       <div class="grp-t fsec">¿Dónde está el cero de Z?</div>
       <div class="seg pics" id="zZeroSeg2" style="margin-top:0">
@@ -2123,8 +2123,14 @@ var PlotterMotor = (function(){
     el('fr').value = (m==='ind') ? String(Math.round(doc.rot[sel.idx]*10)/10) : '0';
     el('fs').value = (m==='ind') ? String(Math.round(doc.sx[sel.idx]*1000)/10) : '100';
     el('metaSize').textContent=fmtDim(w)+' × '+fmtDim(h)+(unitMode==='in'?' in':' mm');
-    var mmps = state.machine==='cnc' ? (cncTool()?cncTool().feed/60:1) : cutParams().speed;   // CNC: avance de la fresa (mm/min → mm/s)
-    var secs=Math.round(pathLen()/Math.max(1,mmps)); el('metaTime').textContent='≈ '+Math.floor(secs/60)+' min '+(secs%60)+' s';
+    if(state.machine==='cnc'){
+      // CNC: el tiempo es el de los CORTES (pasadas, contorno de la fresa, movimientos), el mismo
+      // que da Revisar. Antes dividía el largo del DIBUJO entre el avance: decía ≈5 min y eran 26.
+      var totC=0, hayC=false; tpaths.forEach(function(t){ if(t.enabled&&t._secs!=null){ totC+=t._secs; hayC=true; } });
+      el('metaTime').textContent=hayC?('≈ '+fmtSecs(totC)):'sin cortes';
+      el('metaTime').title=hayC?'Tiempo de los cortes activos (el mismo que en Revisar)':'Agrega un corte en el paso Corte para estimar el tiempo';
+    } else {
+      var secs=Math.round(pathLen()/Math.max(1,cutParams().speed)); el('metaTime').textContent='≈ '+Math.floor(secs/60)+' min '+(secs%60)+' s'; el('metaTime').title=''; }
     el('stSel').textContent = m==='ind'?'1 objeto seleccionado':(m==='grp'?(sel.set.size+' objetos seleccionados'):(doc.paths.length+' trazados'));
   }
 
@@ -3350,8 +3356,10 @@ var PlotterMotor = (function(){
   // partir, cada tramo queda SEPARADO en su lugar (col×sep, fila×sep), como grupo, con su etiqueta
   // «fila-columna» como NOTA; las notas y trazos abiertos de la pieza viajan con el tramo donde caen.
   var mosJ='cola', mosOn=false, mosPrev=null, mosFirma='', mosT=null;
-  function mosPlacaV(){ var w=parseFloat(String(el('mosW').value).replace(',','.')), h=parseFloat(String(el('mosH').value).replace(',','.'));
-    return (w>0&&h>0)?[w,h]:(placa()||state.work); }
+  // Campo vacío = el número gris (la placa de Material o la mesa), CADA UNO por su lado: antes con un
+  // solo campo lleno se usaba la placa entera de reserva y "Alto 1060" se ignoraba (reporte, 24-nov).
+  function mosPlacaV(){ var w=parseFloat(String(el('mosW').value).replace(',','.')), h=parseFloat(String(el('mosH').value).replace(',','.')), base=placa()||state.work;
+    return [w>0?w:base[0], h>0?h:base[1]]; }
   function mosPieza(){ var gu=geoUnits().map(function(u){ return {idxs:u.idxs, cerr:u.idxs.filter(function(i){ return isClosedIdx(i)&&!esNota(i); })}; })
       .filter(function(u){ return u.cerr.length; });
     return gu; }
@@ -3362,7 +3370,8 @@ var PlotterMotor = (function(){
     if(!r){ b.textContent='Ajusta un valor y las costuras se dibujan sobre la pieza.'; lb.textContent='Partir en mosaico'; return; }
     if(!r.ok){ b.textContent=r.error||'No se pudo calcular'; lb.textContent='Partir en mosaico'; return; }
     var mx=0,my=0; r.tiles.forEach(function(t){ mx=Math.max(mx,t.bbox[2]-t.bbox[0]); my=Math.max(my,t.bbox[3]-t.bbox[1]); });
-    b.innerHTML='Saldrán <b>'+r.tiles.length+' tramos</b> ('+r.cols+' × '+r.rows+') de hasta <b>'+Math.round(mx)+' × '+Math.round(my)+' mm</b>.'+((r.warnings||[]).length?('<br>⚠ '+r.warnings.map(hesc).join('<br>⚠ ')):'');
+    var pv=mosPlacaV();
+    b.innerHTML='Placa de <b>'+pv[0]+' × '+pv[1]+' mm</b>: saldrán <b>'+r.tiles.length+' tramos</b> ('+r.cols+' × '+r.rows+') de hasta <b>'+Math.round(mx)+' × '+Math.round(my)+' mm</b>.'+((r.warnings||[]).length?('<br>⚠ '+r.warnings.map(hesc).join('<br>⚠ ')):'');
     lb.textContent='Partir en '+r.tiles.length+' tramos'; }
   function mosVista(){ if(!mosOn||state.machine!=='cnc'||!hasDoc()||cncStep()){ if(mosPrev){ mosPrev=null; mosFirma=''; draw(); } return; }
     var gu=mosPieza(); if(!gu.length){ mosPrev=null; mosFirma=''; el('mosSum').textContent='Selecciona la pieza (figuras cerradas) que quieres partir.'; draw(); return; }
@@ -4309,14 +4318,18 @@ var PlotterMotor = (function(){
       if(!r||r.ok===false) return;               // sin respuesta clara: reintentar en el próximo loadWork
       autosaveChecked=true;
       if(!r.exists||!r.project) return;
+      // ⚠️ La respuesta puede llegar DESPUÉS de que abriste otra cosa: entonces "Recuperar" la
+      // reemplazaría sin avisar (reporte, 24-nov-2026). Se dice con todas sus letras.
+      var yaHay=hasDoc();
       askConfirm('Recuperar trabajo',
         'Encontré trabajo sin guardar de la sesión pasada'+(r.time?(' (de las '+r.time+')'):'')+
-        (r.project.name?(':<br><b>'+hesc(r.project.name)+'</b>'):'')+'<br><br><b>Recuperar</b> lo trae a la mesa. <b>Descartar</b> lo borra para siempre.',
+        (r.project.name?(':<br><b>'+hesc(r.project.name)+'</b>'):'')+'<br><br><b>Recuperar</b> lo trae a la mesa. <b>Descartar</b> lo borra para siempre.'+
+        (yaHay?('<br><br>⚠ Ya tienes abierto <b>'+hesc(state.name||'otro diseño')+'</b>: <b>Recuperar lo reemplaza</b>. Para seguir con lo que abriste, cierra este cuadro con la ✕: el respaldo no se borra, pero en cuanto hagas un cambio aquí, el respaldo automático pasa a ser ESTE trabajo.'):''),
         // ⚠️ El respaldo SOLO se borra con "Descartar". Recuperarlo no lo borra (sigue siendo la
         // única copia hasta que guardes), y este cuadro no se puede cerrar sin elegir.
         function(ok){ if(ok===true){ loadProject(r.project); sinGuardar=true; toast('Trabajo recuperado — guárdalo para no depender del respaldo'); }
                       else if(ok===false) autosaveClear(); },
-        {yes:'Recuperar', no:'Descartar', obligatorio:true});
+        {yes:(yaHay?'Recuperar (reemplaza lo abierto)':'Recuperar'), no:'Descartar', obligatorio:!yaHay});   // con algo abierto, la ✕ = "después" (no borra nada)
     };
     if(api()) api().autosave_load().then(got).catch(function(){});
     else fetch('/api/autosave_load').then(function(r){ return r.json(); }).then(got).catch(function(){});
@@ -4835,8 +4848,8 @@ var PlotterMotor = (function(){
     var shp=state.cnc.material.sheet, cama=state.cnc.work||[1220,2440];
     // ⚠️ No pisar los campos mientras escriben en ellos o con uno solo lleno: al pasar de Ancho a
     // Alto se guarda, la respuesta llega sin placa y borraba el ancho recién escrito (24-nov-2026).
-    var ae=document.activeElement, enPlaca=(ae===el('matSW')||ae===el('matSH')), unoSolo=(!!el('matSW').value)!==(!!el('matSH').value);
-    if(!enPlaca && !unoSolo){ el('matSW').value=shp?shp[0]:''; el('matSH').value=shp?shp[1]:''; }
+    var ae=document.activeElement, enPlaca=(ae===el('matSW')||ae===el('matSH'));
+    if(!enPlaca){ el('matSW').value=shp?shp[0]:''; el('matSH').value=shp?shp[1]:''; }
     el('matSW').placeholder=String(cama[0]); el('matSH').placeholder=String(cama[1]);
     if(typeof draw==='function') draw();   // la placa del lienzo sigue al material
     el('matClear').value=state.cnc.material.clearance!=null?state.cnc.material.clearance:5;
@@ -4881,8 +4894,9 @@ var PlotterMotor = (function(){
              home_end: el('homeEnd').checked,
              spinup: (function(v){ return isFinite(v)? Math.max(0,v) : (m.spinup!=null?m.spinup:10); })(parseFloat(el('matSpin').value)),
              type: el('matType').value||m.type,
-             // los dos = placa; ninguno = la mesa; UNO solo = a medio escribir → se deja como estaba
-             sheet: (function(w,h){ return (w>0&&h>0)?[w,h]:((w>0||h>0)?(m.sheet||null):null); })(parseFloat(String(el('matSW').value).replace(',','.')), parseFloat(String(el('matSH').value).replace(',','.'))) }; }
+             // Campo VACÍO = la medida de la MESA (el número gris que muestra). Ninguno = la mesa
+             // entera (sin placa). Antes un campo solo se IGNORABA en silencio (reporte, 24-nov-2026).
+             sheet: (function(w,h){ var c=state.cnc.work||[1220,2440]; return (w>0||h>0)?[w>0?w:c[0], h>0?h:c[1]]:null; })(parseFloat(String(el('matSW').value).replace(',','.')), parseFloat(String(el('matSH').value).replace(',','.'))) }; }
   // Placa de ESTE trabajo [ancho, alto] o null (= la mesa). Solo existe en la CNC.
   function placa(){ var s=state.machine==='cnc'&&state.cnc&&state.cnc.material&&state.cnc.material.sheet;
     return (s&&s[0]>0&&s[1]>0)?s:null; }
@@ -5695,7 +5709,8 @@ var PlotterMotor = (function(){
     el('stMat').textContent=nom.split('/')[0].trim()+' '+(Math.round(parseFloat(state.cnc.material.thickness)*100)/100)+' mm';
     el('stCuts').textContent=tpaths.length?(tpaths.length+(tpaths.length===1?' corte':' cortes')):'ninguno aún';
     var tot=0, hay=false; tpaths.forEach(function(t){ if(t.enabled&&t._secs!=null){ tot+=t._secs; hay=true; } });
-    el('stRev').textContent=hay?('≈ '+fmtSecs(tot)):''; }
+    el('stRev').textContent=hay?('≈ '+fmtSecs(tot)):'';
+    if(state.machine==='cnc' && hasDoc()) el('metaTime').textContent=hay?('≈ '+fmtSecs(tot)):'sin cortes'; }   // la barra de abajo dice lo mismo
   function irPaso(k){
     if(k===0){ formOpen=false; revOpen=false; volverRev=false; if(tpSel>=0){ tpSel=-1; paintTps(); } pintarVista(); showTab('cnccfg'); return; }   // salir de Revisar: el botón de arriba no debe guardar desde Material
     if(k===2){ if(!tpaths.length){ toast('Primero agrega un corte en el paso 2'); return; } showTab('cnccut'); abrirRev(); return; }
