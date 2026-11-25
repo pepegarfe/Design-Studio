@@ -39,6 +39,15 @@ letras A–D y una nota «voltear». Se reprodujo cada punto en la copia de prue
 - Trampa propia: `python3 auditar_gcode.py` con el Python del SISTEMA falla por falta de shapely
   (parece un error del código); se corre con `/opt/homebrew/bin/python3`.
 
+## Segundo reporte (24-nov-2026, noche)
+- ✅ Subido: placa con un solo campo (vacío = medida de la mesa), tiempo de la barra = el de
+  Revisar, «Recuperar trabajo» que llega tarde.
+- ⏳ **Mosaico en placas de medidas distintas**: opciones dibujadas para Jose en
+  https://claude.ai/artifact/G2fnmKQPrKgAraswktxVsZ (recomendé A: arrastrar las costuras en el
+  lienzo, con su medida escribible). El MOTOR ya acepta costuras a mano (`xs`/`ys` en
+  `mosaic_op`) y ya no parte de más (`_cuantos`: 1 tramo sin uniones, 2 con una, 3+ con dos) —
+  **ese cambio de `geo_ops.py` está SIN SUBIR**, esperando la decisión de pantalla.
+
 ## ⏳ Pendiente
 - **Mosaico** (EN MARCHA, 24-nov-2026): el MOTOR ya está escrito, en `geo_ops.mosaic_op` (cola de
   milano / rompecabezas / recta; cuadrícula igual; uniones alternadas y solo ENTERAS dentro de la
