@@ -253,6 +253,15 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   como NOTA. Las notas y trazos abiertos de la pieza viajan con el tramo donde cae su centro
   (`enTramo`, par-impar), y la etiqueta los esquiva (`avoid`). Los cortes (tpaths) de la pieza
   vieja quedan sin figuras: hay que asignarlos de nuevo. Un solo deshacer regresa la pieza.
+- ⚠️ **Cada figura de un tramo recuerda la fresa con que se partió** (`fresaMos[uid]`, viaja como
+  `notas`/`capas`; en el proyecto `objects[i].mf`). `avisosMosaico()` avisa si un corte usa una fresa
+  MÁS GRUESA: no entra en los rincones redondeados y las uniones no encajan. El servidor no lo puede
+  saber: el aviso se une en la interfaz (`conAvisos()`, que COPIA la respuesta para no ensuciar la
+  memoria de recorridos) en la vista previa y en Revisar.
+- **Atajo**: el aviso «Se sale de la placa/mesa» trae «Partir en mosaico» (caja `#tpWarn` y fila de
+  Revisar, `data-mos`) → `irAMosaico()`: paso Diseño, figuras de ESOS cortes (`cortesFuera`)
+  elegidas, sección abierta y vista previa encendida. ⚠️ Al apagar Revisar hay que llamar
+  `pintarVista()`, o el botón de arriba se queda diciendo «Guardar G-code» en Diseño.
 - **Fuera a propósito**: el solape/media madera (exige voltear la placa).
 
 ### Fuentes en la web
