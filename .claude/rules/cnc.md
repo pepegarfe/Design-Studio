@@ -19,6 +19,11 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Historia: 
   Una cadena es un trayecto **ABIERTO**: entra con `_open_pass` (no `_ring_pass`, que da la
   vuelta con `s % perim`) y **entre pasadas de profundidad DEBE subir y volver al inicio por
   el aire** — sin eso cortaría en línea recta del extremo lejano al principio.
+  ⚠️ **La ÚLTIMA pasada de un trayecto abierto con rampa REGRESA sobre la rampa a fondo**
+  (`back=True`) antes de recorrerlo entero: en un anillo cerrado la vuelta completa repasa la
+  rampa, pero en uno abierto nada lo hace y quedaba una CUÑA en el fondo (25-nov-2026: una línea
+  a 8 mm quedaba de 5.3 a 8 mm en sus primeros 25 mm). Lo vigila `caso_rampa_abierta` en
+  `auditar_gcode.py`.
 - ⚠️ **Rendimiento del Corte (12-nov-2026).** Tres causas de "calcular tarda segundos", y su arreglo:
   (1) `_point_at()` va por **búsqueda binaria** (`bisect`): se llama una vez POR VÉRTICE de cada
   pasada y de corrido era cuadrática — un cajeado con rampa tardaba 8× (1.06 s → 0.17 s; G-code

@@ -518,6 +518,34 @@ def caso_cajeado_acabado():
 caso_cajeado_acabado()
 
 
+def caso_rampa_abierta():
+    """La ÚLTIMA pasada de un trayecto abierto con rampa debe repasar la rampa a fondo
+    (reporte 25-nov-2026: la línea quedaba con una cuña de 5.3 a 8 mm en sus primeros 25 mm).
+    Mide en cada punto de la rampa la Z más honda que llegó a ver la fresa."""
+    rampa = {'on': True, 'type': 'smooth', 'mode': 'dist', 'v': 25}
+    t = dict(TOOL, pass_depth=2.7)
+    for nombre, pl in (
+            ('línea abierta', {'paths': [[(20.0, 20.0), (80.0, 20.0)]], 'op': 'profile', 'side': 'on'}),
+            ('cajeado', {'paths': [sq(0, 0, 80, 50)], 'op': 'pocket', 'direction': 'climb'})):
+        r = sb.cnc_build_tap(dict(pl, depth=8.0, tool=t, material=MAT_TOP, name='x', label='x',
+                                  ramp=rampa))
+        check(f'rampa {nombre}: genera', r.get('ok'), str(r.get('error')))
+        if not r.get('ok'):
+            continue
+        if nombre == 'línea abierta':
+            puntos = [(20.0 + k, 20.0) for k in range(0, 61, 2)]
+        else:   # el arranque de la cadena del cajeado: primer G00 antes de cortar
+            m = re.search(r'G00 X(-?[\d.]+) Y(-?[\d.]+)\nG01 Z', r['tap'])
+            x0, y0 = float(m.group(1)), float(m.group(2))
+            puntos = [(x0, y0)]
+        hondo = [min(_z_cortando_cerca(r['tap'], x, y, r=0.3) or [0.0]) for x, y in puntos]
+        check(f'rampa {nombre}: todo el trayecto llega al fondo (sin cuña de rampa)',
+              max(hondo) < -7.999, str(max(hondo)))
+
+
+caso_rampa_abierta()
+
+
 print(f'\n== {len(OK)} verificaciones OK ==')
 if FALLAS:
     print(f'\n!! {len(FALLAS)} FALLAS:')

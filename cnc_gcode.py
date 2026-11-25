@@ -637,7 +637,7 @@ def _ring_pass(pts, cum, perim, s0, z_from, z_cut, entry_len, zones, z_tab, tab_
     return out, (s0 + entry_len) % perim if (overlap and entry_len > 0) else s0 % perim
 
 
-def _open_pass(pts, cum, z_from, z_cut, entry_len):
+def _open_pass(pts, cum, z_from, z_cut, entry_len, back=False):
     """Vértices [x,y,z] de UNA pasada sobre una polilínea ABIERTA (una cadena de anillos de
     cajeado): baja en rampa a lo largo de los primeros `entry_len` mm y sigue plana hasta
     el final.
@@ -645,6 +645,14 @@ def _open_pass(pts, cum, z_from, z_cut, entry_len):
     Existe aparte de `_ring_pass` porque aquélla da LA VUELTA (usa `s % perim`): en un
     trayecto abierto envolver saltaría del final al principio cortando en línea recta por
     donde no debe. Aquí el recorrido es de 0 a `perim` y se acabó.
+
+    ⚠️ `back` (la ÚLTIMA pasada): al terminar la rampa, REGRESA al inicio a fondo y luego
+    recorre todo. Sin esto el tramo de la rampa de la última pasada nunca se cortaba a la
+    profundidad final y quedaba una cuña en el fondo (reporte de Jose, 25-nov-2026, con una
+    línea de 60 mm a 8 mm: los primeros 25 mm quedaban de 5.3 a 8 mm). En un anillo cerrado
+    no pasa porque la vuelta completa repasa la rampa; en uno abierto nada la repasa.
+    Las pasadas intermedias no lo necesitan: la rampa de la siguiente baja por debajo de la
+    cuña anterior en todo el tramo.
     """
     total = cum[-1]
     L = max(0.0, min(float(entry_len or 0.0), total))
@@ -652,9 +660,20 @@ def _open_pass(pts, cum, z_from, z_cut, entry_len):
     st.add(0.0); st.add(total)
     if L > 0:
         st.add(L)
+    seq = sorted(st)
+    if back and L > 0:
+        ida = [(s, None) for s in seq if s <= L + 1e-9]            # la rampa, bajando
+        vuelta = [(s, z_cut) for s in reversed(seq) if s <= L + 1e-9]   # regreso a fondo
+        todo = [(s, z_cut) for s in seq]                            # y el recorrido completo
+        seq = ida + vuelta + todo
+    else:
+        seq = [(s, None) for s in seq]
     out = []
-    for s in sorted(st):
-        z = z_cut if (L <= 0 or s >= L) else z_from + (z_cut - z_from) * (s / L)
+    for s, zf in seq:
+        if zf is not None:
+            z = zf
+        else:
+            z = z_cut if (L <= 0 or s >= L) else z_from + (z_cut - z_from) * (s / L)
         p = _point_at(pts, cum, s)
         if out and abs(p[0]-out[-1][0]) < 1e-6 and abs(p[1]-out[-1][1]) < 1e-6 \
                and abs(z-out[-1][2]) < 1e-6:
@@ -896,7 +915,11 @@ def _contour_body(lines, toolpaths, tool, depth, tabs, ramp, z_top, safe, start=
             if (not closed) and rcfg and dz > 1e-9:
                 # cadena de anillos de cajeado: rampa a lo largo del propio trayecto, sin
                 # dar la vuelta (ver _open_pass)
-                verts = _open_pass(pts, cum, z_prev, z_cut, _entry_len(rcfg, dz, perim))
+                L_e = _entry_len(rcfg, dz, perim)
+                ultima = d == ring_depths[-1]
+                verts = _open_pass(pts, cum, z_prev, z_cut, L_e, back=ultima)
+                if ultima:
+                    secs += (2.0 * min(L_e, perim) / feed) * 60.0
             elif rtype == 'zigzag':
                 # vaivén descendente y luego la vuelta completa a fondo (repasa el tramo)
                 verts, s_zz = _zigzag_pass(pts, cum, perim, s_cur, z_prev, z_cut,
