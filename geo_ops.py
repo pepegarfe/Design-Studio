@@ -474,14 +474,30 @@ def mosaic_op(data):
         uw, uh = tw - 2 * margen - 2 * d, th - 2 * margen - 2 * d
         if uw < 20 or uh < 20:
             return {'ok': False, 'error': 'La placa es muy chica para esas uniones y ese borde.'}
-        cols = max(1, math.ceil(W / uw - 1e-9))
-        rows = max(1, math.ceil(H / uh - 1e-9))
+        # Costuras A MANO (`xs`/`ys`: posiciones interiores, en mm): para placas de medidas distintas
+        # no sirve la cuadrícula pareja. Se ignora la que quede a menos de 20 mm de una orilla.
+        def _manual(v, a, b):
+            if not isinstance(v, list):
+                return None
+            vs = sorted(float(t) for t in v if isinstance(t, (int, float)) and a + 20 < float(t) < b - 20)
+            return [a] + vs + [b]
+        xs, ys = _manual(o.get('xs'), x0, x1), _manual(o.get('ys'), y0, y1)
+        # Cuántos tramos en un sentido: con 1 no hay uniones que sobresalgan; con 2 cada tramo
+        # recibe UNA costura (sobresale d); con 3 o más, los de en medio reciben dos (2d). Antes se
+        # suponía siempre 2d y una pieza de 1200 en placa de 1220 se partía sin necesidad.
+        def _cuantos(L, placa_util):
+            for n in range(1, 61):
+                if L / n <= placa_util - (0 if n == 1 else (d if n == 2 else 2 * d)) + 1e-9:
+                    return n
+            return 61
+        cols = len(xs) - 1 if xs else _cuantos(W, tw - 2 * margen)
+        rows = len(ys) - 1 if ys else _cuantos(H, th - 2 * margen)
         if cols * rows == 1:
             return {'ok': False, 'error': 'La pieza ya cabe en la placa: no hace falta partirla.'}
         if cols * rows > 60:
             return {'ok': False, 'error': 'Saldrían %d tramos: revisa el tamaño de la placa.' % (cols * rows)}
-        xs = [x0 + W * i / cols for i in range(cols + 1)]
-        ys = [y0 + H * j / rows for j in range(rows + 1)]
+        xs = xs or [x0 + W * i / cols for i in range(cols + 1)]
+        ys = ys or [y0 + H * j / rows for j in range(rows + 1)]
         G = max(W, H) + 1000.0                         # los tramos de la orilla se extienden de sobra
         paso = d * 3.2
         # uniones de cada costura: (polígono, quién lo POSEE como (col,row))
@@ -570,6 +586,8 @@ def mosaic_op(data):
         if perdidos:
             avisos.append('%d pedacito(s) de menos de 1 mm² se descartaron (uniones que caían en una orilla).' % perdidos)
         seams = [[[xs[i], y0], [xs[i], y1]] for i in range(1, cols)] + [[[x0, ys[j]], [x1, ys[j]]] for j in range(1, rows)]
-        return {'ok': True, 'cols': cols, 'rows': rows, 'tiles': tiles, 'seams': seams, 'warnings': avisos}
+        return {'ok': True, 'cols': cols, 'rows': rows, 'tiles': tiles, 'seams': seams, 'warnings': avisos,
+                'xs': [round(v, 2) for v in xs[1:-1]], 'ys': [round(v, 2) for v in ys[1:-1]],
+                'bounds': [round(v, 2) for v in (x0, y0, x1, y1)]}
     except Exception as e:
         return {'ok': False, 'error': f'Mosaico: {e}'}

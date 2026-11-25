@@ -270,6 +270,16 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Preferenci
   Revisar, `data-mos`) → `irAMosaico()`: paso Diseño, figuras de ESOS cortes (`cortesFuera`)
   elegidas, sección abierta y vista previa encendida. ⚠️ Al apagar Revisar hay que llamar
   `pintarVista()`, o el botón de arriba se queda diciendo «Guardar G-code» en Diseño.
+- **Costuras A MANO** (opción A de Jose, 24-nov-2026, para placas de medidas distintas:
+  https://claude.ai/artifact/G2fnmKQPrKgAraswktxVsZ): con la vista previa encendida, cada costura
+  tiene una manija (verticales ARRIBA de la pieza, horizontales a su DERECHA) con su medida desde la
+  orilla izquierda / de abajo. Arrastrar = mover (`mosDrag`); tocar sin mover = escribir la medida
+  (`mosEscribir`). Van en `mosXs`/`mosYs` → `xs`/`ys` del motor; «Volver a tramos parejos» las borra,
+  y se reinician al partir y al abrir otro diseño. Los manejadores van en fase de CAPTURA (antes
+  que la selección de figuras). Cada tramo muestra su tamaño y sale en rojo si no cabe en la placa.
+- **El motor ya no parte de más** (`_cuantos`): 1 tramo no lleva uniones, con 2 cada uno recibe
+  UNA costura, con 3+ los de en medio reciben dos. Antes suponía siempre dos y partía una pieza de
+  1200 en placa de 1220.
 - **Fuera a propósito**: el solape/media madera (exige voltear la placa).
 
 ### Fuentes en la web

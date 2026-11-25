@@ -46,7 +46,10 @@ letras A–D y una nota «voltear». Se reprodujo cada punto en la copia de prue
   https://claude.ai/artifact/G2fnmKQPrKgAraswktxVsZ (recomendé A: arrastrar las costuras en el
   lienzo, con su medida escribible). El MOTOR ya acepta costuras a mano (`xs`/`ys` en
   `mosaic_op`) y ya no parte de más (`_cuantos`: 1 tramo sin uniones, 2 con una, 3+ con dos) —
-  **ese cambio de `geo_ops.py` está SIN SUBIR**, esperando la decisión de pantalla.
+  Jose eligió **A**; hecho y probado (arrastre, escribir la medida, dedo, partir 1030/530).
+- Ojo: `node web/test_plotter_web.mjs` falló UNA vez con la Mac cargada (simula el plotter con
+  relojes de ms) y pasó 8 de 8 al repetir; su bloque no había cambiado. Si vuelve a fallar,
+  correrla sola antes de culpar a un cambio.
 
 ## ⏳ Pendiente
 - **Mosaico** (EN MARCHA, 24-nov-2026): el MOTOR ya está escrito, en `geo_ops.mosaic_op` (cola de

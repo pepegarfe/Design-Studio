@@ -707,6 +707,7 @@
       </div>
       <div class="mrow" style="margin:8px 0 0"><div class="field" style="flex:1" title="Cuánto entra cada unión en el tramo vecino"><label>Fondo</label><input id="mosD" value="30" inputmode="decimal"><span class="u">mm</span></div><div class="field" style="flex:1" title="Espacio que se deja entre las piezas para que entren sin forzar"><label>Holgura</label><input id="mosG" value="0.2" inputmode="decimal"><span class="u">mm</span></div></div>
       <div class="muted-note" id="mosSum" style="margin-top:8px"></div>
+      <button class="lnk" id="mosParejo" style="display:none;margin-top:4px">Volver a tramos parejos</button>
       <button class="gbtn" id="btnMosaic" disabled style="width:100%;margin-top:8px" title="Reemplaza la pieza por sus tramos, separados en su lugar y con su etiqueta (deshacer la regresa entera)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="4.5" width="7" height="6.5" rx="1"/><rect x="13.5" y="4.5" width="7" height="6.5" rx="1"/><rect x="3.5" y="13" width="7" height="6.5" rx="1"/><rect x="13.5" y="13" width="7" height="6.5" rx="1"/></svg> <span id="mosBtnLbl">Partir en mosaico</span></button>
       </div>
       </div>
@@ -3356,6 +3357,8 @@ var PlotterMotor = (function(){
   // partir, cada tramo queda SEPARADO en su lugar (col×sep, fila×sep), como grupo, con su etiqueta
   // «fila-columna» como NOTA; las notas y trazos abiertos de la pieza viajan con el tramo donde caen.
   var mosJ='cola', mosOn=false, mosPrev=null, mosFirma='', mosT=null;
+  // Costuras A MANO (opción A de Jose, 24-nov-2026: placas de medidas distintas). null = parejo.
+  var mosXs=null, mosYs=null, mosDrag=null, mosCursor=false;
   // Campo vacío = el número gris (la placa de Material o la mesa), CADA UNO por su lado: antes con un
   // solo campo lleno se usaba la placa entera de reserva y "Alto 1060" se ignoraba (reporte, 24-nov).
   function mosPlacaV(){ var w=parseFloat(String(el('mosW').value).replace(',','.')), h=parseFloat(String(el('mosH').value).replace(',','.')), base=placa()||state.work;
@@ -3365,14 +3368,17 @@ var PlotterMotor = (function(){
     return gu; }
   function mosPayload(gu){ var av=[]; gu.forEach(function(u){ u.idxs.forEach(function(i){ if(u.cerr.indexOf(i)<0) av.push(bboxOf([i])); }); });
     return { avoid:av, units:gu.map(function(u){ return u.cerr.map(function(i){ return effPts(i); }); }),
-    tile:mosPlacaV(), joint:mosJ, size:parseFloat(el('mosD').value)||30, gap:parseFloat(el('mosG').value), dia:parseFloat(el('dbDia').value)||6, margin:10 }; }
+    tile:mosPlacaV(), joint:mosJ, size:parseFloat(el('mosD').value)||30, gap:parseFloat(el('mosG').value), dia:parseFloat(el('dbDia').value)||6, margin:10,
+    xs:mosXs||undefined, ys:mosYs||undefined }; }
   function mosResumen(r){ var b=el('mosSum'), lb=el('mosBtnLbl');
-    if(!r){ b.textContent='Ajusta un valor y las costuras se dibujan sobre la pieza.'; lb.textContent='Partir en mosaico'; return; }
+    if(!r){ b.textContent='Ajusta un valor y las costuras se dibujan sobre la pieza.'; lb.textContent='Partir en mosaico'; el('mosParejo').style.display='none'; return; }
     if(!r.ok){ b.textContent=r.error||'No se pudo calcular'; lb.textContent='Partir en mosaico'; return; }
     var mx=0,my=0; r.tiles.forEach(function(t){ mx=Math.max(mx,t.bbox[2]-t.bbox[0]); my=Math.max(my,t.bbox[3]-t.bbox[1]); });
     var pv=mosPlacaV();
     b.innerHTML='Placa de <b>'+pv[0]+' × '+pv[1]+' mm</b>: saldrán <b>'+r.tiles.length+' tramos</b> ('+r.cols+' × '+r.rows+') de hasta <b>'+Math.round(mx)+' × '+Math.round(my)+' mm</b>.'+((r.warnings||[]).length?('<br>⚠ '+r.warnings.map(hesc).join('<br>⚠ ')):'');
-    lb.textContent='Partir en '+r.tiles.length+' tramos'; }
+    lb.textContent='Partir en '+r.tiles.length+' tramos';
+    b.innerHTML+='<br><span style="color:var(--faint)">Arrastra la manija de una costura para moverla; tócala para escribir la medida.</span>';
+    el('mosParejo').style.display=(mosXs||mosYs)?'':'none'; }
   function mosVista(){ if(!mosOn||state.machine!=='cnc'||!hasDoc()||cncStep()){ if(mosPrev){ mosPrev=null; mosFirma=''; draw(); } return; }
     var gu=mosPieza(); if(!gu.length){ mosPrev=null; mosFirma=''; el('mosSum').textContent='Selecciona la pieza (figuras cerradas) que quieres partir.'; draw(); return; }
     var p=mosPayload(gu), f=JSON.stringify(p); if(f===mosFirma) return; mosFirma=f;
@@ -3383,6 +3389,46 @@ var PlotterMotor = (function(){
     el(id).addEventListener('keydown',function(e){ if(e.key==='Escape'){ mosOn=false; mosVista(); this.blur(); } }); });
   el('mosJoint').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; mosJ=b.getAttribute('data-j');
     el('mosJoint').querySelectorAll('button').forEach(function(x){ x.classList.toggle('on',x===b); }); mosEncender(); });
+  el('mosParejo').addEventListener('click',function(){ mosXs=mosYs=null; mosFirma=''; mosEncender(); });
+  // Manijas de las costuras: verticales ARRIBA de la pieza, horizontales a su DERECHA. La medida
+  // se cuenta desde la orilla izquierda / de abajo de la pieza (lo que se mide con flexómetro).
+  function mosManijas(){ if(!(mosOn&&mosPrev&&mosPrev.bounds&&view.ready&&state.machine==='cnc'&&!cncStep())) return [];
+    var b=mosPrev.bounds, out=[];
+    (mosPrev.xs||[]).forEach(function(x,k){ var v=(mosDrag&&mosDrag.h.ax==='x'&&mosDrag.h.k===k)?mosDrag.val:x, q=tp(v,b[3]); out.push({ax:'x',k:k,v:v,sx:q[0],sy:q[1]-30}); });
+    (mosPrev.ys||[]).forEach(function(y,k){ var v=(mosDrag&&mosDrag.h.ax==='y'&&mosDrag.h.k===k)?mosDrag.val:y, q=tp(b[2],v); out.push({ax:'y',k:k,v:v,sx:q[0]+30,sy:q[1]}); });
+    return out; }
+  function mosMedida(h){ var b=mosPrev.bounds; return Math.round(h.ax==='x'?(h.v-b[0]):(h.v-b[1])); }
+  function mosCaja(h){ var t=mosMedida(h)+' mm', w=8+t.length*7.2; return h.ax==='x'?{x:h.sx-w/2,y:h.sy-38,w:w,h:22}:{x:h.sx+16,y:h.sy-11,w:w,h:22}; }
+  function mosTocada(sx,sy){ var hs=mosManijas();
+    for(var i=0;i<hs.length;i++){ var h=hs[i], c=mosCaja(h);
+      if(Math.hypot(sx-h.sx,sy-h.sy)<=13*TOQ || (sx>=c.x&&sx<=c.x+c.w&&sy>=c.y&&sy<=c.y+c.h)) return h; }
+    return null; }
+  function mosPoner(h,val){ var b=mosPrev.bounds, arr=(h.ax==='x'?mosPrev.xs:mosPrev.ys).slice();
+    var lo=(h.k>0?arr[h.k-1]:(h.ax==='x'?b[0]:b[1]))+40, hi=(h.k<arr.length-1?arr[h.k+1]:(h.ax==='x'?b[2]:b[3]))-40;
+    arr[h.k]=Math.round(Math.max(lo,Math.min(hi,val))*10)/10;
+    if(h.ax==='x'){ mosXs=arr; if(!mosYs) mosYs=(mosPrev.ys||[]).slice(); } else { mosYs=arr; if(!mosXs) mosXs=(mosPrev.xs||[]).slice(); }
+    mosFirma=''; mosVista(); }
+  function mosEscribir(h){ var b=mosPrev.bounds, ori=(h.ax==='x'?b[0]:b[1]);
+    askConfirm('Mover la costura', (h.ax==='x'?'Distancia desde la orilla IZQUIERDA de la pieza:':'Distancia desde la orilla de ABAJO de la pieza:')+
+      '<div class="field" style="margin-top:10px"><label>Costura</label><input id="mosVal" inputmode="decimal" value="'+mosMedida(h)+'"><span class="u">mm</span></div>',
+      function(ok){ if(!ok) return; var v=parseFloat(String(el('mosVal').value).replace(',','.')); if(isNaN(v)){ toast('Escribe la medida en mm'); return; } mosPoner(h, ori+v); },
+      {yes:'Mover', ancho:Math.min(360,window.innerWidth-24)});
+    setTimeout(function(){ var c=el('mosVal'); if(c){ c.focus(); c.select(); } },50); }
+  // En fase de CAPTURA: van antes que la selección de figuras del lienzo.
+  cv.addEventListener('mousedown',function(e){ if(e.button!==0) return; var r=cv.getBoundingClientRect(), h=mosTocada(e.clientX-r.left,e.clientY-r.top);
+    if(!h) return; e.stopImmediatePropagation(); e.preventDefault();
+    mosDrag={h:h, x:e.clientX, y:e.clientY, val:h.v, moved:false}; },true);
+  window.addEventListener('mousemove',function(e){ var r=cv.getBoundingClientRect();
+    if(mosDrag){ e.stopImmediatePropagation();
+      if(Math.hypot(e.clientX-mosDrag.x,e.clientY-mosDrag.y)>3) mosDrag.moved=true;
+      var m=sp(e.clientX-r.left,e.clientY-r.top); mosDrag.val=(mosDrag.h.ax==='x')?m[0]:m[1]; draw(); return; }
+    if(!mosOn||!mosPrev) { if(mosCursor){ mosCursor=false; cv.style.cursor='default'; } return; }
+    var h=mosTocada(e.clientX-r.left,e.clientY-r.top);
+    if(h){ cv.style.cursor=(h.ax==='x')?'ew-resize':'ns-resize'; mosCursor=true; }
+    else if(mosCursor){ mosCursor=false; cv.style.cursor='default'; } },true);
+  window.addEventListener('mouseup',function(e){ if(!mosDrag) return; e.stopImmediatePropagation();
+    var d=mosDrag; mosDrag=null;
+    if(d.moved) mosPoner(d.h, d.val); else { draw(); mosEscribir(d.h); } },true);
   // ¿punto dentro de un tramo? (par-impar sobre todos sus anillos, como el motor)
   function enTramo(t,x,y){ var dentro=false; t.paths.forEach(function(p){ var q=p.pts;
     for(var a=0,b=q.length-1;a<q.length;b=a++){ if(((q[a][1]>y)!==(q[b][1]>y)) && (x<(q[b][0]-q[a][0])*(y-q[a][1])/(q[b][1]-q[a][1])+q[a][0])) dentro=!dentro; } }); return dentro; }
@@ -3411,7 +3457,7 @@ var PlotterMotor = (function(){
         var t=r.tiles.filter(function(tt){ return enTramo(tt,cx,cy); })[0];
         if(!t){ sueltos++; return; }
         doc.off[i]=[doc.off[i][0]+t._dx, doc.off[i][1]+t._dy]; doc.grp[i]=t._g; ns.add(i); });
-      sel.idx=-1; sel.set=ns; mosOn=false; mosPrev=null; mosFirma=''; mosResumen(null);
+      sel.idx=-1; sel.set=ns; mosOn=false; mosPrev=null; mosFirma=''; mosXs=mosYs=null; mosResumen(null);
       refreshUI(); fitView();
       toast('Partida en '+r.tiles.length+' tramos ('+r.cols+' × '+r.rows+'). Las etiquetas 1-1, 1-2… son notas: se ven, no se cortan. Para cortarlos, «Acomodar piezas» los reparte en las hojas.'+(sueltos?(' · '+sueltos+' trazo(s) quedaron fuera de todo tramo y no se movieron'):'')+((r.warnings||[]).length?(' · ⚠ '+r.warnings.join(' · ')):''));
     }); });
@@ -3958,7 +4004,7 @@ var PlotterMotor = (function(){
     doc.paths=(res.paths||[]).map(function(p){return {pts:p.pts.map(function(q){return [q[0],q[1]];})};});
     doc.off=[]; doc.sx=[]; doc.sy=[]; doc.rot=[]; doc.oc=[]; doc.grp=[]; doc.uid=[];
     textMeta={};   // diseño nuevo: recetas de texto viejas fuera
-    lockedUids=new Set(); colores={}; notas={}; capas={}; fresaMos={}; capasOcultas=false; mosOn=false; mosPrev=null; projId=null;
+    lockedUids=new Set(); colores={}; notas={}; capas={}; fresaMos={}; capasOcultas=false; mosOn=false; mosPrev=null; mosXs=mosYs=null; projId=null;
     var gid=doc.paths.length>1?(++groupSeq):0;   // import agrupado por defecto (un diseño = un grupo)
     for(var i=0;i<doc.paths.length;i++){ doc.off.push([0,0]); doc.sx.push(1); doc.sy.push(1); doc.rot.push(0); var bb=bboxOfPts(doc.paths[i].pts); doc.oc.push([(bb[0]+bb[2])/2,(bb[1]+bb[3])/2]); doc.grp.push(gid); doc.uid.push(++uidSeq); if(res.paths[i]&&res.paths[i].col) colores[uidSeq]=res.paths[i].col; metaDesde(res.paths[i],uidSeq); }
     tpaths=[]; tpSel=-1; paintTps(); formOpen=false; revOpen=false; volverRev=false; pintarVista();   // diseño nuevo: las trayectorias viejas ya no aplican
@@ -5530,8 +5576,21 @@ var PlotterMotor = (function(){
     ctx.save(); ctx.strokeStyle=cvar('--accent'); ctx.lineWidth=1.6; ctx.setLineDash([6,4]);
     mosPrev.tiles.forEach(function(t){ t.paths.forEach(function(p){ var q=p.pts; ctx.beginPath(); var a=tp(q[0][0],q[0][1]); ctx.moveTo(a[0],a[1]);
       for(var k=1;k<q.length;k++){ var b=tp(q[k][0],q[k][1]); ctx.lineTo(b[0],b[1]); } ctx.closePath(); ctx.stroke(); }); });
-    ctx.setLineDash([]); ctx.fillStyle=cvar('--accent'); ctx.font='700 12px '+cvar('--mono'); ctx.textAlign='center';
-    mosPrev.tiles.forEach(function(t){ var a=tp(t.label_at[0],t.label_at[1]); ctx.fillText((t.row+1)+'-'+(t.col+1),a[0],a[1]+4); });
+    ctx.setLineDash([]); ctx.textAlign='center';
+    var pv=mosPlacaV();
+    mosPrev.tiles.forEach(function(t){ var a=tp(t.label_at[0],t.label_at[1]), w=t.bbox[2]-t.bbox[0], h=t.bbox[3]-t.bbox[1];
+      var cabe=(w<=pv[0]-20+0.01&&h<=pv[1]-20+0.01)||(h<=pv[0]-20+0.01&&w<=pv[1]-20+0.01);   // girado también vale
+      ctx.fillStyle=cabe?cvar('--accent'):cvar('--bad'); ctx.font='700 12px '+cvar('--mono'); ctx.fillText((t.row+1)+'-'+(t.col+1),a[0],a[1]-3);
+      ctx.font='600 11px '+cvar('--mono'); ctx.fillText(Math.round(w)+' × '+Math.round(h)+(cabe?'':' · no cabe'),a[0],a[1]+12); });
+    // costura que se está arrastrando: una línea llena donde quedaría
+    if(mosDrag){ var b=mosPrev.bounds, p1, p2;
+      if(mosDrag.h.ax==='x'){ p1=tp(mosDrag.val,b[1]); p2=tp(mosDrag.val,b[3]); } else { p1=tp(b[0],mosDrag.val); p2=tp(b[2],mosDrag.val); }
+      ctx.strokeStyle=cvar('--accent'); ctx.lineWidth=2.2; ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke(); }
+    mosManijas().forEach(function(h){ ctx.fillStyle=cvar('--accent'); ctx.beginPath(); ctx.arc(h.sx,h.sy,9,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.6; ctx.beginPath();
+      if(h.ax==='x'){ ctx.moveTo(h.sx-5,h.sy); ctx.lineTo(h.sx+5,h.sy); } else { ctx.moveTo(h.sx,h.sy-5); ctx.lineTo(h.sx,h.sy+5); } ctx.stroke();
+      var c=mosCaja(h); ctx.fillStyle=cvar('--ink'); ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(c.x,c.y,c.w,c.h,5); else ctx.rect(c.x,c.y,c.w,c.h); ctx.fill();
+      ctx.fillStyle=cvar('--panel'); ctx.font='600 11px '+cvar('--mono'); ctx.fillText(mosMedida(h)+' mm',c.x+c.w/2,c.y+15); });
     ctx.textAlign='start'; ctx.restore(); }
   // "Recorridos" (junto al zoom) solo existe en el paso Corte de la CNC; encendido = se ven.
   // Se llama tras cada redibujo y al cambiar de paso (pasar a Diseño no redibuja).
@@ -5685,7 +5744,7 @@ var PlotterMotor = (function(){
       G.forEach(function(g,k){ var i=el('tapNom'+k); g.archivo=nombreTap(i?i.value:'', g.archivo); });
       bajarRev(); }, {yes:(varios?'Guardar los '+G.length+' archivos':'Guardar'), ancho:420});
     var i0=el('tapNom0'); if(i0){ i0.focus(); i0.select(); } }
-  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^(tapNom|proyNom|calMed)/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
+  el('confirmModal').addEventListener('keydown',function(e){ if(e.key==='Enter' && e.target && /^(tapNom|proyNom|calMed|mosVal)/.test(e.target.id||'')){ e.preventDefault(); el('cfYes').click(); } });
   function bajarRev(){ if(!revDatos||!state.cnc) return;
     var gs=revDatos.grupos.slice(), hechos=0, lineas=0; el('revSave').disabled=true;
     (function sig(){ var g=gs.shift();
