@@ -50,3 +50,7 @@ Queda de fondo: aun a F1270 la viruta es 0.040 mm/filo (bajo; MDF quiere 0.10–
 tabla de marchas S2–S8 = 12000–18000 sigue SIN medir (ver [[cnc-richauto]]). Preguntado a Jose:
 qué marcha usaba con Aspire (entonces la máquina ignoraba la S del archivo), qué marca el
 variador en S4 y S6, y si el humo salía al entrar o en todo el recorrido.
+✅ Respuesta de Jose (25-nov-2026): el variador marca S4=14000, S6=16000 (escribió "1600"),
+S8=18000 → la tabla de marchas de la app es CORRECTA; el giro no era el problema. Lo que
+humeaba era la viruta delgada (sobre todo las rampas a F381). Faltan: qué marcha usaba con
+Aspire y dónde salía el humo.

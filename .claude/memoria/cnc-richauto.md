@@ -423,8 +423,8 @@ movimientos" y el hueco tiene 5 puntos vs 69 del exterior) — verificar el orde
   `MACHINE SETUP → Spindle Setup → Spindle speed` listaba "1..8 desde 18000 bajando 1000",
   pero al PROBAR girando el husillo: **S1 = PARADO** (combinación muerta del cableado
   Count 3) y **S2→S8 ASCENDENTE**. La tabla leída del menú habría mandado el MDF a S1 =
-  fresa hundiéndose SIN GIRAR. **Tabla en la app (PROVISIONAL, pendiente de leer los Hz del
-  variador por marcha): [100(S1 bloqueada), 12000, 13000, 14000, 15000, 16000, 17000, 18000]**
+  fresa hundiéndose SIN GIRAR. **Tabla en la app (✅ CONFIRMADA por Jose el 25-nov-2026 leyendo el
+  variador: S4=14000, S6=16000, S8=18000; antes era provisional): [100(S1 bloqueada), 12000, 13000, 14000, 15000, 16000, 17000, 18000]**
   → mdf S8, acr S6, pvc S4. Para calibrarla exacta: husillo a mano, recorrer S2..S8 leyendo
   el display del variador (RPM = Hz × 60) y capturar en "Marchas…". `SpdlCnt = 3` (no tocar).
   La app la trae capturada (material.gears) y elige marcha por CERCANÍA de RPM del preset:
