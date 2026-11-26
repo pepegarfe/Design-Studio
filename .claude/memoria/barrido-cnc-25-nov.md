@@ -40,3 +40,13 @@ Verificado: auditoría 179/179 (las 5 pruebas nuevas FALLAN con el código viejo
   se revisó aparte: SVG y DXF cierran bien sus figuras).
 
 Relacionado: [[rebaba-microsegmentos]] (la rampa a avance de picada), [[cnc-richauto]].
+
+## Mismo día: el humo del `gato-2 doble.tap` (Jose bajó a S4)
+Medido en el archivo: el 28 % del tiempo de corte era RAMPA a F381 (viruta 0.012 mm/filo a
+16000 RPM: raspa). Causa: `_emit_cut` mandaba toda rampa al avance de picada. Arreglado: se
+limita solo la velocidad VERTICAL a la picada (las rampas de ~10° van ya a F1270). Recorrido
+idéntico; solo cambian las F de las bajadas. ~5 min menos en ese trabajo.
+Queda de fondo: aun a F1270 la viruta es 0.040 mm/filo (bajo; MDF quiere 0.10–0.25), y la
+tabla de marchas S2–S8 = 12000–18000 sigue SIN medir (ver [[cnc-richauto]]). Preguntado a Jose:
+qué marcha usaba con Aspire (entonces la máquina ignoraba la S del archivo), qué marca el
+variador en S4 y S6, y si el humo salía al entrar o en todo el recorrido.

@@ -844,7 +844,15 @@ def _z_levels(material):
 
 
 def _emit_cut(lines, verts, feed, plunge, slot=0.0, slot_feed=None):
-    """Emite un tramo de corte XYZ. Todo movimiento que BAJA va al avance de PICADA.
+    """Emite un tramo de corte XYZ. Lo que BAJA no puede bajar más rápido que la PICADA.
+
+    ⚠️ (25-nov-2026) Se limita la velocidad VERTICAL, no el avance entero: una rampa al avance
+    de picada completo (381) avanzando casi en plano dejaba la viruta en 0.012 mm/filo a 16000
+    RPM —diez veces menos de lo normal— y la fresa RASPABA y humeaba (28 % del tiempo de corte
+    del `gato-2 doble.tap`; Jose tuvo que bajar a S4). Ahora el avance de un segmento que baja es
+    el de corte, recortado para que su componente vertical no pase de `plunge`
+    (F = plunge × largo3D / bajada). Una bajada vertical pura sigue a `plunge`.
+    Lo de abajo es el porqué del límite vertical (sigue valiendo):
 
     ⚠️ Una rampa de entrada avanza y baja a la vez, así que para el control es un
     movimiento de corte más — pero la fresa está estrenando material con su PUNTA, que
@@ -859,7 +867,12 @@ def _emit_cut(lines, verts, feed, plunge, slot=0.0, slot_feed=None):
     xp, yp, hecho = verts[0][0], verts[0][1], 0.0
     for x, y, z in verts[1:]:
         # `slot` mm iniciales a ranura completa (primer anillo de un cajeado): avance reducido
-        f = plunge if z < zp - 1e-9 else (slot_feed if (slot_feed and hecho < slot - 1e-6) else feed)
+        f = slot_feed if (slot_feed and hecho < slot - 1e-6) else feed
+        if z < zp - 1e-9:
+            baja = zp - z
+            largo = math.sqrt((x - xp) ** 2 + (y - yp) ** 2 + baja * baja)
+            f = max(float(plunge), min(float(f), float(plunge) * largo / baja))
+            f = round(f)
         lines.append('G01 X%s Y%s Z%s F%s' % (_f(x), _f(y), _f(z), _f(f)))
         hecho += math.hypot(x - xp, y - yp)
         xp, yp, zp = x, y, z

@@ -5,6 +5,7 @@ Genera .tap por el MISMO camino que la app (studio_backend.cnc_build_tap) para u
 batería de casos y verifica, con un parser independiente, los invariantes que
 protegen a la máquina y a la pieza. Cualquier FALLA se lista al final.
 """
+import math
 import re
 import sys
 
@@ -128,14 +129,24 @@ def parse(tap, mat, tool, depth, caso, start=0.0):
         if not rapid:
             if f_mod is None:
                 malas.append('G01 sin F vigente: ' + ln)
-            elif not aereo and f_mod not in (float(tool['feed']), float(tool['plunge']),
-                                             float(round(float(tool['feed']) * 0.6))):   # 0.6 = primer anillo de un cajeado, a ranura completa
+            baja = (nz is not None and z is not None and nz < z - 1e-9 and not aereo)
+            # una bajada con avance lateral lleva su F calculada (ver la de abajo): no es
+            # una F "desconocida"
+            if not aereo and not baja and f_mod not in (
+                    float(tool['feed']), float(tool['plunge']),
+                    float(round(float(tool['feed']) * 0.6))):   # 0.6 = primer anillo de un cajeado, a ranura completa
                 malas.append('F desconocida: ' + ln)
-            # TODO lo que baja entrando al material va al avance de picada, sea una
-            # bajada vertical o una rampa que avanza mientras baja (ver _emit_cut)
-            if nz is not None and z is not None and nz < z - 1e-9 and not aereo \
-               and f_mod != float(tool['plunge']):
-                malas.append('bajada sin F de plunge: ' + ln)
+            # TODO lo que baja entrando al material baja como MÁXIMO a la velocidad de picada
+            # (componente vertical), sea una bajada vertical o una rampa; y nunca más rápido
+            # que el avance de corte (ver _emit_cut, 25-nov-2026)
+            if baja and f_mod is not None:
+                dxy = math.hypot((nx if nx is not None else 0) - (x if x is not None else 0),
+                                 (ny if ny is not None else 0) - (y if y is not None else 0))
+                vz = f_mod * (z - nz) / math.sqrt(dxy * dxy + (z - nz) ** 2)
+                if vz > float(tool['plunge']) * 1.01 + 1.0:
+                    malas.append(f'baja a {vz:.0f} mm/min (> picada {tool["plunge"]}): ' + ln)
+                if f_mod > float(tool['feed']) + 1e-6 or f_mod < float(tool['plunge']) - 1e-6:
+                    malas.append(f'bajada con F fuera de [picada, corte]: ' + ln)
         else:
             if f is not None:
                 malas.append('G00 con F: ' + ln)

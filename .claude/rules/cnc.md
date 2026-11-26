@@ -73,12 +73,16 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Historia: 
   sale con rebaba** (caso real, ago-2026). Señal: si dos archivos cortan la MISMA geometría y uno
   vibra, no compares las trayectorias — **compara el largo de los movimientos**; un patrón
   largo-corto-largo-corto es geometría de computadora que nadie limpió.
-- ⚠️ **CNC: TODO movimiento que baja entrando al material va al avance de PICADA**, no al
-  de corte — lo emite `_emit_cut()`, que decide **por segmento** (baja → `plunge`, llano →
-  `feed`). Una rampa de entrada avanza y baja a la vez, así que para el control es un corte
-  más; pero la fresa estrena material con su **punta**, que es donde peor corta. Emitirla al
-  avance de corte la hundía a **686 mm/min verticales de mediana, con picos de 2499**, contra
-  los 90/381 de Aspire en la misma pieza (ago-2026).
+- ⚠️ **CNC: TODO movimiento que baja entrando al material baja, como MÁXIMO, a la velocidad
+  de PICADA (componente VERTICAL)** — lo emite `_emit_cut()`, por segmento: F = avance de corte
+  recortado a `plunge × largo3D / bajada`; una bajada vertical pura va a `plunge`. Una rampa
+  avanza y baja a la vez; la fresa estrena material con su **punta**, donde peor corta.
+  Emitirla al avance de corte SIN límite la hundía a **686 mm/min verticales de mediana, con
+  picos de 2499**, contra los 90/381 de Aspire (ago-2026). ⚠️ Pero **no volver a mandar la
+  rampa ENTERA a `plunge`** (así estuvo de ago a nov-2026): casi en plano, a 381 mm/min y 16000
+  RPM la viruta era 0.012 mm/filo, la fresa RASPABA y humeaba — el 28 % del tiempo del
+  `gato-2 doble.tap` (25-nov-2026; Jose tuvo que bajar a S4). La auditoría vigila las dos
+  cosas (velocidad vertical ≤ picada y F entre picada y corte).
 - ⚠️ **CNC: la salida del `.tap` es MODAL** (`_modal()`, la última pasada de `build_jobs`):
   el `G01` y la `F` solo se escriben cuando cambian, los ejes que no cambian se omiten y los
   movimientos de **largo cero se borran** (frenan al control sin cortar nada). **No la quites:
