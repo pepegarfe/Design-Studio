@@ -54,3 +54,16 @@ variador en S4 y S6, y si el humo salía al entrar o en todo el recorrido.
 S8=18000 → la tabla de marchas de la app es CORRECTA; el giro no era el problema. Lo que
 humeaba era la viruta delgada (sobre todo las rampas a F381). Faltan: qué marcha usaba con
 Aspire y dónde salía el humo.
+
+## 26-nov-2026: proyecto de cortes de prueba en la cuenta de Jose
+«Prueba de parametros MDF 6mm 2F» en Mis proyectos (id `p2bbfdaeccffb`): 6 probetas de flor
+ondulada (Ø ~73 mm) con hueco cuadrado de 30 mm, perfil por fuera a 12.2 mm en 3 pasadas, 3
+puentes, rampa suave 10°, bajada 381. Archivo 1 = S4 con F1270 / 1800 / 2400; archivo 2 = S2 con
+F1800 / 2400 / 3000 (apagado: casillas). Marcas taladradas de 2 mm (1-3 agujeros; arriba del
+hueco en el archivo 1, abajo en el 2) PRIMERO en cada archivo. Verificado: el .tap del servidor en
+vivo = el de la interfaz local = el revisado (huella idéntica), fondo completo, puentes a 3 mm.
+Generador: scratchpad (se pierde); si hay que rehacerlo, la receta es esta nota.
+⏳ Falta que Jose lo corte y diga cuál quedó mejor → ajustar la fresa en «Fresas…».
+Lección: Chrome nuevo pide permiso de «red local» y una petición de una página https a
+127.0.0.1 se queda colgada sin aviso; para pasar un archivo grande a una pestaña, crear un
+`<input type=file>` en ella y usar la herramienta de subir archivo.
