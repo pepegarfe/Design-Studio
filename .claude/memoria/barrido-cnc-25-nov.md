@@ -71,3 +71,18 @@ Mismo día (26-nov): Jose pidió cortar todo en UN archivo → el generador ahor
 entre cortes (ver `.claude/rules/cnc.md`). ⏳ La primera vez que lo corra: escuchar si el husillo
 cambia de sonido al pasar a las probetas 4-6. Las notas del proyecto de prueba todavía dicen
 «un grupo por archivo» (se escribieron antes): basta con encender las casillas del grupo S2.
+
+## 26-nov-2026: MATRIZ giro × avance (la prueba de verdad)
+Jose pidió una prueba que mida las dos variables. Proyecto «Matriz giro x avance MDF 6mm 2F» en
+su cuenta (id `p0f7f7488a6d4`): 4 filas (S8/S6/S4/S2) × 4 avances (1270/1800/2400/3000) = 16
+ranuras a 4 mm en UNA pasada, perfil «sobre la línea», sin rampa ni puentes. Cada ranura: 120 mm
+recto + media vuelta + 120 mm ondulado (±3 mm, onda de 15 mm); 303.5 mm en total. Se cortan en
+orden salteado (S6, S2, S8, S4) y al final se REPITE S6·F1270 para ver si el calor de la fresa
+cambió algo. UN archivo con 4 cambios de marcha (≈4 min) — de paso prueba si el A11E obedece el
+cambio a medio archivo. Placa de ~60 × 28 cm. Verificado: tap del servidor en vivo = interfaz
+local = revisado (sha 6cc105bfe16bdf26), todo a −4, cada ranura a su avance.
+Qué mide Jose por casilla: viruta o polvo, color de la pared, rebaba, sonido, y video para sacar
+el avance REAL en el tramo ondulado (tiempo esperado a avance programado: F1270 14.3 s, F1800
+10.1 s, F2400 7.6 s, F3000 6.1 s por ranura, sin contar bajada). No tiene calibrador claro.
+Etapas siguientes: (2) las 2-3 mejores como pieza real (proyecto «Prueba de parametros…», que
+quedó de antes con 6 combinaciones); (3) profundidad por pasada 2.5/4/6.
