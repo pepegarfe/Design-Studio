@@ -86,3 +86,15 @@ el avance REAL en el tramo ondulado (tiempo esperado a avance programado: F1270 
 10.1 s, F2400 7.6 s, F3000 6.1 s por ranura, sin contar bajada). No tiene calibrador claro.
 Etapas siguientes: (2) las 2-3 mejores como pieza real (proyecto «Prueba de parametros…», que
 quedó de antes con 6 combinaciones); (3) profundidad por pasada 2.5/4/6.
+
+### Misma noche: prueba en el AIRE + columna F3600 (pedido de Jose)
+- La matriz se REEMPLAZÓ (mismo id `p0f7f7488a6d4`): ahora 5 avances (…, 3600) = 20 ranuras + la
+  repetición, 73 × 27 cm, ≈4 min, sha defeb9a1d9ba02eb.
+- NUEVO «Prueba en el AIRE avances y marchas» (id `p207c0e2570de`): un recto de 900 mm y un
+  ondulado de 900 mm (recorrido real 1187.7 mm), cada uno a F1270/1800/2400/3000/3600 = 10
+  recorridos; cada avance con otra marcha (S6, S2, S8, S4, S6) para OÍR los 4 cambios. Baja solo
+  1 mm: se corre SIN material y con el cero de Z fijado ~30 mm arriba de la mesa. Sha 853faf7f5f0d6583.
+  Tiempos si alcanzara el avance (recto / ondulado, s): 1270 → 42.5 / 56.1 · 1800 → 30.0 / 39.6 ·
+  2400 → 22.5 / 29.7 · 3000 → 18.0 / 23.8 · 3600 → 15.0 / 19.8. Avance real = largo ÷ tiempo medido.
+- Orden acordado: PRIMERO el aire (¿obedece el cambio de marcha? ¿a cuánto va de verdad en
+  curvas?), luego la matriz (quizá con menos columnas según lo que salga).
