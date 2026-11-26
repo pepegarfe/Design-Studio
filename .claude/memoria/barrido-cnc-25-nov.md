@@ -67,3 +67,7 @@ Generador: scratchpad (se pierde); si hay que rehacerlo, la receta es esta nota.
 Lección: Chrome nuevo pide permiso de «red local» y una petición de una página https a
 127.0.0.1 se queda colgada sin aviso; para pasar un archivo grande a una pestaña, crear un
 `<input type=file>` en ella y usar la herramienta de subir archivo.
+Mismo día (26-nov): Jose pidió cortar todo en UN archivo → el generador ahora cambia de marcha
+entre cortes (ver `.claude/rules/cnc.md`). ⏳ La primera vez que lo corra: escuchar si el husillo
+cambia de sonido al pasar a las probetas 4-6. Las notas del proyecto de prueba todavía dicen
+«un grupo por archivo» (se escribieron antes): basta con encender las casillas del grupo S2.

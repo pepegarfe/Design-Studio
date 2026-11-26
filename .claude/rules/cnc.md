@@ -123,6 +123,13 @@ Verificado contra el código el 18-nov-2026 (movido del `CLAUDE.md`). Historia: 
   nuevo y al cambiar de fresa (`resetPasses`).
 - ⚠️ **Marchas de fábrica = las MEDIDAS girando el husillo** (`[100, 12000…18000]`, S1 parado),
   no las del menú del handle (`_GEARS_MENU`, que `cnc_get()` reemplaza si todavía está guardada).
+  ✅ Confirmadas por Jose leyendo el variador (25-nov-2026): S4=14000, S6=16000, S8=18000.
+- ⚠️ **Un archivo puede CAMBIAR DE MARCHA entre cortes** (`build_jobs`, 26-nov-2026): cada
+  trabajo usa la marcha de SU fresa; al cambiar, ya en Z segura, manda `M03 S<n>` y repite la
+  espera del arranque. Antes valía la del primer trabajo EN SILENCIO. Lo avisan
+  `studio_backend._avisos_marcha` y la tarjeta de Revisar (`avisoMarchas`). ⏳ Falta confirmar
+  en la máquina que el A11E obedece el cambio con el husillo girando. Con una sola marcha el
+  archivo sale idéntico al de antes (`caso_cambio_de_marcha` en `auditar_gcode.py`).
 - ⚠️ **Cambiar `CNC_DEFAULTS` NO llega a las instalaciones que ya existen**: `cnc_get()` toma la
   lista `tools` guardada ENTERA. Para corregir un dato de fábrica en el campo, agrega una entrada
   a `_PRESET_FIXES` (`studio_backend.py`): se aplica una sola vez por `preset_rev` y solo si la

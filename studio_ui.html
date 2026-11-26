@@ -5666,7 +5666,9 @@ var PlotterMotor = (function(){
     var gk=Object.keys(gears), th='style="text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:2px 8px 4px 0"';
     return (ws.length?'<div style="border:1px solid var(--bad);border-radius:8px;padding:8px 10px;margin-bottom:10px"><b>Revisa antes de cortar</b><br>'+warnList(ws)+'</div>':'')+
       '<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr><th '+th+'>Trayectoria</th><th '+th+'>Prof.</th><th '+th+'>Pasadas</th><th '+th+'>mm/min</th></tr>'+filas+'</table>'+
-      '<div style="margin-top:10px">Fresa: <b>'+hesc(tool.name||'')+'</b> (Ø '+n1(tool.dia)+' mm) · '+Math.round(tool.rpm)+' RPM'+(gk.length?' → marcha <b>'+gk.join('/')+'</b>':'')+'<br>'+
+      (function(){ var mp={}; list.forEach(function(t,k){ mp[t.id]=rs[k]; }); var am=avisoMarchas(list.map(function(t){ return t.id; }), mp);
+        return am?'<div style="border:1px solid var(--bad);border-radius:8px;padding:8px 10px;margin-top:10px">⚠ '+am+'</div>':''; })()+
+      '<div style="margin-top:10px">Fresa: <b>'+hesc(tool.name||'')+'</b> (Ø '+n1(tool.dia)+' mm)'+(gk.length>1?'':' · '+Math.round(tool.rpm)+' RPM'+(gk.length?' → marcha <b>'+gk.join('/')+'</b>':''))+'<br>'+
       'Material: <b>'+n1(m.thickness)+' mm</b> · tiempo ≈ <b>'+Math.floor(secs/60)+' min '+Math.round(secs%60)+' s</b> (aprox., suele ser un poco más)'+
       (bb?'<br>La fresa recorre de X <b>'+bb[0]+'</b> a <b>'+bb[2]+'</b> y de Y <b>'+bb[1]+'</b> a <b>'+bb[3]+'</b> mm':'')+'</div>'+
       '<div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--line)"><b>En la máquina, antes de correr</b><br>'+
@@ -5680,6 +5682,13 @@ var PlotterMotor = (function(){
   // había que apagar trayectorias a mano) y el aviso de ORDEN (un perfil que atraviesa la pieza
   // antes que un cajeado o un taladro de esa misma pieza la deja suelta a medio trabajo). =====
   var revDatos=null;
+  // Marchas EN ORDEN de corte (26-nov-2026): el archivo ya cambia de marcha entre cortes con
+  // distintas RPM (antes valía la del primero, en silencio). Devuelve el texto del aviso o ''.
+  function avisoMarchas(lista, rs){ var seq=[];
+    lista.forEach(function(t){ var r=rs[t]||{}; if(r.gear){ var k='S'+r.gear; if(seq[seq.length-1]!==k) seq.push(k); } });
+    if(seq.length<2) return '';
+    var sp=(state.cnc&&state.cnc.material&&state.cnc.material.spinup)||0;
+    return 'Cambia de marcha dentro del archivo: <b>'+seq.join(' → ')+'</b> (sube la fresa, cambia'+(sp?' y espera '+sp+' s':'')+'). La primera vez, fíjate que el husillo cambie de sonido; si no cambia, tu control no acepta el cambio a medio archivo y hay que separarlos.'; }
   function gruposPorFresa(list){ var g=[], ix={}; list.forEach(function(t){ var k=t.toolId||'?';
       if(ix[k]==null){ ix[k]=g.length; g.push({tool:tpToolOf(t), list:[]}); } g[ix[k]].list.push(t); }); return g; }
   function atraviesa(t){ return t.op==='profile' && t.side!=='inside' && ((t.start||0)+(t.depth||0)) >= state.cnc.material.thickness-0.01; }
@@ -5716,9 +5725,11 @@ var PlotterMotor = (function(){
           if(r.bbox){ bb=bb?[Math.min(bb[0],r.bbox[0]),Math.min(bb[1],r.bbox[1]),Math.max(bb[2],r.bbox[2]),Math.max(bb[3],r.bbox[3])]:r.bbox.slice(); }
           filas+='<div>'+(tpaths.indexOf(t)+1)+' · <b>'+hesc(t.name)+'</b> <span class="l">— '+n1(t.depth)+' mm'+(t.op==='drill'?'':' en '+np+(np===1?' pasada':' pasadas'))+' · '+Math.round(tl.feed)+' mm/min</span></div>'; });
         secs=Math.max(0, secs-(g.list.length-1)*(m.spinup||0)); total+=secs; g.secs=secs; g.archivo=archivoDe(k,grupos.length,g.tool);
-        var gk=Object.keys(gears);
+        var gk=Object.keys(gears), mapa={}; g.list.forEach(function(t){ mapa[t.id]=x.rs[list.indexOf(t)]; });
+        var am=avisoMarchas(g.list.map(function(t){ return t.id; }), mapa);
         h+='<div class="revcard"><h5><span>'+hesc(g.archivo)+'</span><small>≈ '+fmtSecs(secs)+'</small></h5>'+filas+
-           '<div class="l">Fresa: '+hesc(g.tool.name||'')+' (Ø '+n1(g.tool.dia)+' mm) · '+Math.round(g.tool.rpm)+' RPM'+(gk.length?' → marcha '+gk.join('/'):'')+'</div></div>'; });
+           '<div class="l">Fresa: '+hesc(g.tool.name||'')+' (Ø '+n1(g.tool.dia)+' mm)'+(am?'':' · '+Math.round(g.tool.rpm)+' RPM'+(gk.length?' → marcha '+gk.join('/'):''))+'</div>'+
+           (am?'<div class="revwarn" style="margin-top:6px"><span>⚠ '+am+'</span></div>':'')+'</div>'; });
       h+='<div class="revcard"><div><b>'+list.length+(list.length===1?' corte':' cortes')+' · ≈ '+fmtSecs(total)+'</b> <span class="l">(aprox., suele ser un poco más)</span></div>'+
          '<div class="l">Material: '+hesc(selTxt('matType'))+' de '+n1(m.thickness)+' mm'+(bb?'<br>La fresa recorre de X '+bb[0]+' a '+bb[2]+' y de Y '+bb[1]+' a '+bb[3]+' mm':'')+'</div></div>';
       el('revBody').innerHTML=h;

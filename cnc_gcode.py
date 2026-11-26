@@ -1074,20 +1074,34 @@ def build_jobs(jobs, material, name=''):
     # un DSP multi-speed con "S Read = Read S" (el A11E de Jose toma el S como número de
     # marcha; un S18000 ahí es "marcha 18000" → el husillo NO arranca). Sin tabla se
     # emiten las RPM (legado / controles que sí leen RPM).
-    rpm = int(float(tool.get('rpm', 18000)))
-    gear = gear_for(rpm, material.get('gears'))
-    if not gear:
-        try:
-            g = int(material.get('gear') or 0)      # campo viejo (marcha manual global)
-            gear = g if 1 <= g <= 9 else 0
-        except (TypeError, ValueError):
-            gear = 0
-    if gear:
-        m03 = 'M03 S%d' % gear
-        s_note = 'marcha S%d = %d RPM' % (gear, rpm)   # ⚠️ sin paréntesis: anidados rompen el comentario
-    else:
-        m03 = 'M03 S%d' % rpm
-        s_note = '%d RPM' % rpm
+    def husillo(t):
+        """(palabra M03, nota) para las RPM de la fresa de un trabajo."""
+        rpm = int(float(t.get('rpm', 18000)))
+        gear = gear_for(rpm, material.get('gears'))
+        if not gear:
+            try:
+                g = int(material.get('gear') or 0)      # campo viejo (marcha manual global)
+                gear = g if 1 <= g <= 9 else 0
+            except (TypeError, ValueError):
+                gear = 0
+        if gear:   # ⚠️ sin paréntesis en la nota: anidados rompen el comentario
+            return 'M03 S%d' % gear, 'marcha S%d = %d RPM' % (gear, rpm)
+        return 'M03 S%d' % rpm, '%d RPM' % rpm
+
+    # ⚠️ CAMBIO DE MARCHA A MITAD DEL ARCHIVO (26-nov-2026). Antes el husillo se encendía UNA vez
+    # con la marcha del PRIMER trabajo y los demás la heredaban EN SILENCIO aunque su fresa dijera
+    # otras RPM. Ahora, antes de cada trabajo con otra marcha: ya está en Z segura (cada trabajo
+    # termina ahí), manda la marcha nueva y ESPERA lo mismo que al arrancar. El A11E lee la S del
+    # archivo ("S Read = Read S"); que acepte el cambio con el husillo girando se confirma en la
+    # máquina (lo avisa studio_backend._avisos_marcha).
+    husos = [husillo(j['tool']) for j in jobs]
+    m03, s_note = husos[0]
+    if len({h[0] for h in husos}) > 1:
+        vistos = []
+        for h in husos:
+            if not vistos or vistos[-1] != h[1]:
+                vistos.append(h[1])
+        s_note = 'marchas ' + ' luego '.join(v.replace('marcha ', '') for v in vistos)
     z_note = ('Z0 en la cama - la cara del material queda en Z%s' % _f(z_top)
               if material.get('z_zero') == 'bed'
               else 'Z0 en la cara superior del material')
@@ -1108,14 +1122,26 @@ def build_jobs(jobs, material, name=''):
     #     calculada para durar exactamente la espera — funciona en cualquier control
     #     que lea F (mismo requisito que ya tiene todo el archivo: "Read F").
     spin = float(material.get('spinup', 10.0) or 0)
-    if spin > 0:
-        lines.append('( espera husillo %s s )' % _f(spin))
-        lines.append('G04 P%s' % _f(spin))
-        f_air = max(6.0, 240.0 / spin)
-        lines.append('G01 Z%s F%s' % (_f(safe + 2), _f(f_air)))
-        lines.append('G01 Z%s F%s' % (_f(safe), _f(f_air)))
-        secs += spin
-    for j in jobs:
+
+    def espera():
+        if spin > 0:
+            lines.append('( espera husillo %s s )' % _f(spin))
+            lines.append('G04 P%s' % _f(spin))
+            f_air = max(6.0, 240.0 / spin)
+            lines.append('G01 Z%s F%s' % (_f(safe + 2), _f(f_air)))
+            lines.append('G01 Z%s F%s' % (_f(safe), _f(f_air)))
+        return spin if spin > 0 else 0.0
+
+    secs += espera()
+    actual = m03
+    for j, (m03_j, nota_j) in zip(jobs, husos):
+        if m03_j != actual:
+            # (sin G00 Z aquí: cada trabajo YA termina en Z segura, y repetirlo sería un
+            # movimiento de largo cero, que frena al control sin hacer nada)
+            lines.append('( cambio de husillo: %s )' % nota_j)
+            lines.append(m03_j)
+            secs += espera()
+            actual = m03_j
         lines.append('( -- %s -- )' % _ascii(j.get('label', j['op'])))
         if j['op'] == 'drill':
             secs += _drill_body(lines, j['points'], j['tool'], j['depth'], z_top, safe,

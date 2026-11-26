@@ -605,6 +605,43 @@ def caso_barrido_25nov():
 caso_barrido_25nov()
 
 
+def caso_cambio_de_marcha():
+    """26-nov-2026: cortes con distintas RPM en UN archivo. Antes valía la marcha del primero
+    en silencio; ahora el archivo cambia de marcha entre cortes, con la fresa arriba y esperando."""
+    mat = dict(MAT_TOP, gears=[100, 12000, 13000, 14000, 15000, 16000, 17000, 18000], spinup=10)
+    def j(x, rpm, lab):
+        return {'paths': [sq(x, 0, 20, 20)], 'op': 'profile', 'side': 'outside', 'depth': 4.0,
+                'tool': dict(TOOL, rpm=rpm), 'label': lab}
+    r = sb.cnc_build_tap({'jobs': [j(0, 14000, 'A'), j(40, 12000, 'B'), j(80, 12000, 'C')],
+                          'material': mat, 'name': 'x'})
+    check('cambio de marcha: genera', r.get('ok'), str(r.get('error')))
+    if not r.get('ok'):
+        return
+    parse(r['tap'], mat, TOOL, 4.0, 'cambio de marcha')     # gramática estricta
+    ls = r['tap'].splitlines()
+    m03 = [k for k, l in enumerate(ls) if l.startswith('M03')]
+    check('cambio de marcha: S4 al arrancar y S2 antes de «B» (y no otra vez antes de «C»)',
+          [ls[k] for k in m03] == ['M03 S4', 'M03 S2'] and
+          ls.index('( -- B -- )') > m03[1] > ls.index('( -- A -- )'), str([ls[k] for k in m03]))
+    # la fresa está a Z segura al cambiar: el último Z antes del M03 es >= 5
+    z = None
+    for l in ls[:m03[1]]:
+        m = re.search(r'Z(-?[\d.]+)', l)
+        if m:
+            z = float(m.group(1))
+    check('cambio de marcha: la fresa está ARRIBA al cambiar', z is not None and z >= 5.0, str(z))
+    check('cambio de marcha: espera al husillo después del cambio', ls[m03[1] + 2] == 'G04 P10',
+          str(ls[m03[1]:m03[1] + 3]))
+    check('cambio de marcha: lo avisa (una vez, S4 → S2)',
+          len(r['warnings']) == 1 and 'de S4 a S2' in r['warnings'][0], str(r['warnings']))
+    r1 = sb.cnc_build_tap({'jobs': [j(0, 14000, 'A'), j(40, 14000, 'B')], 'material': mat, 'name': 'x'})
+    check('misma marcha: un solo M03 y sin aviso',
+          r1['tap'].count('M03') == 1 and not r1['warnings'], str(r1['warnings']))
+
+
+caso_cambio_de_marcha()
+
+
 print(f'\n== {len(OK)} verificaciones OK ==')
 if FALLAS:
     print(f'\n!! {len(FALLAS)} FALLAS:')

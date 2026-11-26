@@ -699,6 +699,24 @@ def cnc_toolpaths_preview(data):
         return {'ok': False, 'error': f'Trayectorias: {e}'}
 
 
+def _avisos_marcha(jobs, material):
+    """Un aviso por cada CAMBIO de marcha a mitad del archivo (26-nov-2026). Antes la marcha del
+    primer corte valía para todos en silencio; ahora el archivo la cambia, y quien corre el
+    archivo debe saberlo — la primera vez, para comprobar que su control lo obedece."""
+    import cnc_gcode
+    out, prev = [], None
+    for j in jobs:
+        rpm = float((j.get('tool') or {}).get('rpm', 18000))
+        g = cnc_gcode.gear_for(rpm, (material or {}).get('gears'))
+        k = ('S%d' % g) if g else ('%d RPM' % rpm)
+        if prev is not None and k != prev:
+            out.append('Cambia el husillo de %s a %s antes de «%s»: sube a Z segura, cambia y espera '
+                       'a que tome velocidad. Si tu control no obedece el cambio con el husillo '
+                       'girando, ese corte irá a la velocidad anterior.' % (prev, k, j.get('label') or 'el corte'))
+        prev = k
+    return out
+
+
 def cnc_build_tap(data):
     """El .tap completo. Acepta UNA trayectoria (payload plano) o VARIAS en orden
     (data['jobs'] = lista de payloads; material/name compartidos). Todas las de la
@@ -727,6 +745,7 @@ def cnc_build_tap(data):
                 warns += ['%s: %s' % (job['label'], w)
                           for w in _cnc_warnings(jd, job, op, tps, drills, tool, mat)]
             tap, secs = cnc_gcode.build_jobs(jobs, mat, name)
+            warns += _avisos_marcha(jobs, mat)
         else:
             job, op, tps, drills, skipped, tool, mat, name = _as_job(data)
             warns = _cnc_warnings(data, job, op, tps, drills, tool, mat)
